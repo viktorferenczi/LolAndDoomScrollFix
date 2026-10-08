@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Limiter.Core/Limiter.Core.csproj" />
+    <Project Path="src/Limiter.NativeHost/Limiter.NativeHost.csproj" />
+    <Project Path="src/Limiter.Protocol/Limiter.Protocol.csproj" />
+    <Project Path="src/Limiter.Service/Limiter.Service.csproj" />
+    <Project Path="src/Limiter.Tray/Limiter.Tray.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Limiter.Core.Tests/Limiter.Core.Tests.csproj" />
+  </Folder>
+</Solution>

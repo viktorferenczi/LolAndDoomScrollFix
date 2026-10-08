@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "LoL- és görgetéskorlátozó",
+  "version": "1.0.0",
+  "description": "Rövidvideós és Facebook-hírfolyam időkeret (60-60 perc / 24 óra) a helyi korlátozó szolgáltatással.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoWbAGZBDAMU21sWlNZt9XCsX8wUvhQy1bGj4VnOfijX9K1zgVITaF1Yswdl8CInfBoe3OfJAlqW5v0C3mY7ji+V9pUYj516Z0a0pzyFVlnY+qImciEstRVvdOupI9I4ThBSe9eVT9N0A4Op27106BYpdqjm7MyVpdEOk2Dk9hbyRoPkbJtOEC7uEIkZlwhsLIVKg/AFtZHiyhpYWLd/t1KPR6Tbl7I2sExTl/Xbr0pef98k7DAQKqnzSb2fBSmxEBIlX45f8bC+kjoqW+IK6hwq7u3P4qkOUusnZOeKroKOPnB1kahN1WyOXz6U2xNQG34wt+lR5dA9AtZHaQ7SQ0QIDAQAB",
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "nativeMessaging",
+    "idle",
+    "alarms"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.instagram.com/*",
+        "https://*.tiktok.com/*",
+        "https://*.youtube.com/*",
+        "https://*.facebook.com/*"
+      ],
+      "js": [
+        "detect.js",
+        "content.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ],
+  "action": {
+    "default_title": "LoL- és görgetéskorlátozó",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "incognito": "not_allowed"
+}

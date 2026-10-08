@@ -1,0 +1,8 @@
+{
+  "name": "lol-scroll-limiter-extension",
+  "private": true,
+  "description": "Chrome-bővítmény a LoL- és görgetéskorlátozóhoz",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}
