@@ -13,7 +13,7 @@ Felismerési vagy működési hibánál a program **enged tovább, és hibát je
 
 ## Szabad felhasználás
 
-Nyugodtan használd, másold, módosítsd és terjeszd tovább – személyes és egyéb célra is, megkötés nélkül. A program garancia nélkül, „ahogy van” formában készült; a korlátok értékeit (3 meccs, 60 perc) és a támogatott oldalakat a saját igényeid szerint át lehet írni. Ha hasznosnak találod, egy csillag vagy egy hivatkozás örömet okoz, de nem kötelező.
+Nyugodtan használd, másold, módosítsd és terjeszd tovább – személyes és egyéb célra is. A projekt [MIT licenc](LICENSE) alatt áll. A program garancia nélkül, „ahogy van” formában készült; a korlátok értékeit (3 meccs, 60 perc) és a támogatott oldalakat a saját igényeid szerint át lehet írni. Ha hasznosnak találod, egy csillag vagy egy hivatkozás örömet okoz, de nem kötelező.
 
 ## Mit tud az alkalmazás?
 
