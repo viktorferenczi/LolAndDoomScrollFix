@@ -1,5 +1,16 @@
 # Ellenőrzés és próbák
 
+## Telepítés utáni gyorsellenőrzés (minden telepítés után)
+
+Ezek az élő Windows-viselkedésen múlnak, unit-teszt nem fedi le őket.
+
+| # | Lépés | Elvárt eredmény |
+|---|---|---|
+| S.1 | Rendszergazdai PowerShell: `Get-Acl "C:\Program Files\LolScrollLimiter\Limiter.Service.exe" \| Format-List` | Olvasható; SYSTEM és Rendszergazdák: FullControl, Felhasználók: ReadAndExecute (az `install.ps1` ezt maga is ellenőrzi, és hibával leáll, ha nem így van) |
+| S.2 | `Get-Service LolScrollLimiter` | `Running` |
+| S.3 | Normál felhasználóként: tálcaikon és a bővítmény felugró ablaka | Zöld ikon, „A védelem működik.” — nem „A szolgáltatás munkamenete nem kérdezhető le” |
+| S.4 | Normál felhasználóként, futó LoL-klienssel: `Limiter.Service.exe --diagnose` | Kiírja a fázist és a játékost — nem „a LoL-kliens felderítése sikertelen” |
+
 ## 0. Első lépés: a LoL-kliens igazolása
 
 A Riot a kliens helyi API-ját nem támogatja hivatalosan, ezért éles használat előtt az **aktuális** kliensen igazolni kell a keresés megszakítását és a remake felismerését. Normál felhasználóként, futó LoL-klienssel:

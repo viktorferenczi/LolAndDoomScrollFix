@@ -78,17 +78,57 @@ foreach ($f in $ServiceExe, $HostExe, $TrayExe) { if (-not (Test-Path $f)) { thr
 
 function Step($text) { Write-Host "==> $text" }
 
+$SidSystem = 'S-1-5-18'
+$SidAdmins = 'S-1-5-32-544'
+$SidUsers = 'S-1-5-32-545'
+
+# Egy mappa jogosultságainak beállítása: csak a mappán (/T nélkül), a tartalom örököl.
+# A /inheritance:r ... /T egyes Windows-buildeken olvashatatlanná tette a fájlokat (még a
+# rendszergazdának és a SYSTEM-nek is), miközben az icacls sikert jelzett.
+function Set-FolderAcl([string]$Path, [string[]]$Grants) {
+    & icacls.exe $Path /inheritance:r /grant:r @Grants /C /Q | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "A jogosultságok nem állíthatók be: $Path" }
+    # A már meglévő tartalom (pl. egy korábbi, hibás telepítésből) explicit jogait töröljük, hogy örököljön.
+    if (Get-ChildItem -LiteralPath $Path -Force -ErrorAction SilentlyContinue | Select-Object -First 1) {
+        & icacls.exe (Join-Path $Path '*') /reset /T /C /Q | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "A jogosultságok nem állíthatók vissza: $Path" }
+    }
+}
+
+# Az icacls kilépési kódja nem elég: ténylegesen ellenőrizzük a jogosultságokat és az olvashatóságot.
+function Assert-Acl([string]$Path, [string[]]$Required, [string[]]$Forbidden = @()) {
+    try {
+        $acl = Get-Acl -LiteralPath $Path
+        if (Test-Path -LiteralPath $Path -PathType Leaf) { [System.IO.File]::OpenRead($Path).Dispose() }
+    } catch {
+        throw "A jogosultság-ellenőrzés sikertelen: $Path nem olvasható ($($_.Exception.Message)). Javítás: icacls `"$Path`" /reset"
+    }
+    $present = foreach ($rule in $acl.Access) {
+        if ($rule.AccessControlType -ne 'Allow') { continue }
+        try { $rule.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value }
+        catch { $rule.IdentityReference.Value }
+    }
+    foreach ($sid in $Required) {
+        if ($present -notcontains $sid) { throw "Hiányzó jogosultság ($sid): $Path" }
+    }
+    foreach ($sid in $Forbidden) {
+        if ($present -contains $sid) { throw "Nem kívánt jogosultság ($sid): $Path" }
+    }
+}
+
 # --- 1. Jogosultságok ---------------------------------------------------------------
 Step 'Telepítési mappa: normál felhasználónak csak olvasható'
 # SYSTEM és Rendszergazdák: teljes; Felhasználók: olvasás és futtatás.
-& icacls.exe $InstallDir /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' /T /C /Q | Out-Null
-if ($LASTEXITCODE -ne 0) { throw 'A telepítési mappa jogosultságai nem állíthatók be.' }
+Set-FolderAcl $InstallDir @("*${SidSystem}:(OI)(CI)F", "*${SidAdmins}:(OI)(CI)F", "*${SidUsers}:(OI)(CI)RX")
+foreach ($f in $InstallDir, $ServiceExe, $HostExe, $TrayExe, (Join-Path $InstallDir 'install.ps1')) {
+    if (Test-Path -LiteralPath $f) { Assert-Acl $f -Required $SidSystem, $SidAdmins, $SidUsers }
+}
 
 Step 'Adatmappa: csak SYSTEM és Rendszergazdák'
 New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
-& icacls.exe $DataDir /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' /T /C /Q | Out-Null
-if ($LASTEXITCODE -ne 0) { throw 'Az adatmappa jogosultságai nem állíthatók be.' }
-& icacls.exe $DataDir /setowner '*S-1-5-32-544' /T /C /Q | Out-Null
+Set-FolderAcl $DataDir @("*${SidSystem}:(OI)(CI)F", "*${SidAdmins}:(OI)(CI)F")
+& icacls.exe $DataDir /setowner "*$SidAdmins" /C /Q | Out-Null
+Assert-Acl $DataDir -Required $SidSystem, $SidAdmins -Forbidden $SidUsers
 
 Step "Korlátok mentése: $ResetMode$(if ($ResetMode -eq 'daily') { " ($('{0:00}' -f $DailyResetHour):00)" }), rövid videó $ShortVideoMinutes perc, hírfolyam $FacebookFeedMinutes perc, $(if ($EnforceOnWeekends) { 'hétvégén is van korlát' } else { 'hétvégén nincs korlát' })"
 # A telepítőben választott értékek mindig felülírják a korábbiakat (a szolgáltatás 30 mp-en belül átveszi).
@@ -103,7 +143,9 @@ $limits = [ordered]@{
     shortVideoRestDayBonusMinutes   = $ShortVideoRestDayBonusMinutes
     facebookFeedRestDayBonusMinutes = $FacebookFeedRestDayBonusMinutes
 }
-[System.IO.File]::WriteAllText((Join-Path $DataDir 'limits.json'), ($limits | ConvertTo-Json), (New-Object System.Text.UTF8Encoding($false)))
+$limitsPath = Join-Path $DataDir 'limits.json'
+[System.IO.File]::WriteAllText($limitsPath, ($limits | ConvertTo-Json), (New-Object System.Text.UTF8Encoding($false)))
+Assert-Acl $limitsPath -Required $SidSystem, $SidAdmins -Forbidden $SidUsers
 
 # --- 2. Szolgáltatás ----------------------------------------------------------------
 Step 'Windows-szolgáltatás telepítése'

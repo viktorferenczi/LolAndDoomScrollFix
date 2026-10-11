@@ -15,8 +15,10 @@ public static class LcuDiscovery
     public static IReadOnlyList<LcuProcess> Find()
     {
         var result = new List<LcuProcess>();
+        // SELECT *: oszlopszűkítéses lekérdezés eredményének nincs objektumútvonala, és azon a
+        // GetOwnerSid metódushívás InvalidOperationException-t dob.
         using var searcher = new ManagementObjectSearcher(
-            "SELECT ProcessId, CommandLine FROM Win32_Process WHERE Name = 'LeagueClientUx.exe'");
+            "SELECT * FROM Win32_Process WHERE Name = 'LeagueClientUx.exe'");
         using var processes = searcher.Get();
         foreach (var obj in processes)
         {
@@ -30,7 +32,10 @@ public static class LcuDiscovery
                 using var outParams = mo.InvokeMethod("GetOwnerSid", null, null);
                 sid = outParams?["Sid"] as string;
             }
-            catch (ManagementException) { }
+            catch (Exception ex) when (ex is ManagementException or InvalidOperationException or UnauthorizedAccessException)
+            {
+                // Egy hibás folyamat nem akaszthatja meg a többi felderítését.
+            }
 
             if (!string.IsNullOrEmpty(sid)) result.Add(new LcuProcess(pid, sid, port, token));
         }
