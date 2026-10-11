@@ -31,10 +31,10 @@ A cél az, hogy megfékezze a végtelen görgetést és a túlzott League of Leg
 
 ### Működés röviden
 
-1. **Gördülő 24 órás keret.** Nincs éjféli nullázás: mindig az elmúlt 24 óra felhasználását nézi, így egy meccs vagy egy perc pontosan 24 óra múlva szabadul fel újra.
+1. **Visszaállítás.** Alapértelmezésként gördülő 24 órás keret: nincs éjféli nullázás, mindig az elmúlt 24 óra felhasználását nézi, így egy meccs vagy egy perc pontosan 24 óra múlva szabadul fel újra. Telepítéskor választható helyette napi nullázás egy adott órában (pl. 03:00). Alapértelmezésként hétvégén nincs korlát; ez is a telepítőben kapcsolható.
 2. **LoL-meccsek.** A szolgáltatás a League kliens helyi (LCU) API-ját figyeli. Csak a PvP-sorok (pl. rangsorolt, normál) számítanak; TFT, botmeccs, gyakorlás, egyéni játék és néző mód nem. Ha a keret elfogyott, az új PvP-keresést megszakítja, a meccselfogadást elutasítja. Az igazolt remake (újrakezdett meccs) visszaadja az elhasznált alkalmat.
-3. **Rövidvideók.** Instagram Reels, TikTok, YouTube Shorts és Facebook Reels **közös** 60 perces keretet használ.
-4. **Facebook-hírfolyam.** A kezdőlapi hírfolyam **külön** 60 perces keretet kap.
+3. **Rövidvideók.** Instagram Reels, TikTok, YouTube Shorts és Facebook Reels **közös** keretet használ (alapértelmezés: 60 perc, telepítéskor állítható).
+4. **Facebook-hírfolyam.** A kezdőlapi hírfolyam **külön** keretet kap (alapértelmezés: 60 perc, telepítéskor állítható).
 5. **Hibatűrés.** Ha a felismerés vagy a működés hibázik, a program nem zár ki, hanem tovább enged, és hibát jelez (piros tálcaikon, a bővítmény piros „!” jelvénye).
 6. **Kijátszás elleni védelem.** Éles telepítésben a Chrome-szabályok kötelezővé teszik a bővítményt, tiltják az inkognitó- és vendégmódot, a bővítmények fejlesztői módját; a beállítások módosításához rendszergazdai jelszó kell (a gondolat: ezt egy megbízható személy ismeri, nem te).
 
