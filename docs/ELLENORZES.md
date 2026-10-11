@@ -91,7 +91,8 @@ Tipp: `"shortVideoMinutes": 2`, `"facebookFeedMinutes": 2`.
 | # | Lépés | Elvárt eredmény |
 |---|---|---|
 | 4.1 | `chrome://extensions` — kikapcsolás / eltávolítás | Nem lehetséges („A rendszergazda telepítette”) |
-| 4.2 | Inkognitó ablak, vendégmód | Nem nyitható |
+| 4.2 | Vendégmód | Nem nyitható |
+| 4.2b | Inkognitó ablak | Nyitható. „Engedélyezés inkognitó módban” bekapcsolva: rövid videó mér, elfogyott keretnél blokkol, a keret közös a normál ablakokkal; kikapcsolva: nem mér, nem blokkol. A felugró ablak a kapcsoló állapotát mutatja |
 | 4.3 | Fejlesztői mód bekapcsolása | Nem lehetséges |
 | 4.4 | `C:\ProgramData\LolScrollLimiter` megnyitása / `limiter.db` törlése vagy módosítása | Hozzáférés megtagadva |
 | 4.5 | `sc stop LolScrollLimiter` vagy Szolgáltatások → Leállítás | Hozzáférés megtagadva |

@@ -39,7 +39,8 @@ A cél az, hogy megfékezze a végtelen görgetést és a túlzott League of Leg
 4. **Facebook-hírfolyam.** A kezdőlapi hírfolyam **külön** keretet kap (alapértelmezés: 60 perc, telepítéskor állítható).
 5. **Pihenőnap-jutalom.** Ha az előző napon egy keretből semmi sem fogyott, aznap ahhoz több jár (LoL +1 meccs, rövid videó +30 perc, hírfolyam +30 perc). Nem halmozódik. Mentes hétvégénél hétfőn a péntek számít.
 6. **Hibatűrés.** Ha a felismerés vagy a működés hibázik, a program nem zár ki, hanem tovább enged, és hibát jelez (piros tálcaikon, a bővítmény piros „!” jelvénye).
-7. **Kijátszás elleni védelem.** Éles telepítésben a Chrome-szabályok kötelezővé teszik a bővítményt, tiltják az inkognitó- és vendégmódot, a bővítmények fejlesztői módját; a beállítások módosításához rendszergazdai jelszó kell (a gondolat: ezt egy megbízható személy ismeri, nem te).
+7. **Inkognitó mód.** Engedélyezett. A bővítmény inkognitó ablakban csak akkor mér és korlátoz, ha a chrome://extensions oldalon be van kapcsolva az „Engedélyezés inkognitó módban” kapcsoló; ezt a felhasználó maga dönti el.
+8. **Kijátszás elleni védelem.** Éles telepítésben a Chrome-szabályok kötelezővé teszik a bővítményt, tiltják a vendégmódot és a bővítmények fejlesztői módját; a beállítások módosításához rendszergazdai jelszó kell (a gondolat: ezt egy megbízható személy ismeri, nem te).
 
 A telepítésről és az ellenőrzésről lásd lent a hivatkozott útmutatókat.
 

@@ -19,7 +19,7 @@ Kimenet az `out\` mappában:
 
 | Fájl | Mire való |
 |---|---|
-| `LolScrollLimiter-Setup-1.2.1.exe` | Windows-telepítő |
+| `LolScrollLimiter-Setup-1.2.2.exe` | Windows-telepítő |
 | `extension-store.zip` | Feltöltés a Chrome Web Store-ba |
 | `extension-dev.zip` | Fejlesztői tesztverzió (kicsomagolt betöltés, fix azonosító: `iidlgdeiobckahalgoabbobfdlefkagi`) |
 | `app\` | A telepítendő programfájlok |
@@ -38,7 +38,7 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
 
 ## 4. Telepítés (éles)
 
-1. Futtasd a `LolScrollLimiter-Setup-1.2.1.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
+1. Futtasd a `LolScrollLimiter-Setup-1.2.2.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
 2. Telepítési mód: **Éles**.
 3. Bővítményazonosító: az áruházi azonosító (3. pont).
 4. **Korlátok** oldal:
@@ -68,12 +68,25 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
    - telepíti és elindítja a `LolScrollLimiter` szolgáltatást (automatikus indulás, összeomlás után újraindul, normál felhasználó nem állíthatja le),
    - létrehozza a `C:\ProgramData\LolScrollLimiter` adatmappát (normál felhasználó nem éri el),
    - regisztrálja a Native Messaging hostot,
-   - beállítja a Chrome-szabályokat: kötelező bővítménytelepítés, inkognitómód és vendégmód tiltva, bővítmények fejlesztői módja tiltva,
+   - beállítja a Chrome-szabályokat: kötelező bővítménytelepítés, vendégmód tiltva, bővítmények fejlesztői módja tiltva (az inkognitómód engedélyezett, lásd lent),
    - beállítja a tálcaalkalmazás automatikus indulását minden felhasználónak.
 6. Indítsd újra a Chrome-ot. Ellenőrzés:
-   - `chrome://policy` — megjelenik az `ExtensionInstallForcelist`, `IncognitoModeAvailability`, `BrowserGuestModeEnabled`, `ExtensionDeveloperModeSettings`.
+   - `chrome://policy` — megjelenik az `ExtensionInstallForcelist`, `BrowserGuestModeEnabled`, `ExtensionDeveloperModeSettings`.
    - `chrome://extensions` — a bővítmény „A rendszergazda telepítette”, nem kapcsolható ki.
    - A tálcán zöld óraikon; a menüben „Védelem: rendben”.
+
+### Inkognitó mód
+
+Az inkognitómód nincs tiltva. Hogy a bővítmény inkognitó ablakban is mérjen és korlátozzon, azt a
+**chrome://extensions → a bővítmény Részletek → Engedélyezés inkognitó módban** kapcsoló dönti el:
+
+| Kapcsoló | Inkognitó ablakban |
+|---|---|
+| Be | Ugyanúgy mér és blokkol, mint normál ablakban; a keret közös |
+| Ki (a Chrome alapértéke) | A bővítmény nem fut: nincs mérés és nincs blokkolás |
+
+A bővítmény felugró ablaka kiírja, melyik állapot érvényes. A kapcsolót a felhasználó szabadon állíthatja,
+ezért kikapcsolt állapotban az inkognitó ablak a webes korlát megkerülésére használható.
 
 ## 5. Fejlesztői tesztverzió
 
@@ -165,6 +178,7 @@ A számlálók megmaradnak (újratelepítés után folytatódnak). Teljes törl�
 
 ## 10. Ismert korlátok
 
+- **Inkognitó mód:** ha az „Engedélyezés inkognitó módban” kapcsoló ki van kapcsolva, inkognitó ablakban nincs webes korlát.
 - **Csak a kezelt Chrome-ra terjed ki.** Más böngészők (pl. Microsoft Edge, Firefox) és mobilalkalmazások nincsenek korlátozva. Ha ez gond, a megbízható személy tilthatja őket (pl. Edge-szabályokkal vagy szülői felügyelettel).
 - **A LoL-kliens helyi API-ját a Riot hivatalosan nem támogatja harmadik fél számára** ([Riot dokumentáció](https://developer.riotgames.com/docs/lol#league-client-api)). Kliensfrissítés után ellenőrizd a `--diagnose` paranccsal; hibás kapcsolatnál a program enged és sárga jelzést ad.
 - **Csoportos lobbyban** ha nem te vagy a vezető, a kliens nem mindig engedi a keresés megszakítását; ilyenkor a program a meccselfogadást utasítja el, ami a többieket visszateszi a sorba.

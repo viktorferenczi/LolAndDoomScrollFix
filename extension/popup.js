@@ -58,5 +58,11 @@ async function render() {
   }
 }
 
+chrome.extension.isAllowedIncognitoAccess().then((allowed) => {
+  document.getElementById('incognito').textContent = allowed
+    ? 'Inkognitó módban is mér és korlátoz.'
+    : 'Inkognitó módban nem mér és nem korlátoz (chrome://extensions → Engedélyezés inkognitó módban).';
+}).catch(() => {});
+
 render();
 setInterval(render, 1000);

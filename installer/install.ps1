@@ -144,8 +144,11 @@ New-Item -Path $Marker -Force | Out-Null
 Set-ItemProperty -Path $Marker -Name 'ExtensionId' -Value $ExtensionId
 Set-ItemProperty -Path $Marker -Name 'InstallDir' -Value $InstallDir
 
-# Inkognitómód tiltva (1), vendégmód tiltva (0).
-New-ItemProperty -Path $ChromePolicy -Name 'IncognitoModeAvailability' -PropertyType DWord -Value 1 -Force | Out-Null
+# Inkognitómód engedélyezett: a bővítmény ott akkor működik, ha a felhasználó bekapcsolja
+# a chrome://extensions oldalon az „Engedélyezés inkognitó módban” kapcsolót.
+# A korábbi verziók által beállított tiltást eltávolítjuk.
+Remove-ItemProperty -Path $ChromePolicy -Name 'IncognitoModeAvailability' -ErrorAction SilentlyContinue
+# Vendégmód tiltva (0): ott semmilyen bővítmény nem fut.
 New-ItemProperty -Path $ChromePolicy -Name 'BrowserGuestModeEnabled' -PropertyType DWord -Value 0 -Force | Out-Null
 
 if ($DevMode) {
