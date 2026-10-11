@@ -83,6 +83,8 @@ Tipp: `"shortVideoMinutes": 2`, `"facebookFeedMinutes": 2`.
 | 3b.7 | Egy teljes napig (kedd) semmi rövid videó, LoL és hírfolyam; szerdán megnézni a tálcát | „… maradt (90 percből, ebből +30 perc pihenőnap-jutalom)”, LoL: „4-ből, ebből +1 pihenőnap-jutalom” |
 | 3b.8 | Szerdán 1 perc rövid videó; csütörtökön a tálca | Rövid videó: 60 perc (nincs jutalom); a hírfolyamnál, ha szerdán sem volt, továbbra is +30 |
 | 3b.9 | Hétfő reggel, pénteken nem volt LoL (mentes hétvégével) | +1 meccs |
+| 3b.10 | Telepítés a Pihenőnap-jutalom oldalon: LoL 2, rövid videó 15, hírfolyam 0 | `limits.json`: `2` / `15` / `0`; üres nap után a tálcán +2 meccs és +15 perc, a hírfolyamnál nincs jutalom |
+| 3b.11 | Érvénytelen jutalom (pl. LoL `11`, perc `abc`) | A telepítő hibaüzenettel nem lép tovább |
 
 ## 4. Védelempróbák (normál felhasználóként)
 

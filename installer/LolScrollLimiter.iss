@@ -2,7 +2,7 @@
 ; Fordítás: installer\build.ps1 (előtte a programfájlok az out\app mappába kerülnek).
 
 #define AppName "LoL- és görgetéskorlátozó"
-#define AppVersion "1.2.0"
+#define AppVersion "1.2.1"
 #define DevExtensionId "iidlgdeiobckahalgoabbobfdlefkagi"
 
 [Setup]
@@ -46,6 +46,8 @@ var
   ResetHourCombo: TNewComboBox;
   ShortVideoEdit, FeedEdit: TNewEdit;
   WeekendCheck: TNewCheckBox;
+  BonusPage: TWizardPage;
+  LolBonusEdit, ShortVideoBonusEdit, FeedBonusEdit: TNewEdit;
 
 procedure ResetModeChanged(Sender: TObject);
 begin
@@ -61,7 +63,7 @@ begin
   Result.Top := Top;
 end;
 
-function AddMinutesEdit(Parent: TWizardPage; const Caption: String; Top: Integer): TNewEdit;
+function AddNumberEdit(Parent: TWizardPage; const Caption: String; Top: Integer; const DefaultText, UnitText: String): TNewEdit;
 begin
   AddLabel(Parent, Caption, 0, Top + ScaleY(3));
   Result := TNewEdit.Create(Parent);
@@ -69,8 +71,13 @@ begin
   Result.Left := ScaleX(230);
   Result.Top := Top;
   Result.Width := ScaleX(60);
-  Result.Text := '60';
-  AddLabel(Parent, 'perc', ScaleX(298), Top + ScaleY(3));
+  Result.Text := DefaultText;
+  AddLabel(Parent, UnitText, ScaleX(298), Top + ScaleY(3));
+end;
+
+function AddMinutesEdit(Parent: TWizardPage; const Caption: String; Top: Integer): TNewEdit;
+begin
+  Result := AddNumberEdit(Parent, Caption, Top, '60', 'perc');
 end;
 
 function TwoDigits(Value: Integer): String;
@@ -142,12 +149,41 @@ begin
   Heading.Height := ScaleY(32);
 end;
 
-function MinutesValid(Edit: TNewEdit): Boolean;
+function NumberInRange(Edit: TNewEdit; Max: Integer): Boolean;
 var
   Value: Integer;
 begin
   Value := StrToIntDef(Trim(Edit.Text), -1);
-  Result := (Value >= 0) and (Value <= 1440);
+  Result := (Value >= 0) and (Value <= Max);
+end;
+
+function MinutesValid(Edit: TNewEdit): Boolean;
+begin
+  Result := NumberInRange(Edit, 1440);
+end;
+
+procedure CreateBonusPage(AfterID: Integer);
+var
+  Y: Integer;
+  Note: TNewStaticText;
+begin
+  BonusPage := CreateCustomPage(AfterID, 'Pihenőnap-jutalom',
+    'Mennyivel nőjön a keret egy kihagyott nap után?');
+
+  Note := AddLabel(BonusPage,
+    'Ha egy napon egy keretből semmi sem fogy (0 meccs, illetve 0 perc), másnap ahhoz ennyivel több jár. ' +
+    'A jutalom nem halmozódik: több üres nap után is csak egyszer jár. 0 = kikapcsolva.', 0, 0);
+  Note.AutoSize := False;
+  Note.WordWrap := True;
+  Note.Width := BonusPage.SurfaceWidth;
+  Note.Height := ScaleY(48);
+  Y := ScaleY(56);
+
+  LolBonusEdit := AddNumberEdit(BonusPage, 'LoL PvP:', Y, '1', 'meccs');
+  Y := Y + ScaleY(28);
+  ShortVideoBonusEdit := AddNumberEdit(BonusPage, 'Rövid videók (Reels, TikTok, Shorts):', Y, '30', 'perc');
+  Y := Y + ScaleY(28);
+  FeedBonusEdit := AddNumberEdit(BonusPage, 'Facebook kezdőlapi hírfolyam:', Y, '30', 'perc');
 end;
 
 procedure InitializeWizard;
@@ -169,6 +205,7 @@ begin
   ExtensionPage.Values[0] := '{#DevExtensionId}';
 
   CreateLimitsPage(ExtensionPage.ID);
+  CreateBonusPage(LimitsPage.ID);
 end;
 
 function IsValidExtensionId(const Id: String): Boolean;
@@ -193,6 +230,20 @@ begin
     if not MinutesValid(ShortVideoEdit) or not MinutesValid(FeedEdit) then
     begin
       MsgBox('Az időkeret 0 és 1440 közötti egész szám (perc) lehet.', mbError, MB_OK);
+      Result := False;
+    end;
+    Exit;
+  end;
+  if CurPageID = BonusPage.ID then
+  begin
+    if not NumberInRange(LolBonusEdit, 10) then
+    begin
+      MsgBox('A LoL-jutalom 0 és 10 közötti egész szám (meccs) lehet.', mbError, MB_OK);
+      Result := False;
+    end
+    else if not MinutesValid(ShortVideoBonusEdit) or not MinutesValid(FeedBonusEdit) then
+    begin
+      MsgBox('A percben megadott jutalom 0 és 1440 közötti egész szám lehet.', mbError, MB_OK);
       Result := False;
     end;
     Exit;
@@ -242,6 +293,10 @@ begin
       ' -FacebookFeedMinutes ' + IntToStr(StrToInt(Trim(FeedEdit.Text)));
     if WeekendCheck.Checked then
       Params := Params + ' -EnforceOnWeekends';
+    Params := Params +
+      ' -LolRestDayBonusMatches ' + IntToStr(StrToInt(Trim(LolBonusEdit.Text))) +
+      ' -ShortVideoRestDayBonusMinutes ' + IntToStr(StrToInt(Trim(ShortVideoBonusEdit.Text))) +
+      ' -FacebookFeedRestDayBonusMinutes ' + IntToStr(StrToInt(Trim(FeedBonusEdit.Text)));
     WizardForm.StatusLabel.Caption := 'Szolgáltatás, jogosultságok és Chrome-szabályok beállítása…';
     if not Exec('powershell.exe', Params, '', SW_HIDE, ewWaitUntilTerminated, Code) or (Code <> 0) then
       MsgBox('A rendszerbeállítás sikertelen (kód: ' + IntToStr(Code) + '). ' +

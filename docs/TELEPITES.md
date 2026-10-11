@@ -19,7 +19,7 @@ Kimenet az `out\` mappában:
 
 | Fájl | Mire való |
 |---|---|
-| `LolScrollLimiter-Setup-1.2.0.exe` | Windows-telepítő |
+| `LolScrollLimiter-Setup-1.2.1.exe` | Windows-telepítő |
 | `extension-store.zip` | Feltöltés a Chrome Web Store-ba |
 | `extension-dev.zip` | Fejlesztői tesztverzió (kicsomagolt betöltés, fix azonosító: `iidlgdeiobckahalgoabbobfdlefkagi`) |
 | `app\` | A telepítendő programfájlok |
@@ -38,7 +38,7 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
 
 ## 4. Telepítés (éles)
 
-1. Futtasd a `LolScrollLimiter-Setup-1.2.0.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
+1. Futtasd a `LolScrollLimiter-Setup-1.2.1.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
 2. Telepítési mód: **Éles**.
 3. Bővítményazonosító: az áruházi azonosító (3. pont).
 4. **Korlátok** oldal:
@@ -49,6 +49,16 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
    | Rövid videók (Reels, TikTok, Shorts) | 0–1440 perc | 60 perc |
    | Facebook kezdőlapi hírfolyam | 0–1440 perc | 60 perc |
    | A korlátok hétvégén is érvényesek | Ha nincs bejelölve, szombaton és vasárnap nincs korlát, és a hétvégi használat (meccs is) nem számít bele a keretbe | Nincs bejelölve |
+
+   **Pihenőnap-jutalom** oldal: mennyivel nőjön a keret egy kihagyott nap után (részletek: 6. pont).
+
+   | Beállítás | Lehetőségek | Alapértelmezés |
+   |---|---|---|
+   | LoL PvP | 0–10 meccs | +1 meccs |
+   | Rövid videók | 0–1440 perc | +30 perc |
+   | Facebook kezdőlapi hírfolyam | 0–1440 perc | +30 perc |
+
+   0 = az adott jutalom kikapcsolva.
 
    Napi nullázásnál a „hétvége” a választott órától számít: 03:00-s nullázásnál szombat 03:00-tól hétfő 03:00-ig tart.
    Gördülő módban szombat 00:00-tól hétfő 00:00-ig. Ha pénteken elfogy egy keret, a hétvége kezdetén feloldódik.
@@ -114,7 +124,7 @@ Kézzel: rendszergazdai jogú szerkesztővel (pl. Jegyzettömb „Futtatás rend
 - **Hétvége:** ha hétvégén nincs korlát, a hétvégi használat nem rögzül, ezért hétfőn a péntek számít (nem a vasárnap).
 - **0 perces / 0 meccses keretre** nem jár jutalom (különben minden második nap feloldódna).
 - Ha a gép egész nap ki volt kapcsolva, az is üres napnak számít.
-- A telepítő jelenleg az alapértékeket írja be; eltérő jutalomhoz a fenti mezőket kell szerkeszteni (vagy az `install.ps1`-et a `-LolRestDayBonusMatches`, `-ShortVideoRestDayBonusMinutes`, `-FacebookFeedRestDayBonusMinutes` kapcsolókkal futtatni).
+- A jutalom mértékét a telepítő **Pihenőnap-jutalom** oldalán lehet megadni (vagy utólag a fenti mezőkben).
 
 A szolgáltatás 30 másodpercen belül átveszi. Hibás fájlnál az előző korlát marad érvényben, és a tálcaikon figyelmeztet.
 Módváltáskor a már rögzített használat az új szabály szerint számít (pl. gördülőről napira váltva csak az utolsó nullázás óta eltelt használat).
