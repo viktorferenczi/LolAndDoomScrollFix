@@ -19,7 +19,7 @@ Kimenet az `out\` mappában:
 
 | Fájl | Mire való |
 |---|---|
-| `LolScrollLimiter-Setup-1.0.0.exe` | Windows-telepítő |
+| `LolScrollLimiter-Setup-1.1.0.exe` | Windows-telepítő |
 | `extension-store.zip` | Feltöltés a Chrome Web Store-ba |
 | `extension-dev.zip` | Fejlesztői tesztverzió (kicsomagolt betöltés, fix azonosító: `iidlgdeiobckahalgoabbobfdlefkagi`) |
 | `app\` | A telepítendő programfájlok |
@@ -38,17 +38,29 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
 
 ## 4. Telepítés (éles)
 
-1. Futtasd a `LolScrollLimiter-Setup-1.0.0.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
+1. Futtasd a `LolScrollLimiter-Setup-1.1.0.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
 2. Telepítési mód: **Éles**.
 3. Bővítményazonosító: az áruházi azonosító (3. pont).
-4. A telepítő:
+4. **Korlátok** oldal:
+
+   | Beállítás | Lehetőségek | Alapértelmezés |
+   |---|---|---|
+   | A keretek visszaállítása | **Gördülő 24 óra**: minden felhasználás pontosan 24 órával később szabadul fel (a webes idő percenként, fokozatosan). **Naponta nullázás**: a választott órában (00:00–23:00, helyi idő) minden keret egyszerre nullázódik | Gördülő 24 óra (napi módnál 03:00) |
+   | Rövid videók (Reels, TikTok, Shorts) | 0–1440 perc | 60 perc |
+   | Facebook kezdőlapi hírfolyam | 0–1440 perc | 60 perc |
+   | A korlátok hétvégén is érvényesek | Ha nincs bejelölve, szombaton és vasárnap nincs korlát, és a hétvégi használat (meccs is) nem számít bele a keretbe | Nincs bejelölve |
+
+   Napi nullázásnál a „hétvége” a választott órától számít: 03:00-s nullázásnál szombat 03:00-tól hétfő 03:00-ig tart.
+   Gördülő módban szombat 00:00-tól hétfő 00:00-ig. Ha pénteken elfogy egy keret, a hétvége kezdetén feloldódik.
+
+5. A telepítő:
    - a programot a `C:\Program Files\LolScrollLimiter` mappába teszi (normál felhasználónak csak olvasható),
    - telepíti és elindítja a `LolScrollLimiter` szolgáltatást (automatikus indulás, összeomlás után újraindul, normál felhasználó nem állíthatja le),
    - létrehozza a `C:\ProgramData\LolScrollLimiter` adatmappát (normál felhasználó nem éri el),
    - regisztrálja a Native Messaging hostot,
    - beállítja a Chrome-szabályokat: kötelező bővítménytelepítés, inkognitómód és vendégmód tiltva, bővítmények fejlesztői módja tiltva,
    - beállítja a tálcaalkalmazás automatikus indulását minden felhasználónak.
-5. Indítsd újra a Chrome-ot. Ellenőrzés:
+6. Indítsd újra a Chrome-ot. Ellenőrzés:
    - `chrome://policy` — megjelenik az `ExtensionInstallForcelist`, `IncognitoModeAvailability`, `BrowserGuestModeEnabled`, `ExtensionDeveloperModeSettings`.
    - `chrome://extensions` — a bővítmény „A rendszergazda telepítette”, nem kapcsolható ki.
    - A tálcán zöld óraikon; a menüben „Védelem: rendben”.
@@ -64,18 +76,32 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
 
 ## 6. Korlátok módosítása (rendszergazda)
 
-Rendszergazdai jogú szerkesztővel (pl. Jegyzettömb „Futtatás rendszergazdaként”) szerkeszd:
-`C:\ProgramData\LolScrollLimiter\limits.json`
+A legegyszerűbb: futtasd újra a telepítőt, és válaszd az új értékeket — a telepítő a **Korlátok** oldal értékeivel mindig felülírja a korábbiakat (a számlálók megmaradnak).
+
+Kézzel: rendszergazdai jogú szerkesztővel (pl. Jegyzettömb „Futtatás rendszergazdaként”) szerkeszd a
+`C:\ProgramData\LolScrollLimiter\limits.json` fájlt:
 
 ```json
 {
+  "resetMode": "rolling",
+  "dailyResetHour": 3,
   "lolPvpMatches": 3,
   "shortVideoMinutes": 60,
-  "facebookFeedMinutes": 60
+  "facebookFeedMinutes": 60,
+  "enforceOnWeekends": false
 }
 ```
 
+| Mező | Érték |
+|---|---|
+| `resetMode` | `"rolling"` (gördülő 24 óra) vagy `"daily"` (napi nullázás) |
+| `dailyResetHour` | 0–23, a napi nullázás órája helyi idő szerint (csak `"daily"` módban) |
+| `lolPvpMatches` | PvP-meccsek száma |
+| `shortVideoMinutes`, `facebookFeedMinutes` | 0–1440 perc |
+| `enforceOnWeekends` | `true`: hétvégén is van korlát; `false`: hétvégén nincs |
+
 A szolgáltatás 30 másodpercen belül átveszi. Hibás fájlnál az előző korlát marad érvényben, és a tálcaikon figyelmeztet.
+Módváltáskor a már rögzített használat az új szabály szerint számít (pl. gördülőről napira váltva csak az utolsó nullázás óta eltelt használat).
 
 ## 7. Mit jelent a tálcaikon színe?
 
@@ -117,4 +143,5 @@ A számlálók megmaradnak (újratelepítés után folytatódnak). Teljes törl�
 - **A LoL-kliens helyi API-ját a Riot hivatalosan nem támogatja harmadik fél számára** ([Riot dokumentáció](https://developer.riotgames.com/docs/lol#league-client-api)). Kliensfrissítés után ellenőrizd a `--diagnose` paranccsal; hibás kapcsolatnál a program enged és sárga jelzést ad.
 - **Csoportos lobbyban** ha nem te vagy a vezető, a kliens nem mindig engedi a keresés megszakítását; ilyenkor a program a meccselfogadást utasítja el, ami a többieket visszateszi a sorba.
 - **Remake** csak a kliens `gameEndedInEarlySurrender` jelzése alapján igazolt; a meccstörténet frissüléséig (általában 1-2 perc) a meccs számít. 6 óra után igazolás nélkül végleg beleszámít.
-- **Fokozatos felszabadulás:** a webes idő percenként szabadul fel, a felhasználás után 24 óra + legfeljebb 1 perc elteltével.
+- **Fokozatos felszabadulás (gördülő mód):** a webes idő percenként szabadul fel, a felhasználás után 24 óra + legfeljebb 1 perc elteltével.
+- **Időzóna:** a napi nullázás és a hétvége a gép helyi idejét követi; nyári időszámítás kezdetekor a kihagyott óra helyett egy órával később nullázódik.

@@ -18,6 +18,7 @@ public sealed record StatusView(
     string ShortVideoText,
     string FacebookFeedText,
     string NextReleaseText,
+    string ScheduleText,
     IReadOnlyList<string> Problems)
 {
     /// <summary>Ennyi ideig jelentkezés nélkül a bővítményt hibásnak tekintjük, ha a Chrome fut.</summary>
@@ -31,6 +32,7 @@ public sealed record StatusView(
         "LoL PvP: –",
         "Rövid videók: –",
         "Facebook-hírfolyam: –",
+        "",
         "",
         [$"A korlátozó szolgáltatás nem érhető el ({error}). A védelem most nem működik; a program automatikusan újrapróbálja."]);
 
@@ -58,16 +60,22 @@ public sealed record StatusView(
         if (problems.Count > 0) health = Health.Warning;
 
         var lol = s.Lol;
+        var exempt = s.Schedule?.ExemptNow == true;
         var lolText = lol is null
             ? "LoL PvP: –"
+            : exempt
+                ? "LoL PvP: hétvége — nincs korlát"
             : lol.Blocked
                 ? $"LoL PvP: elfogyott ({lol.Used}/{lol.Limit}) — újra: {When(lol.AvailableAgainAt, now)}"
                 : $"LoL PvP: {lol.Remaining} meccs maradt ({lol.Limit}-ból)";
 
         var next = new List<string>();
-        if (lol?.NextReleaseAt is { } lr) next.Add($"meccs {When(lr, now)}");
-        if (s.ShortVideo?.NextReleaseAt is { } sr) next.Add($"rövid videó {When(sr, now)}");
-        if (s.FacebookFeed?.NextReleaseAt is { } fr) next.Add($"hírfolyam {When(fr, now)}");
+        if (!exempt)
+        {
+            if (lol?.NextReleaseAt is { } lr) next.Add($"meccs {When(lr, now)}");
+            if (s.ShortVideo?.NextReleaseAt is { } sr) next.Add($"rövid videó {When(sr, now)}");
+            if (s.FacebookFeed?.NextReleaseAt is { } fr) next.Add($"hírfolyam {When(fr, now)}");
+        }
 
         return new StatusView(
             health,
@@ -75,16 +83,32 @@ public sealed record StatusView(
             lolText,
             Web("Rövid videók", s.ShortVideo, now),
             Web("Facebook-hírfolyam", s.FacebookFeed, now),
-            next.Count > 0 ? "Következő felszabadulás: " + string.Join(", ", next) : "Minden keret szabad",
+            exempt ? "Hétvégén nincs korlát"
+                : next.Count > 0 ? "Következő felszabadulás: " + string.Join(", ", next) : "Minden keret szabad",
+            DescribeSchedule(s.Schedule),
             problems);
     }
 
     private static string Web(string label, WebLimitDto? w, DateTimeOffset now)
     {
         if (w is null) return $"{label}: –";
+        if (w.Exempt) return $"{label}: hétvége — nincs korlát";
         var limitMin = (int)Math.Round(w.LimitSeconds / 60);
         if (w.Blocked) return $"{label}: elfogyott — újra: {When(w.AvailableAgainAt, now)}";
         return $"{label}: {Minutes(w.RemainingSeconds)} maradt ({limitMin} percből)";
+    }
+
+    /// <summary>A telepítéskor választott időbeosztás szövegesen.</summary>
+    public static string DescribeSchedule(ScheduleDto? schedule)
+    {
+        if (schedule is null) return "";
+        var reset = schedule.ResetMode == IpcConstants.ResetModes.Daily
+            ? $"A keretek naponta {schedule.DailyResetHour:00}:00-kor nullázódnak."
+            : "Minden keret az előző 24 órára vonatkozik; a felhasznált idő 24 órával később fokozatosan felszabadul.";
+        var weekend = schedule.EnforceOnWeekends
+            ? "A korlátok hétvégén is érvényesek."
+            : "Hétvégén (szombat, vasárnap) nincs korlát.";
+        return reset + "\n" + weekend;
     }
 
     public static string Minutes(double seconds)

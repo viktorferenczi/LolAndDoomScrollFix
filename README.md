@@ -1,12 +1,18 @@
 # LoL- és görgetéskorlátozó
 
-Windows 11-es alkalmazás Chrome-bővítménnyel. **Minden keret az előző 24 órára vonatkozik**, éjféli nullázás nélkül.
+Windows 11-es alkalmazás Chrome-bővítménnyel.
 
-| Tevékenység | Korlát | A keret elfogyásakor |
+| Tevékenység | Korlát (alapértelmezés) | A keret elfogyásakor |
 |---|---:|---|
-| LoL PvP | 3 meccs / 24 óra | Új PvP-keresés megszakítva, meccselfogadás elutasítva |
-| Instagram Reels, TikTok, YouTube Shorts, Facebook Reels | Együtt 60 perc / 24 óra | A felület blokkolva |
-| Facebook kezdőlapi hírfolyam | Külön 60 perc / 24 óra | A hírfolyam blokkolva |
+| LoL PvP | 3 meccs | Új PvP-keresés megszakítva, meccselfogadás elutasítva |
+| Instagram Reels, TikTok, YouTube Shorts, Facebook Reels | Együtt 60 perc (telepítéskor állítható) | A felület blokkolva |
+| Facebook kezdőlapi hírfolyam | Külön 60 perc (telepítéskor állítható) | A hírfolyam blokkolva |
+
+Telepítéskor választható:
+
+- **Visszaállítás:** gördülő 24 óra (alapértelmezés — minden felhasználás pontosan 24 órával később szabadul fel), vagy napi nullázás egy választott órában (pl. 03:00).
+- **Időkeretek** percben a rövid videókra és a Facebook-hírfolyamra (alapértelmezés: 60-60 perc).
+- **Hétvége:** alapértelmezésként szombaton és vasárnap nincs korlát, és a hétvégi használat nem számít bele a keretbe; bejelölve a korlátok hétvégén is érvényesek.
 
 TFT, botmeccs, gyakorlás, egyéni játék és néző mód nem fogyasztja a LoL-keretet; az igazolt remake visszaadja az alkalmat.
 Felismerési vagy működési hibánál a program **enged tovább, és hibát jelez** (tálcaikon, a bővítmény piros „!” jelvénye).

@@ -11,6 +11,7 @@ public sealed class StatusForm : Form
     private readonly Label _feed = Line();
     private readonly Label _next = Line();
     private readonly Label _problems = Line();
+    private readonly Label _schedule = Line();
 
     public StatusForm()
     {
@@ -32,11 +33,11 @@ public sealed class StatusForm : Form
             WrapContents = false,
             Dock = DockStyle.Fill,
         };
+        _schedule.ForeColor = SystemColors.GrayText;
         var note = Line();
         note.ForeColor = SystemColors.GrayText;
-        note.Text = "Minden keret az előző 24 órára vonatkozik; a felhasznált idő 24 órával később fokozatosan felszabadul.\n" +
-                    "TFT, botmeccs, gyakorlás, egyéni játék és néző mód nem fogyasztja a LoL-keretet.";
-        layout.Controls.AddRange([_protection, _lol, _short, _feed, _next, _problems, note]);
+        note.Text = "TFT, botmeccs, gyakorlás, egyéni játék és néző mód nem fogyasztja a LoL-keretet.";
+        layout.Controls.AddRange([_protection, _lol, _short, _feed, _next, _problems, _schedule, note]);
         Controls.Add(layout);
     }
 
@@ -63,5 +64,7 @@ public sealed class StatusForm : Form
         _next.Text = view.NextReleaseText;
         _problems.Text = string.Join("\n", view.Problems.Select(p => "• " + p));
         _problems.Visible = view.Problems.Count > 0;
+        _schedule.Text = view.ScheduleText;
+        _schedule.Visible = view.ScheduleText.Length > 0;
     }
 }

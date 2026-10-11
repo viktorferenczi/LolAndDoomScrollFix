@@ -16,9 +16,19 @@ function minutes(sec) {
 
 function web(el, w) {
   if (!w) return;
-  el.textContent = w.blocked
+  el.textContent = w.exempt
+    ? 'hétvége — nincs korlát'
+    : w.blocked
     ? 'elfogyott — újra: ' + when(w.availableAgainAt)
     : minutes(w.remainingSeconds) + ' maradt';
+}
+
+function describeSchedule(schedule) {
+  if (!schedule) return '';
+  const reset = schedule.resetMode === 'daily'
+    ? `A keretek naponta ${String(schedule.dailyResetHour).padStart(2, '0')}:00-kor nullázódnak.`
+    : 'Minden keret az előző 24 órára vonatkozik.';
+  return reset + (schedule.enforceOnWeekends ? ' Hétvégén is érvényes.' : ' Hétvégén nincs korlát.');
 }
 
 async function render() {
@@ -27,11 +37,14 @@ async function render() {
   const s = r && r.status;
   if (s) {
     const lol = s.lol;
-    document.getElementById('lol').textContent = lol.blocked
+    document.getElementById('lol').textContent = lol.exempt
+      ? 'hétvége — nincs korlát'
+      : lol.blocked
       ? 'elfogyott — újra: ' + when(lol.availableAgainAt)
       : lol.remaining + ' / ' + lol.limit + ' meccs maradt';
     web(document.getElementById('short'), s.shortVideo);
     web(document.getElementById('feed'), s.facebookFeed);
+    document.getElementById('schedule').textContent = describeSchedule(s.schedule);
   }
   if (r && r.healthy) {
     state.className = 'state ok';

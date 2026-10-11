@@ -15,6 +15,22 @@
   A bővítmény azonosítója. Fejlesztői (kicsomagolt) verziónál a manifest "key" mezőjéből adódó azonosító;
   áruházi kiadásnál a Chrome Web Store által adott azonosító.
 
+.PARAMETER ResetMode
+  'rolling' (alapértelmezett): gördülő 24 óra — minden felhasználás 24 órával később szabadul fel.
+  'daily': naponta egyszer, a DailyResetHour órában minden keret nullázódik.
+
+.PARAMETER DailyResetHour
+  Napi nullázás órája (0–23, helyi idő), csak ResetMode = 'daily' esetén. Alapértelmezés: 3 (03:00).
+
+.PARAMETER ShortVideoMinutes
+  Rövidvideós keret percben (Reels, TikTok, Shorts együtt). Alapértelmezés: 60.
+
+.PARAMETER FacebookFeedMinutes
+  Facebook-hírfolyam keret percben. Alapértelmezés: 60.
+
+.PARAMETER EnforceOnWeekends
+  Ha meg van adva, a korlátok szombaton és vasárnap is érvényesek. Alapértelmezés: hétvégén nincs korlát.
+
 .PARAMETER DevMode
   Fejlesztői tesztverzió: a bővítményt kézzel, kicsomagolva kell betölteni, ezért nem kötelező telepítésű,
   és a fejlesztői mód nincs tiltva. Éles használatra NEM alkalmas.
@@ -24,6 +40,12 @@ param(
     [string]$InstallDir = $PSScriptRoot,
     [string]$ExtensionId = 'iidlgdeiobckahalgoabbobfdlefkagi',
     [string]$UpdateUrl = 'https://clients2.google.com/service/update2/crx',
+    [ValidateSet('rolling', 'daily')][string]$ResetMode = 'rolling',
+    [ValidateRange(0, 23)][int]$DailyResetHour = 3,
+    [ValidateRange(0, 1440)][int]$ShortVideoMinutes = 60,
+    [ValidateRange(0, 1440)][int]$FacebookFeedMinutes = 60,
+    [ValidateRange(0, 1000)][int]$LolPvpMatches = 3,
+    [switch]$EnforceOnWeekends,
     [switch]$DevMode
 )
 
@@ -56,16 +78,17 @@ New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Az adatmappa jogosultságai nem állíthatók be.' }
 & icacls.exe $DataDir /setowner '*S-1-5-32-544' /T /C /Q | Out-Null
 
-$limits = Join-Path $DataDir 'limits.json'
-if (-not (Test-Path $limits)) {
-    Set-Content -Path $limits -Encoding UTF8 -Value @'
-{
-  "lolPvpMatches": 3,
-  "shortVideoMinutes": 60,
-  "facebookFeedMinutes": 60
+Step "Korlátok mentése: $ResetMode$(if ($ResetMode -eq 'daily') { " ($('{0:00}' -f $DailyResetHour):00)" }), rövid videó $ShortVideoMinutes perc, hírfolyam $FacebookFeedMinutes perc, $(if ($EnforceOnWeekends) { 'hétvégén is van korlát' } else { 'hétvégén nincs korlát' })"
+# A telepítőben választott értékek mindig felülírják a korábbiakat (a szolgáltatás 30 mp-en belül átveszi).
+$limits = [ordered]@{
+    resetMode           = $ResetMode
+    dailyResetHour      = $DailyResetHour
+    lolPvpMatches       = $LolPvpMatches
+    shortVideoMinutes   = $ShortVideoMinutes
+    facebookFeedMinutes = $FacebookFeedMinutes
+    enforceOnWeekends   = [bool]$EnforceOnWeekends
 }
-'@
-}
+[System.IO.File]::WriteAllText((Join-Path $DataDir 'limits.json'), ($limits | ConvertTo-Json), (New-Object System.Text.UTF8Encoding($false)))
 
 # --- 2. Szolgáltatás ----------------------------------------------------------------
 Step 'Windows-szolgáltatás telepítése'

@@ -20,9 +20,17 @@ public sealed class StatusBuilder(LimitEngine engine, ProtectionState protection
                 Blocked = lol.Blocked,
                 NextReleaseAt = lol.NextReleaseAt,
                 AvailableAgainAt = lol.AvailableAgainAt,
+                Exempt = lol.Exempt,
             },
             ShortVideo = Web(engine.GetWebStatus(sid, WebCategory.ShortVideo)),
             FacebookFeed = Web(engine.GetWebStatus(sid, WebCategory.FacebookFeed)),
+            Schedule = new ScheduleDto
+            {
+                ResetMode = engine.Settings.ResetMode == ResetMode.Daily ? IpcConstants.ResetModes.Daily : IpcConstants.ResetModes.Rolling,
+                DailyResetHour = engine.Settings.DailyResetHour,
+                EnforceOnWeekends = engine.Settings.EnforceOnWeekends,
+                ExemptNow = engine.IsExemptNow,
+            },
             Protection = protection.Snapshot(sid, settings.Warning is { } w ? [w] : []),
         };
     }
@@ -35,6 +43,7 @@ public sealed class StatusBuilder(LimitEngine engine, ProtectionState protection
         Blocked = s.Blocked,
         NextReleaseAt = s.NextReleaseAt,
         AvailableAgainAt = s.AvailableAgainAt,
+        Exempt = s.Exempt,
     };
 }
 

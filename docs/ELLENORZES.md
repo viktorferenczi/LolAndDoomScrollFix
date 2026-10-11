@@ -36,6 +36,7 @@ node --test extension/test/*.test.js
 | Nem PvP módok, néző mód | `LolLimitTests.Non_pvp_modes_never_count_…`, `Spectating_does_not_count`, `ClassifierTests` |
 | Webes időmérés | `background.test.js`: fókusz, háttérlap, zárolás, alvás, 1 mp-en belüli tiltás, fail-open |
 | Felismerés | `detect.test.js`: URL-szabályok, felugró Reels, Messenger/profil/csoport kivétel |
+| Napi nullázás, hétvége | `ScheduleTests`: nullázás a választott órában (webes és LoL-keret), 00:00-s nullázás, hétvégi mentesség, vasárnap este indult meccs hétfőn sem számít, hétvége a nullázási órától, hétvégi korlát bekapcsolva, péntek esti tiltás a hétvége kezdetén feloldódik, nyári időszámítás, a telepítő által írt `limits.json` beolvasása |
 
 ## 2. Windowsos próbák (LoL)
 
@@ -67,6 +68,17 @@ Tipp: `"shortVideoMinutes": 2`, `"facebookFeedMinutes": 2`.
 | 3.8 | Videó szól, egér nem mozdul 3 percig | Az idő fogy |
 | 3.9 | Gép zárolása (Win+L) videó közben | Zárolás alatt nem fogy |
 | 3.10 | Második Chrome-profil | Ugyanaz a keret, ugyanaz a tiltás |
+
+## 3/b. Telepítési beállítások próbái
+
+| # | Lépés | Elvárt eredmény |
+|---|---|---|
+| 3b.1 | Telepítés alapértékekkel | `limits.json`: `rolling`, 60/60 perc, `enforceOnWeekends: false`; tálca: „Minden keret az előző 24 órára vonatkozik…”, „Hétvégén … nincs korlát” |
+| 3b.2 | Újratelepítés: napi nullázás 03:00, 20/10 perc | A tálca és a bővítmény felugró ablaka „naponta 03:00-kor nullázódnak” szöveget mutat; a blokkoló felületen „20 percet naponta (nullázás 03:00-kor)” |
+| 3b.3 | Napi mód: keret elfogyasztása, majd az óra átállítása 03:00 utánra (rendszergazdaként) | A keret teljesen felszabadul |
+| 3b.4 | Hétvégén (vagy a rendszeridőt szombatra állítva), hétvégi korlát nélkül | Tálca: „hétvége — nincs korlát”; nincs blokkolás, nincs LoL-megszakítás; hétfőn a hétvégi használat nem látszik |
+| 3b.5 | Ugyanez „A korlátok hétvégén is érvényesek” bejelölésével | A korlátok szombaton is tiltanak |
+| 3b.6 | Érvénytelen perc (pl. `abc` vagy `2000`) a telepítőben | A telepítő hibaüzenettel nem lép tovább |
 
 ## 4. Védelempróbák (normál felhasználóként)
 

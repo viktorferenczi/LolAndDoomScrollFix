@@ -8,6 +8,9 @@ public enum MatchRecordOutcome
     NotPvp,
     Spectator,
     Unknown,
+
+    /// <summary>Korlátmentes időszakban (hétvégén) indult: rögzítve, de nem számít a keretbe.</summary>
+    Exempt,
 }
 
 public enum MatchmakingAction
@@ -73,9 +76,12 @@ public sealed class LolMatchTracker
         if (snapshot.LocalPlayerIsParticipant == false) return MatchRecordOutcome.Spectator;
         if (snapshot.LocalPlayerIsParticipant is null && !HasRecentPreGame(userSid)) return MatchRecordOutcome.Unknown;
 
-        return _store.TryRecordMatch(userSid, snapshot.GameId, _clock.UtcNow, snapshot.Queue.QueueId)
-            ? MatchRecordOutcome.Recorded
-            : MatchRecordOutcome.AlreadyRecorded;
+        // Hétvégén indult meccs mentesként kerül be, így ha átnyúlik hétfőre, akkor sem számít.
+        var exempt = _engine.IsExemptNow;
+        var inserted = _store.TryRecordMatch(userSid, snapshot.GameId, _clock.UtcNow, snapshot.Queue.QueueId,
+            exempt ? RemakeStatus.Exempt : RemakeStatus.Unchecked);
+        if (!inserted) return MatchRecordOutcome.AlreadyRecorded;
+        return exempt ? MatchRecordOutcome.Exempt : MatchRecordOutcome.Recorded;
     }
 
     /// <summary>

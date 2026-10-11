@@ -9,8 +9,6 @@ namespace Limiter.Service;
 /// </summary>
 public sealed class SettingsProvider
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { WriteIndented = true };
-
     private readonly DataPaths _paths;
     private readonly ILogger<SettingsProvider> _log;
     private DateTime _lastWrite = DateTime.MinValue;
@@ -21,7 +19,7 @@ public sealed class SettingsProvider
         _paths = paths;
         _log = log;
         if (!File.Exists(paths.SettingsPath))
-            File.WriteAllText(paths.SettingsPath, JsonSerializer.Serialize(LimitSettings.Default, JsonOptions));
+            File.WriteAllText(paths.SettingsPath, LimitSettings.Default.ToJson());
         Reload();
     }
 
@@ -35,9 +33,7 @@ public sealed class SettingsProvider
         {
             var write = File.GetLastWriteTimeUtc(_paths.SettingsPath);
             if (write == _lastWrite) return;
-            var parsed = JsonSerializer.Deserialize<LimitSettings>(File.ReadAllText(_paths.SettingsPath), JsonOptions)
-                         ?? throw new JsonException("üres fájl");
-            _current = parsed.Sanitized();
+            _current = LimitSettings.Parse(File.ReadAllText(_paths.SettingsPath));
             _lastWrite = write;
             Warning = null;
             _log.LogInformation("Korlátok betöltve: {Settings}", _current);

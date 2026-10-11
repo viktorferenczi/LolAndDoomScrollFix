@@ -94,7 +94,7 @@ function healthy() {
 function isBlocked(category) {
   if (!category || !healthy()) return false;
   const s = lastStatus[category];
-  if (!s) return false;
+  if (!s || s.exempt) return false; // hétvégén (ha így van beállítva) nincs korlát
   if (s.blocked) return true;
   // A még nyugtázatlan jelentéseket is levonjuk, így a tiltás egy másodpercen belül életbe lép.
   let pending = 0;
@@ -104,11 +104,15 @@ function isBlocked(category) {
 
 function stateFor(category) {
   const s = lastStatus && lastStatus[category];
+  const schedule = (lastStatus && lastStatus.schedule) || null;
   return {
     type: 'state',
     category,
     blocked: isBlocked(category),
     availableAgainAt: s ? (s.availableAgainAt || s.nextReleaseAt || null) : null,
+    limitMinutes: s ? Math.round(s.limitSeconds / 60) : null,
+    resetMode: schedule ? schedule.resetMode : null,
+    dailyResetHour: schedule ? schedule.dailyResetHour : null,
     error: healthy() ? null : lastError,
   };
 }

@@ -7,6 +7,9 @@ public enum RemakeStatus
     Unchecked = 0,
     NotRemake = 1,
     Remake = 2,
+
+    /// <summary>Korlátmentes időszakban (hétvégén) indult meccs: nem számít a keretbe.</summary>
+    Exempt = 3,
 }
 
 public sealed record LolMatch(string UserSid, long GameId, DateTimeOffset StartedAt, int QueueId, RemakeStatus RemakeStatus);
@@ -104,15 +107,17 @@ public sealed class UsageStore : IDisposable
 
     /// <summary>Új meccs rögzítése. Ugyanaz a meccsazonosító (újracsatlakozás, ismételt esemény) nem kerül be újra.</summary>
     /// <returns>Igaz, ha új alkalom keletkezett.</returns>
-    public bool TryRecordMatch(string userSid, long gameId, DateTimeOffset startedAt, int queueId)
+    public bool TryRecordMatch(string userSid, long gameId, DateTimeOffset startedAt, int queueId,
+        RemakeStatus initialStatus = RemakeStatus.Unchecked)
     {
         lock (_gate)
         {
             using var cmd = _db.CreateCommand();
             cmd.CommandText = """
                 INSERT OR IGNORE INTO lol_match (user_sid, game_id, started_at, queue_id, remake_status)
-                VALUES ($sid, $game, $start, $queue, 0);
+                VALUES ($sid, $game, $start, $queue, $status);
                 """;
+            cmd.Parameters.AddWithValue("$status", (int)initialStatus);
             cmd.Parameters.AddWithValue("$sid", userSid);
             cmd.Parameters.AddWithValue("$game", gameId);
             cmd.Parameters.AddWithValue("$start", startedAt.ToUnixTimeMilliseconds());

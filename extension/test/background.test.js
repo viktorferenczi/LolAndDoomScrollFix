@@ -15,30 +15,34 @@ function listeners() {
 }
 
 /** Hamis szolgáltatás: kategóriánként keret, a jelentéseket levonja. */
-function fakeService(limits) {
+function fakeService(limits, schedule = { resetMode: 'rolling', dailyResetHour: 3, enforceOnWeekends: false, exemptNow: false }) {
   const used = { shortVideo: 0, facebookFeed: 0 };
   return {
     used,
+    schedule,
     respond(msg) {
       if (msg.type === 'usage') used[msg.category] += msg.seconds;
       const web = (c) => ({
         limitSeconds: limits[c], usedSeconds: used[c],
-        remainingSeconds: Math.max(0, limits[c] - used[c]), blocked: used[c] >= limits[c],
+        remainingSeconds: schedule.exemptNow ? limits[c] : Math.max(0, limits[c] - used[c]),
+        blocked: !schedule.exemptNow && used[c] >= limits[c],
+        exempt: schedule.exemptNow,
         availableAgainAt: '2026-10-09T10:00:00Z',
       });
       return {
         id: msg.id, ok: true,
         lol: { limit: 3, used: 0, remaining: 3, blocked: false },
         shortVideo: web('shortVideo'), facebookFeed: web('facebookFeed'),
+        schedule,
       };
     },
   };
 }
 
-function setup({ limits = { shortVideo: 3600, facebookFeed: 3600 }, nativeFails = false } = {}) {
+function setup({ limits = { shortVideo: 3600, facebookFeed: 3600 }, nativeFails = false, schedule } = {}) {
   let now = 1_000_000;
   const intervals = [];
-  const service = fakeService(limits);
+  const service = fakeService(limits, schedule);
   const queue = [];
   let port = null;
   const badge = { text: '' };
@@ -200,4 +204,24 @@ test('Hiányzó native host: enged és hibát jelez', () => {
   const env = setup({ nativeFails: true });
   assert.equal(env.hb(10).blocked, false);
   assert.equal(env.badge.text, '!');
+});
+
+test('A tiltási állapot a beállított keretet és visszaállítási módot is átadja a lapnak', () => {
+  const env = setup({
+    limits: { shortVideo: 1200, facebookFeed: 3600 },
+    schedule: { resetMode: 'daily', dailyResetHour: 3, enforceOnWeekends: false, exemptNow: false },
+  });
+  const r = env.hb(10);
+  assert.equal(r.limitMinutes, 20);
+  assert.equal(r.resetMode, 'daily');
+  assert.equal(r.dailyResetHour, 3);
+});
+
+test('Hétvégén (mentes időszakban) nem tilt, akkor sem, ha a keret elfogyott volna', () => {
+  const env = setup({
+    limits: { shortVideo: 2, facebookFeed: 3600 },
+    schedule: { resetMode: 'rolling', dailyResetHour: 0, enforceOnWeekends: false, exemptNow: true },
+  });
+  watch(env, 5);
+  assert.equal(env.hb(10).blocked, false);
 });

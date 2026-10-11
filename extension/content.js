@@ -9,13 +9,23 @@
   const TEXTS = {
     shortVideo: {
       title: 'Elfogyott a rövidvideós keret',
-      body: 'Az Instagram Reels, a TikTok, a YouTube Shorts és a Facebook Reels együtt legfeljebb 60 percet használható 24 óra alatt.',
+      body: (limit) => `Az Instagram Reels, a TikTok, a YouTube Shorts és a Facebook Reels együtt legfeljebb ${limit} használható.`,
     },
     facebookFeed: {
       title: 'Elfogyott a Facebook-hírfolyam kerete',
-      body: 'A kezdőlapi hírfolyam legfeljebb 60 percet használható 24 óra alatt. A Messenger, a profilok és a csoportok továbbra is elérhetők.',
+      body: (limit) => `A kezdőlapi hírfolyam legfeljebb ${limit} használható. A Messenger, a profilok és a csoportok továbbra is elérhetők.`,
     },
   };
+
+  /** Pl. „60 percet 24 óra alatt” vagy „60 percet naponta (nullázás 03:00-kor)”. */
+  function limitText(state) {
+    const minutes = Number.isFinite(state.limitMinutes) ? state.limitMinutes : 60;
+    if (state.resetMode === 'daily') {
+      const hour = String(state.dailyResetHour ?? 0).padStart(2, '0');
+      return `${minutes} percet naponta (nullázás ${hour}:00-kor)`;
+    }
+    return `${minutes} percet 24 óra alatt`;
+  }
 
   let category = null;
   let blockedState = null; // { category, availableAgainAt, limitMinutes }
@@ -132,7 +142,7 @@
       <div class="wrap" role="alertdialog" aria-modal="true" aria-labelledby="t">
         <div class="card">
           <h1 id="t">${texts.title}</h1>
-          <p>${texts.body}</p>
+          <p>${texts.body(limitText(blockedState))}</p>
           ${when ? `<p class="when">Legközelebb ekkortól szabadul fel idő: ${when}</p>` : ''}
           ${fbLinks}
         </div>

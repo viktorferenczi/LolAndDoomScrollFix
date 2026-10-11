@@ -164,6 +164,9 @@ public sealed class LcuSession : IDisposable
                     _log.LogInformation("PvP-meccs rögzítve: {GameId} (sor {Queue}), {Used}/{Limit}",
                         snapshot.GameId, snapshot.Queue.QueueId, status.Used, status.Limit);
                     break;
+                case MatchRecordOutcome.Exempt:
+                    _log.LogInformation("Hétvégi PvP-meccs rögzítve, nem számít a keretbe: {GameId}", snapshot.GameId);
+                    break;
                 case MatchRecordOutcome.Unknown:
                     _degradedReason = "A futó meccs nem azonosítható — nem került rögzítésre.";
                     break;

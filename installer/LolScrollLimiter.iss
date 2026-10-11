@@ -2,7 +2,7 @@
 ; Fordítás: installer\build.ps1 (előtte a programfájlok az out\app mappába kerülnek).
 
 #define AppName "LoL- és görgetéskorlátozó"
-#define AppVersion "1.0.0"
+#define AppVersion "1.1.0"
 #define DevExtensionId "iidlgdeiobckahalgoabbobfdlefkagi"
 
 [Setup]
@@ -41,6 +41,114 @@ Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Fil
 var
   ExtensionPage: TInputQueryWizardPage;
   ModePage: TInputOptionWizardPage;
+  LimitsPage: TWizardPage;
+  RollingRadio, DailyRadio: TNewRadioButton;
+  ResetHourCombo: TNewComboBox;
+  ShortVideoEdit, FeedEdit: TNewEdit;
+  WeekendCheck: TNewCheckBox;
+
+procedure ResetModeChanged(Sender: TObject);
+begin
+  ResetHourCombo.Enabled := DailyRadio.Checked;
+end;
+
+function AddLabel(Parent: TWizardPage; const Caption: String; Left, Top: Integer): TNewStaticText;
+begin
+  Result := TNewStaticText.Create(Parent);
+  Result.Parent := Parent.Surface;
+  Result.Caption := Caption;
+  Result.Left := Left;
+  Result.Top := Top;
+end;
+
+function AddMinutesEdit(Parent: TWizardPage; const Caption: String; Top: Integer): TNewEdit;
+begin
+  AddLabel(Parent, Caption, 0, Top + ScaleY(3));
+  Result := TNewEdit.Create(Parent);
+  Result.Parent := Parent.Surface;
+  Result.Left := ScaleX(230);
+  Result.Top := Top;
+  Result.Width := ScaleX(60);
+  Result.Text := '60';
+  AddLabel(Parent, 'perc', ScaleX(298), Top + ScaleY(3));
+end;
+
+function TwoDigits(Value: Integer): String;
+begin
+  Result := IntToStr(Value);
+  if Value < 10 then
+    Result := '0' + Result;
+end;
+
+procedure CreateLimitsPage(AfterID: Integer);
+var
+  I, Y: Integer;
+  Heading: TNewStaticText;
+begin
+  LimitsPage := CreateCustomPage(AfterID, 'Korlátok', 'Mikor nullázódjanak a keretek, és mekkorák legyenek?');
+  Y := 0;
+
+  Heading := AddLabel(LimitsPage, 'A keretek visszaállítása:', 0, Y);
+  Heading.Font.Style := [fsBold];
+  Y := Y + ScaleY(22);
+
+  RollingRadio := TNewRadioButton.Create(LimitsPage);
+  RollingRadio.Parent := LimitsPage.Surface;
+  RollingRadio.Top := Y;
+  RollingRadio.Width := LimitsPage.SurfaceWidth;
+  RollingRadio.Caption := 'Gördülő 24 óra (minden felhasználás 24 órával később szabadul fel)';
+  RollingRadio.Checked := True;
+  RollingRadio.OnClick := @ResetModeChanged;
+  Y := Y + ScaleY(24);
+
+  DailyRadio := TNewRadioButton.Create(LimitsPage);
+  DailyRadio.Parent := LimitsPage.Surface;
+  DailyRadio.Top := Y + ScaleY(2);
+  DailyRadio.Width := ScaleX(220);
+  DailyRadio.Caption := 'Naponta nullázás ebben az órában:';
+  DailyRadio.OnClick := @ResetModeChanged;
+
+  ResetHourCombo := TNewComboBox.Create(LimitsPage);
+  ResetHourCombo.Parent := LimitsPage.Surface;
+  ResetHourCombo.Style := csDropDownList;
+  ResetHourCombo.Left := ScaleX(230);
+  ResetHourCombo.Top := Y;
+  ResetHourCombo.Width := ScaleX(80);
+  for I := 0 to 23 do
+    ResetHourCombo.Items.Add(TwoDigits(I) + ':00');
+  ResetHourCombo.ItemIndex := 3;
+  ResetHourCombo.Enabled := False;
+  Y := Y + ScaleY(40);
+
+  Heading := AddLabel(LimitsPage, 'Időkeretek:', 0, Y);
+  Heading.Font.Style := [fsBold];
+  Y := Y + ScaleY(22);
+  ShortVideoEdit := AddMinutesEdit(LimitsPage, 'Rövid videók (Reels, TikTok, Shorts):', Y);
+  Y := Y + ScaleY(28);
+  FeedEdit := AddMinutesEdit(LimitsPage, 'Facebook kezdőlapi hírfolyam:', Y);
+  Y := Y + ScaleY(40);
+
+  WeekendCheck := TNewCheckBox.Create(LimitsPage);
+  WeekendCheck.Parent := LimitsPage.Surface;
+  WeekendCheck.Top := Y;
+  WeekendCheck.Width := LimitsPage.SurfaceWidth;
+  WeekendCheck.Caption := 'A korlátok hétvégén (szombaton és vasárnap) is érvényesek';
+  WeekendCheck.Checked := False;
+  Y := Y + ScaleY(22);
+  Heading := AddLabel(LimitsPage, 'Ha nincs bejelölve, hétvégén nincs korlát, és a hétvégi használat nem számít bele a keretbe.', ScaleX(18), Y);
+  Heading.AutoSize := False;
+  Heading.WordWrap := True;
+  Heading.Width := LimitsPage.SurfaceWidth - ScaleX(18);
+  Heading.Height := ScaleY(32);
+end;
+
+function MinutesValid(Edit: TNewEdit): Boolean;
+var
+  Value: Integer;
+begin
+  Value := StrToIntDef(Trim(Edit.Text), -1);
+  Result := (Value >= 0) and (Value <= 1440);
+end;
 
 procedure InitializeWizard;
 begin
@@ -59,6 +167,8 @@ begin
     'Éles módban a Chrome Web Store által adott 32 betűs azonosító. Fejlesztői módban hagyd az alapértelmezettet.');
   ExtensionPage.Add('Bővítményazonosító:', False);
   ExtensionPage.Values[0] := '{#DevExtensionId}';
+
+  CreateLimitsPage(ExtensionPage.ID);
 end;
 
 function IsValidExtensionId(const Id: String): Boolean;
@@ -78,6 +188,15 @@ end;
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
+  if CurPageID = LimitsPage.ID then
+  begin
+    if not MinutesValid(ShortVideoEdit) or not MinutesValid(FeedEdit) then
+    begin
+      MsgBox('Az időkeret 0 és 1440 közötti egész szám (perc) lehet.', mbError, MB_OK);
+      Result := False;
+    end;
+    Exit;
+  end;
   if CurPageID = ExtensionPage.ID then
   begin
     ExtensionPage.Values[0] := Lowercase(Trim(ExtensionPage.Values[0]));
@@ -115,6 +234,14 @@ begin
       ' -ExtensionId ' + ExtensionPage.Values[0];
     if ModePage.Values[1] then
       Params := Params + ' -DevMode';
+    if DailyRadio.Checked then
+      Params := Params + ' -ResetMode daily -DailyResetHour ' + IntToStr(ResetHourCombo.ItemIndex)
+    else
+      Params := Params + ' -ResetMode rolling';
+    Params := Params + ' -ShortVideoMinutes ' + IntToStr(StrToInt(Trim(ShortVideoEdit.Text))) +
+      ' -FacebookFeedMinutes ' + IntToStr(StrToInt(Trim(FeedEdit.Text)));
+    if WeekendCheck.Checked then
+      Params := Params + ' -EnforceOnWeekends';
     WizardForm.StatusLabel.Caption := 'Szolgáltatás, jogosultságok és Chrome-szabályok beállítása…';
     if not Exec('powershell.exe', Params, '', SW_HIDE, ewWaitUntilTerminated, Code) or (Code <> 0) then
       MsgBox('A rendszerbeállítás sikertelen (kód: ' + IntToStr(Code) + '). ' +

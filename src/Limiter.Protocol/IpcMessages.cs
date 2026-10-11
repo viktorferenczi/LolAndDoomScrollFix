@@ -33,6 +33,12 @@ public static class IpcConstants
         public const string Tray = "tray";
     }
 
+    public static class ResetModes
+    {
+        public const string Rolling = "rolling";
+        public const string Daily = "daily";
+    }
+
     public static class LcuStates
     {
         public const string NotRunning = "notRunning";
@@ -63,6 +69,7 @@ public sealed class IpcResponse
     public LolLimitDto? Lol { get; set; }
     public WebLimitDto? ShortVideo { get; set; }
     public WebLimitDto? FacebookFeed { get; set; }
+    public ScheduleDto? Schedule { get; set; }
     public ProtectionDto? Protection { get; set; }
 
     public static IpcResponse Failure(string? id, string error) =>
@@ -79,6 +86,8 @@ public sealed class LolLimitDto
     public DateTimeOffset? NextReleaseAt { get; set; }
     /// <summary>Tiltott állapotban: ekkor lesz újra legalább egy szabad meccs.</summary>
     public DateTimeOffset? AvailableAgainAt { get; set; }
+    /// <summary>Korlátmentes időszak (hétvége): nem tilt, nem fogy.</summary>
+    public bool Exempt { get; set; }
 }
 
 public sealed class WebLimitDto
@@ -89,6 +98,19 @@ public sealed class WebLimitDto
     public bool Blocked { get; set; }
     public DateTimeOffset? NextReleaseAt { get; set; }
     public DateTimeOffset? AvailableAgainAt { get; set; }
+    /// <summary>Korlátmentes időszak (hétvége): nem tilt, nem fogy.</summary>
+    public bool Exempt { get; set; }
+}
+
+/// <summary>A telepítéskor választott időbeosztás.</summary>
+public sealed class ScheduleDto
+{
+    /// <summary>„rolling” (gördülő 24 óra) vagy „daily” (napi visszaállítás).</summary>
+    public string ResetMode { get; set; } = IpcConstants.ResetModes.Rolling;
+    public int DailyResetHour { get; set; }
+    public bool EnforceOnWeekends { get; set; }
+    /// <summary>Most épp korlátmentes időszak van-e.</summary>
+    public bool ExemptNow { get; set; }
 }
 
 public sealed class ProtectionDto
