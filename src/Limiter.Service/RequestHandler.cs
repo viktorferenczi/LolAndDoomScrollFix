@@ -21,6 +21,7 @@ public sealed class StatusBuilder(LimitEngine engine, ProtectionState protection
                 NextReleaseAt = lol.NextReleaseAt,
                 AvailableAgainAt = lol.AvailableAgainAt,
                 Exempt = lol.Exempt,
+                Bonus = lol.Bonus,
             },
             ShortVideo = Web(engine.GetWebStatus(sid, WebCategory.ShortVideo)),
             FacebookFeed = Web(engine.GetWebStatus(sid, WebCategory.FacebookFeed)),
@@ -30,6 +31,9 @@ public sealed class StatusBuilder(LimitEngine engine, ProtectionState protection
                 DailyResetHour = engine.Settings.DailyResetHour,
                 EnforceOnWeekends = engine.Settings.EnforceOnWeekends,
                 ExemptNow = engine.IsExemptNow,
+                LolRestDayBonusMatches = engine.Settings.LolRestDayBonusMatches,
+                ShortVideoRestDayBonusMinutes = engine.Settings.ShortVideoRestDayBonusMinutes,
+                FacebookFeedRestDayBonusMinutes = engine.Settings.FacebookFeedRestDayBonusMinutes,
             },
             Protection = protection.Snapshot(sid, settings.Warning is { } w ? [w] : []),
         };
@@ -44,6 +48,7 @@ public sealed class StatusBuilder(LimitEngine engine, ProtectionState protection
         NextReleaseAt = s.NextReleaseAt,
         AvailableAgainAt = s.AvailableAgainAt,
         Exempt = s.Exempt,
+        BonusSeconds = s.Bonus.TotalSeconds,
     };
 }
 

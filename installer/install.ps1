@@ -31,6 +31,15 @@
 .PARAMETER EnforceOnWeekends
   Ha meg van adva, a korlátok szombaton és vasárnap is érvényesek. Alapértelmezés: hétvégén nincs korlát.
 
+.PARAMETER LolRestDayBonusMatches
+  Pihenőnap-jutalom: ha egy napon egy PvP-meccs sem volt, másnap ennyivel több jár (nem halmozódik). Alapértelmezés: 1.
+
+.PARAMETER ShortVideoRestDayBonusMinutes
+  Pihenőnap-jutalom percben a rövid videókra (0 perc használat után másnap). Alapértelmezés: 30.
+
+.PARAMETER FacebookFeedRestDayBonusMinutes
+  Pihenőnap-jutalom percben a Facebook-hírfolyamra. Alapértelmezés: 30.
+
 .PARAMETER DevMode
   Fejlesztői tesztverzió: a bővítményt kézzel, kicsomagolva kell betölteni, ezért nem kötelező telepítésű,
   és a fejlesztői mód nincs tiltva. Éles használatra NEM alkalmas.
@@ -45,6 +54,9 @@ param(
     [ValidateRange(0, 1440)][int]$ShortVideoMinutes = 60,
     [ValidateRange(0, 1440)][int]$FacebookFeedMinutes = 60,
     [ValidateRange(0, 1000)][int]$LolPvpMatches = 3,
+    [ValidateRange(0, 10)][int]$LolRestDayBonusMatches = 1,
+    [ValidateRange(0, 1440)][int]$ShortVideoRestDayBonusMinutes = 30,
+    [ValidateRange(0, 1440)][int]$FacebookFeedRestDayBonusMinutes = 30,
     [switch]$EnforceOnWeekends,
     [switch]$DevMode
 )
@@ -87,6 +99,9 @@ $limits = [ordered]@{
     shortVideoMinutes   = $ShortVideoMinutes
     facebookFeedMinutes = $FacebookFeedMinutes
     enforceOnWeekends   = [bool]$EnforceOnWeekends
+    lolRestDayBonusMatches          = $LolRestDayBonusMatches
+    shortVideoRestDayBonusMinutes   = $ShortVideoRestDayBonusMinutes
+    facebookFeedRestDayBonusMinutes = $FacebookFeedRestDayBonusMinutes
 }
 [System.IO.File]::WriteAllText((Join-Path $DataDir 'limits.json'), ($limits | ConvertTo-Json), (New-Object System.Text.UTF8Encoding($false)))
 

@@ -105,6 +105,44 @@ public sealed class UsageStore : IDisposable
         }
     }
 
+    /// <summary>Webes használat összesen a [from, to) időszakban (a percvödrök kezdete szerint).</summary>
+    public long SumWebUsage(string userSid, WebCategory category, DateTimeOffset from, DateTimeOffset to)
+    {
+        lock (_gate)
+        {
+            using var cmd = _db.CreateCommand();
+            cmd.CommandText = """
+                SELECT COALESCE(SUM(ms), 0) FROM web_usage
+                WHERE user_sid = $sid AND category = $cat AND bucket_start >= $from AND bucket_start < $to;
+                """;
+            cmd.Parameters.AddWithValue("$sid", userSid);
+            cmd.Parameters.AddWithValue("$cat", (int)category);
+            cmd.Parameters.AddWithValue("$from", from.ToUnixTimeMilliseconds());
+            cmd.Parameters.AddWithValue("$to", to.ToUnixTimeMilliseconds());
+            return Convert.ToInt64(cmd.ExecuteScalar());
+        }
+    }
+
+    /// <summary>A keretbe számító (nem remake, nem mentes) meccsek száma a [from, to) időszakban.</summary>
+    public int CountCountedMatches(string userSid, DateTimeOffset from, DateTimeOffset to)
+    {
+        lock (_gate)
+        {
+            using var cmd = _db.CreateCommand();
+            cmd.CommandText = """
+                SELECT COUNT(*) FROM lol_match
+                WHERE user_sid = $sid AND started_at >= $from AND started_at < $to
+                  AND remake_status NOT IN ($remake, $exempt);
+                """;
+            cmd.Parameters.AddWithValue("$sid", userSid);
+            cmd.Parameters.AddWithValue("$from", from.ToUnixTimeMilliseconds());
+            cmd.Parameters.AddWithValue("$to", to.ToUnixTimeMilliseconds());
+            cmd.Parameters.AddWithValue("$remake", (int)RemakeStatus.Remake);
+            cmd.Parameters.AddWithValue("$exempt", (int)RemakeStatus.Exempt);
+            return Convert.ToInt32(cmd.ExecuteScalar());
+        }
+    }
+
     /// <summary>Új meccs rögzítése. Ugyanaz a meccsazonosító (újracsatlakozás, ismételt esemény) nem kerül be újra.</summary>
     /// <returns>Igaz, ha új alkalom keletkezett.</returns>
     public bool TryRecordMatch(string userSid, long gameId, DateTimeOffset startedAt, int queueId,

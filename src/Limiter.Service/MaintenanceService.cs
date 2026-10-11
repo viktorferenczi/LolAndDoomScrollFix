@@ -17,7 +17,8 @@ public sealed class MaintenanceService(SettingsProvider settings, UsageStore sto
             {
                 try
                 {
-                    store.Prune(clock.UtcNow - TimeSpan.FromDays(3));
+                    // A pihenőnap-jutalomhoz egy hétvégén túli napot is vissza kell nézni.
+                    store.Prune(clock.UtcNow - TimeSpan.FromDays(9));
                     lastPrune = clock.UtcNow;
                 }
                 catch (Exception ex)

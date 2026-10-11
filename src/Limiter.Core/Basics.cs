@@ -64,6 +64,12 @@ public sealed record LimitSettings
     /// <summary>Hétvégén (szombat, vasárnap) is érvényesek-e a korlátok. Alapértelmezés: nem.</summary>
     public bool EnforceOnWeekends { get; init; }
 
+    // Pihenőnap-jutalom: ha az előző korlátozott napon a keretből semmi sem fogyott,
+    // a következő napra ennyivel nagyobb a keret. Nem halmozódik (több üres nap után is csak egyszer jár).
+    public int LolRestDayBonusMatches { get; init; } = 1;
+    public int ShortVideoRestDayBonusMinutes { get; init; } = 30;
+    public int FacebookFeedRestDayBonusMinutes { get; init; } = 30;
+
     public static LimitSettings Default { get; } = new();
 
     /// <summary>A limits.json formátuma: camelCase mezők, "resetMode": "rolling" | "daily".</summary>
@@ -85,6 +91,21 @@ public sealed record LimitSettings
         _ => throw new ArgumentOutOfRangeException(nameof(category)),
     });
 
+    public TimeSpan WebRestDayBonus(WebCategory category) => TimeSpan.FromMinutes(category switch
+    {
+        WebCategory.ShortVideo => ShortVideoRestDayBonusMinutes,
+        WebCategory.FacebookFeed => FacebookFeedRestDayBonusMinutes,
+        _ => throw new ArgumentOutOfRangeException(nameof(category)),
+    });
+
+    /// <summary>Jutalom nélküli változat (pl. tesztekhez).</summary>
+    public LimitSettings WithoutRestDayBonus() => this with
+    {
+        LolRestDayBonusMatches = 0,
+        ShortVideoRestDayBonusMinutes = 0,
+        FacebookFeedRestDayBonusMinutes = 0,
+    };
+
     public LimitSettings Sanitized() => this with
     {
         ResetMode = Enum.IsDefined(ResetMode) ? ResetMode : ResetMode.Rolling,
@@ -92,5 +113,8 @@ public sealed record LimitSettings
         LolPvpMatches = Math.Clamp(LolPvpMatches, 0, 1000),
         ShortVideoMinutes = Math.Clamp(ShortVideoMinutes, 0, 24 * 60),
         FacebookFeedMinutes = Math.Clamp(FacebookFeedMinutes, 0, 24 * 60),
+        LolRestDayBonusMatches = Math.Clamp(LolRestDayBonusMatches, 0, 10),
+        ShortVideoRestDayBonusMinutes = Math.Clamp(ShortVideoRestDayBonusMinutes, 0, 24 * 60),
+        FacebookFeedRestDayBonusMinutes = Math.Clamp(FacebookFeedRestDayBonusMinutes, 0, 24 * 60),
     };
 }

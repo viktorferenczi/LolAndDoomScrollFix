@@ -37,6 +37,7 @@ node --test extension/test/*.test.js
 | Webes időmérés | `background.test.js`: fókusz, háttérlap, zárolás, alvás, 1 mp-en belüli tiltás, fail-open |
 | Felismerés | `detect.test.js`: URL-szabályok, felugró Reels, Messenger/profil/csoport kivétel |
 | Napi nullázás, hétvége | `ScheduleTests`: nullázás a választott órában (webes és LoL-keret), 00:00-s nullázás, hétvégi mentesség, vasárnap este indult meccs hétfőn sem számít, hétvége a nullázási órától, hétvégi korlát bekapcsolva, péntek esti tiltás a hétvége kezdetén feloldódik, nyári időszámítás, a telepítő által írt `limits.json` beolvasása |
+| Pihenőnap-jutalom | `RestDayBonusTests`: +30 perc / +1 meccs üres nap után, a keretek függetlenek, nem halmozódik, bármilyen előző napi használat kizárja, remake nem rontja el, napi módban a nullázástól számított nap, mentes hétvégénél hétfőn a péntek, hétvégi korlátnál a vasárnap, 0-s keretre nem jár, gördülő módban a jutalom éjféli megszűnését a feloldási idő figyelembe veszi |
 
 ## 2. Windowsos próbák (LoL)
 
@@ -79,6 +80,9 @@ Tipp: `"shortVideoMinutes": 2`, `"facebookFeedMinutes": 2`.
 | 3b.4 | Hétvégén (vagy a rendszeridőt szombatra állítva), hétvégi korlát nélkül | Tálca: „hétvége — nincs korlát”; nincs blokkolás, nincs LoL-megszakítás; hétfőn a hétvégi használat nem látszik |
 | 3b.5 | Ugyanez „A korlátok hétvégén is érvényesek” bejelölésével | A korlátok szombaton is tiltanak |
 | 3b.6 | Érvénytelen perc (pl. `abc` vagy `2000`) a telepítőben | A telepítő hibaüzenettel nem lép tovább |
+| 3b.7 | Egy teljes napig (kedd) semmi rövid videó, LoL és hírfolyam; szerdán megnézni a tálcát | „… maradt (90 percből, ebből +30 perc pihenőnap-jutalom)”, LoL: „4-ből, ebből +1 pihenőnap-jutalom” |
+| 3b.8 | Szerdán 1 perc rövid videó; csütörtökön a tálca | Rövid videó: 60 perc (nincs jutalom); a hírfolyamnál, ha szerdán sem volt, továbbra is +30 |
+| 3b.9 | Hétfő reggel, pénteken nem volt LoL (mentes hétvégével) | +1 meccs |
 
 ## 4. Védelempróbák (normál felhasználóként)
 

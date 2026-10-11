@@ -88,6 +88,8 @@ public sealed class LolLimitDto
     public DateTimeOffset? AvailableAgainAt { get; set; }
     /// <summary>Korlátmentes időszak (hétvége): nem tilt, nem fogy.</summary>
     public bool Exempt { get; set; }
+    /// <summary>Pihenőnap-jutalom (már benne van a <see cref="Limit"/>-ben).</summary>
+    public int Bonus { get; set; }
 }
 
 public sealed class WebLimitDto
@@ -100,6 +102,8 @@ public sealed class WebLimitDto
     public DateTimeOffset? AvailableAgainAt { get; set; }
     /// <summary>Korlátmentes időszak (hétvége): nem tilt, nem fogy.</summary>
     public bool Exempt { get; set; }
+    /// <summary>Pihenőnap-jutalom másodpercben (már benne van a <see cref="LimitSeconds"/>-ben).</summary>
+    public double BonusSeconds { get; set; }
 }
 
 /// <summary>A telepítéskor választott időbeosztás.</summary>
@@ -111,6 +115,10 @@ public sealed class ScheduleDto
     public bool EnforceOnWeekends { get; set; }
     /// <summary>Most épp korlátmentes időszak van-e.</summary>
     public bool ExemptNow { get; set; }
+    /// <summary>Pihenőnap-jutalom: ennyi jár másnapra, ha egy napon semmi sem fogyott.</summary>
+    public int LolRestDayBonusMatches { get; set; }
+    public int ShortVideoRestDayBonusMinutes { get; set; }
+    public int FacebookFeedRestDayBonusMinutes { get; set; }
 }
 
 public sealed class ProtectionDto

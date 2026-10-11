@@ -51,6 +51,25 @@ public sealed class LimitSchedule
         return ToUtc(date.AddHours(DayStartHour));
     }
 
+    /// <summary>A mai nap határai (napi módban: két visszaállítás között, gördülő módban: éjféltől éjfélig).</summary>
+    public (DateTimeOffset Start, DateTimeOffset End) Today(DateTimeOffset now) => (DayStart(now), NextDayStart(now));
+
+    /// <summary>
+    /// A legutóbbi korlátozott nap a mai előtt. Mentes hétvégénél a hétvégét átugorja
+    /// (hétfőn a péntek számít), mert hétvégén nem rögzül használat.
+    /// </summary>
+    public (DateTimeOffset Start, DateTimeOffset End)? PreviousEnforcedDay(DateTimeOffset now)
+    {
+        var date = LogicalDate(now);
+        for (var i = 0; i < 7; i++)
+        {
+            date = date.AddDays(-1);
+            if (_settings.EnforceOnWeekends || !IsWeekend(date))
+                return (ToUtc(date.AddHours(DayStartHour)), ToUtc(date.AddDays(1).AddHours(DayStartHour)));
+        }
+        return null;
+    }
+
     private static bool IsWeekend(DateTime date) => date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
 
     private DateTimeOffset ToUtc(DateTime localWallClock)

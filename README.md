@@ -14,6 +14,8 @@ Telepítéskor választható:
 - **Időkeretek** percben a rövid videókra és a Facebook-hírfolyamra (alapértelmezés: 60-60 perc).
 - **Hétvége:** alapértelmezésként szombaton és vasárnap nincs korlát, és a hétvégi használat nem számít bele a keretbe; bejelölve a korlátok hétvégén is érvényesek.
 
+**Pihenőnap-jutalom:** ha egy napon egy PvP-meccset sem játszol, másnap +1 meccs jár; ha egy napon 0 percet nézel rövid videót, másnap +30 perc; ugyanígy a Facebook-hírfolyamnál +30 perc. A három jutalom független egymástól, és nem halmozódik: több üres nap után is csak egyszer jár.
+
 TFT, botmeccs, gyakorlás, egyéni játék és néző mód nem fogyasztja a LoL-keretet; az igazolt remake visszaadja az alkalmat.
 Felismerési vagy működési hibánál a program **enged tovább, és hibát jelez** (tálcaikon, a bővítmény piros „!” jelvénye).
 
@@ -35,8 +37,9 @@ A cél az, hogy megfékezze a végtelen görgetést és a túlzott League of Leg
 2. **LoL-meccsek.** A szolgáltatás a League kliens helyi (LCU) API-ját figyeli. Csak a PvP-sorok (pl. rangsorolt, normál) számítanak; TFT, botmeccs, gyakorlás, egyéni játék és néző mód nem. Ha a keret elfogyott, az új PvP-keresést megszakítja, a meccselfogadást elutasítja. Az igazolt remake (újrakezdett meccs) visszaadja az elhasznált alkalmat.
 3. **Rövidvideók.** Instagram Reels, TikTok, YouTube Shorts és Facebook Reels **közös** keretet használ (alapértelmezés: 60 perc, telepítéskor állítható).
 4. **Facebook-hírfolyam.** A kezdőlapi hírfolyam **külön** keretet kap (alapértelmezés: 60 perc, telepítéskor állítható).
-5. **Hibatűrés.** Ha a felismerés vagy a működés hibázik, a program nem zár ki, hanem tovább enged, és hibát jelez (piros tálcaikon, a bővítmény piros „!” jelvénye).
-6. **Kijátszás elleni védelem.** Éles telepítésben a Chrome-szabályok kötelezővé teszik a bővítményt, tiltják az inkognitó- és vendégmódot, a bővítmények fejlesztői módját; a beállítások módosításához rendszergazdai jelszó kell (a gondolat: ezt egy megbízható személy ismeri, nem te).
+5. **Pihenőnap-jutalom.** Ha az előző napon egy keretből semmi sem fogyott, aznap ahhoz több jár (LoL +1 meccs, rövid videó +30 perc, hírfolyam +30 perc). Nem halmozódik. Mentes hétvégénél hétfőn a péntek számít.
+6. **Hibatűrés.** Ha a felismerés vagy a működés hibázik, a program nem zár ki, hanem tovább enged, és hibát jelez (piros tálcaikon, a bővítmény piros „!” jelvénye).
+7. **Kijátszás elleni védelem.** Éles telepítésben a Chrome-szabályok kötelezővé teszik a bővítményt, tiltják az inkognitó- és vendégmódot, a bővítmények fejlesztői módját; a beállítások módosításához rendszergazdai jelszó kell (a gondolat: ezt egy megbízható személy ismeri, nem te).
 
 A telepítésről és az ellenőrzésről lásd lent a hivatkozott útmutatókat.
 

@@ -67,7 +67,7 @@ public sealed record StatusView(
                 ? "LoL PvP: hétvége — nincs korlát"
             : lol.Blocked
                 ? $"LoL PvP: elfogyott ({lol.Used}/{lol.Limit}) — újra: {When(lol.AvailableAgainAt, now)}"
-                : $"LoL PvP: {lol.Remaining} meccs maradt ({lol.Limit}-ból)";
+                : $"LoL PvP: {lol.Remaining} meccs maradt ({lol.Limit}-ból{(lol.Bonus > 0 ? $", ebből +{lol.Bonus} pihenőnap-jutalom" : "")})";
 
         var next = new List<string>();
         if (!exempt)
@@ -95,7 +95,9 @@ public sealed record StatusView(
         if (w.Exempt) return $"{label}: hétvége — nincs korlát";
         var limitMin = (int)Math.Round(w.LimitSeconds / 60);
         if (w.Blocked) return $"{label}: elfogyott — újra: {When(w.AvailableAgainAt, now)}";
-        return $"{label}: {Minutes(w.RemainingSeconds)} maradt ({limitMin} percből)";
+        var bonusMin = (int)Math.Round(w.BonusSeconds / 60);
+        var bonus = bonusMin > 0 ? $", ebből +{bonusMin} perc pihenőnap-jutalom" : "";
+        return $"{label}: {Minutes(w.RemainingSeconds)} maradt ({limitMin} percből{bonus})";
     }
 
     /// <summary>A telepítéskor választott időbeosztás szövegesen.</summary>
@@ -108,7 +110,15 @@ public sealed record StatusView(
         var weekend = schedule.EnforceOnWeekends
             ? "A korlátok hétvégén is érvényesek."
             : "Hétvégén (szombat, vasárnap) nincs korlát.";
-        return reset + "\n" + weekend;
+        var bonuses = new List<string>();
+        if (schedule.LolRestDayBonusMatches > 0) bonuses.Add($"LoL +{schedule.LolRestDayBonusMatches} meccs");
+        if (schedule.ShortVideoRestDayBonusMinutes > 0) bonuses.Add($"rövid videó +{schedule.ShortVideoRestDayBonusMinutes} perc");
+        if (schedule.FacebookFeedRestDayBonusMinutes > 0) bonuses.Add($"hírfolyam +{schedule.FacebookFeedRestDayBonusMinutes} perc");
+        var bonus = bonuses.Count > 0
+            ? "\nPihenőnap-jutalom: ha egy napon valamiből semmit sem használsz, másnap ahhoz több jár (" +
+              string.Join(", ", bonuses) + "); nem halmozódik."
+            : "";
+        return reset + "\n" + weekend + bonus;
     }
 
     public static string Minutes(double seconds)

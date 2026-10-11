@@ -18,11 +18,15 @@ public sealed class TestEnv : IDisposable
 
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "limiter-tests-" + Guid.NewGuid().ToString("N"));
 
-    /// <summary>Alapértelmezés: 2026. október 1., csütörtök 12:00 UTC, UTC időzónában.</summary>
-    public TestEnv(LimitSettings? settings = null, TimeZoneInfo? zone = null, DateTimeOffset? start = null)
+    /// <summary>
+    /// Alapértelmezés: 2026. október 1., csütörtök 12:00 UTC, UTC időzónában. A pihenőnap-jutalom csak
+    /// <paramref name="restDayBonus"/> esetén él (üres adatbázisnál különben minden teszt „pihenőnap” után indulna).
+    /// </summary>
+    public TestEnv(LimitSettings? settings = null, TimeZoneInfo? zone = null, DateTimeOffset? start = null, bool restDayBonus = false)
     {
         Directory.CreateDirectory(_dir);
         Settings = settings ?? LimitSettings.Default;
+        if (!restDayBonus) Settings = Settings.WithoutRestDayBonus();
         Zone = zone ?? TimeZoneInfo.Utc;
         Clock = new FakeClock(start ?? new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
         Open();
