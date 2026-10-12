@@ -18,6 +18,8 @@ function web(el, w) {
   if (!w) return;
   el.textContent = w.exempt
     ? 'hétvége — nincs korlát'
+    : w.banned
+    ? 'tiltott időszak — újra: ' + when(w.availableAgainAt)
     : w.blocked
     ? 'elfogyott — újra: ' + when(w.availableAgainAt)
     : minutes(w.remainingSeconds) + ' maradt' + (w.bonusSeconds > 0 ? ' (+' + Math.round(w.bonusSeconds / 60) + ' p jutalom)' : '');
@@ -42,6 +44,8 @@ async function render() {
     const lol = s.lol;
     document.getElementById('lol').textContent = lol.exempt
       ? 'hétvége — nincs korlát'
+      : lol.banned
+      ? 'tiltott időszak — újra: ' + when(lol.availableAgainAt)
       : lol.blocked
       ? 'elfogyott — újra: ' + when(lol.availableAgainAt)
       : lol.remaining + ' / ' + lol.limit + ' meccs maradt' + (lol.bonus > 0 ? ' (+' + lol.bonus + ' jutalom)' : '');

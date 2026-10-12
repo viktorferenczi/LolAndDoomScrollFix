@@ -113,6 +113,8 @@ function stateFor(category) {
     limitMinutes: s ? Math.round(s.limitSeconds / 60) : null,
     resetMode: schedule ? schedule.resetMode : null,
     dailyResetHour: schedule ? schedule.dailyResetHour : null,
+    banned: !!(s && s.banned) && isBlocked(category),
+    bannedHours: schedule ? schedule[category + 'BannedHours'] || null : null,
     error: healthy() ? null : lastError,
   };
 }

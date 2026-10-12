@@ -17,6 +17,17 @@
     },
   };
 
+  const BANNED_TEXTS = {
+    shortVideo: 'Az Instagram Reels, a TikTok, a YouTube Shorts és a Facebook Reels',
+    facebookFeed: 'A Facebook kezdőlapi hírfolyama',
+  };
+
+  function hourRange(ban) {
+    if (!ban) return '';
+    const two = (h) => String(h).padStart(2, '0') + ':00';
+    return `${two(ban.from)} és ${two(ban.to)} között`;
+  }
+
   /** Pl. „60 percet 24 óra alatt” vagy „60 percet naponta (nullázás 03:00-kor)”. */
   function limitText(state) {
     const minutes = Number.isFinite(state.limitMinutes) ? state.limitMinutes : 60;
@@ -70,9 +81,14 @@
     apply(response);
   }
 
+  let overlayKey = null; // a megjelenített szöveg kulcsa; ha változik (pl. tiltás → elfogyott keret), újrarajzoljuk
+
   function apply(state) {
     if (state && state.blocked && category && state.category === category) {
       blockedState = state;
+      const key = [state.category, !!state.banned, state.availableAgainAt].join('|');
+      if (host && key !== overlayKey) release();
+      overlayKey = key;
       enforce();
     } else {
       blockedState = null;
@@ -121,6 +137,11 @@
     const shadow = el.attachShadow({ mode: 'closed' });
     const texts = TEXTS[blockedState.category] || TEXTS.shortVideo;
     const when = formatTime(blockedState.availableAgainAt);
+    const banned = !!blockedState.banned;
+    const title = banned ? 'Tiltott időszak' : texts.title;
+    const body = banned
+      ? `${BANNED_TEXTS[blockedState.category] || BANNED_TEXTS.shortVideo} ${hourRange(blockedState.bannedHours)} nem használható.`
+      : texts.body(limitText(blockedState));
     const fbLinks = blockedState.category === 'facebookFeed'
       ? `<p class="links"><a href="https://www.facebook.com/messages/">Messenger</a>
            <a href="https://www.facebook.com/me/">Profilom</a>
@@ -141,9 +162,9 @@
       </style>
       <div class="wrap" role="alertdialog" aria-modal="true" aria-labelledby="t">
         <div class="card">
-          <h1 id="t">${texts.title}</h1>
-          <p>${texts.body(limitText(blockedState))}</p>
-          ${when ? `<p class="when">Legközelebb ekkortól szabadul fel idő: ${when}</p>` : ''}
+          <h1 id="t">${title}</h1>
+          <p>${body}</p>
+          ${when ? `<p class="when">${banned ? 'Újra elérhető' : 'Legközelebb ekkortól szabadul fel idő'}: ${when}</p>` : ''}
           ${fbLinks}
         </div>
       </div>`;

@@ -9,7 +9,8 @@ public sealed record WebLimitStatus(
     DateTimeOffset? NextReleaseAt,
     DateTimeOffset? AvailableAgainAt,
     bool Exempt = false,
-    TimeSpan Bonus = default);
+    TimeSpan Bonus = default,
+    bool Banned = false);
 
 public sealed record LolLimitStatus(
     int Limit,
@@ -19,14 +20,15 @@ public sealed record LolLimitStatus(
     DateTimeOffset? NextReleaseAt,
     DateTimeOffset? AvailableAgainAt,
     bool Exempt = false,
-    int Bonus = 0);
+    int Bonus = 0,
+    bool Banned = false);
 
 /// <summary>
 /// A keretek számítása. Gördülő módban nincs éjféli nullázás: minden felhasználás pontosan
 /// 24 órával később szabadul fel (a webes idő percenként, fokozatosan). Napi módban a megadott órában
 /// minden keret egyszerre nullázódik. Mentes időszakban (hétvége) semmi sem tilt és semmi sem fogy.
 /// Pihenőnap-jutalom: ha az előző korlátozott napon egy keretből semmi sem fogyott, ma ennyivel nagyobb
-/// (nem halmozódik; 0-s alapkeretnél nem jár).
+/// (nem halmozódik; 0-s alapkeretnél nem jár). Tiltott órákban a keret nem fogy és nem nullázódik, csak tilt.
 /// </summary>
 public sealed class LimitEngine
 {
@@ -127,8 +129,9 @@ public sealed class LimitEngine
             }
         }
 
+        var banned = ApplyBan(schedule.Ban(settings.WebBannedHours(category), now), ref blocked, ref availableAgain);
         if (blocked) availableAgain = EarlierOfExempt(schedule, now, availableAgain);
-        return new WebLimitStatus(category, limit, used, remaining, blocked, next, availableAgain, Bonus: bonus);
+        return new WebLimitStatus(category, limit, used, remaining, blocked, next, availableAgain, Bonus: bonus, Banned: banned);
     }
 
     public LolLimitStatus GetLolStatus(string userSid)
@@ -172,8 +175,9 @@ public sealed class LimitEngine
             }
         }
 
+        var banned = ApplyBan(schedule.Ban(settings.LolBannedHours, now), ref blocked, ref availableAgain);
         if (blocked) availableAgain = EarlierOfExempt(schedule, now, availableAgain);
-        return new LolLimitStatus(limit, used, Math.Max(0, limit - used), blocked, next, availableAgain, Bonus: bonus);
+        return new LolLimitStatus(limit, used, Math.Max(0, limit - used), blocked, next, availableAgain, Bonus: bonus, Banned: banned);
     }
 
     /// <summary>Jár-e jutalom a <paramref name="day"/> utáni napra (semmi sem fogyott azon a napon).</summary>
@@ -205,6 +209,19 @@ public sealed class LimitEngine
             if (usedAt < (t < tomorrowStart ? todayLimit : tomorrowLimit)) return t;
         }
         return null;
+    }
+
+    /// <summary>
+    /// Tiltott időszakban tilt; a feloldás a tiltás vége, vagy ha a keret addig sem szabadul fel, a keret feloldása.
+    /// </summary>
+    private static bool ApplyBan((bool Active, DateTimeOffset? Until) ban, ref bool blocked, ref DateTimeOffset? availableAgain)
+    {
+        if (!ban.Active) return false;
+        var until = ban.Until;
+        if (blocked && (availableAgain is null || availableAgain > until)) until = availableAgain;
+        blocked = true;
+        availableAgain = until;
+        return true;
     }
 
     /// <summary>Ha a hétvége hamarabb kezdődik, mint ahogy a keret felszabadul, akkor az a feloldás ideje.</summary>

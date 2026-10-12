@@ -141,7 +141,7 @@ public sealed class LcuSession : IDisposable
             var decision = _tracker.DecideMatchmaking(Sid, phase, queue);
             if (decision.Kind == GameKind.Unknown)
                 _degradedReason = "Nem azonosítható játékmód — a program enged, de jelzi a hibát.";
-            await ApplyDecisionAsync(decision.Action, ct).ConfigureAwait(false);
+            await ApplyDecisionAsync(decision, ct).ConfigureAwait(false);
             return;
         }
 
@@ -179,14 +179,15 @@ public sealed class LcuSession : IDisposable
         _runningGameId = 0;
     }
 
-    private async Task ApplyDecisionAsync(MatchmakingAction action, CancellationToken ct)
+    private async Task ApplyDecisionAsync(MatchmakingDecision decision, CancellationToken ct)
     {
-        switch (action)
+        var reason = decision.Banned ? "tiltott időszak van" : "elfogyott a meccskeret";
+        switch (decision.Action)
         {
             case MatchmakingAction.CancelSearch:
             {
                 var status = await _api.CancelSearchAsync(ct).ConfigureAwait(false);
-                Report(status, "Új PvP-keresés megszakítva: elfogyott a 24 órás meccskeret.",
+                Report(status, $"Új PvP-keresés megszakítva: {reason}.",
                     "A PvP-keresést nem sikerült megszakítani; a meccselfogadást a program el fogja utasítani.");
                 break;
             }
@@ -194,7 +195,7 @@ public sealed class LcuSession : IDisposable
             {
                 var status = await _api.DeclineReadyCheckAsync(ct).ConfigureAwait(false);
                 await _api.CancelSearchAsync(ct).ConfigureAwait(false);
-                Report(status, "PvP-meccselfogadás elutasítva: elfogyott a 24 órás meccskeret.",
+                Report(status, $"PvP-meccselfogadás elutasítva: {reason}.",
                     "A meccselfogadást nem sikerült elutasítani.");
                 break;
             }

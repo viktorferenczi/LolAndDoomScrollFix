@@ -49,6 +49,30 @@ public enum ResetMode
     Daily = 1,
 }
 
+/// <summary>
+/// Tiltott időszak egy napon belül (helyi idő, egész órák): <see cref="From"/>-tól (benne) <see cref="To"/>-ig (nincs benne).
+/// Átnyúlhat éjfélen (pl. 22 → 6). A keretet és a nullázást nem érinti, csak közben nem lehet használni.
+/// </summary>
+public sealed record BannedHours
+{
+    public bool Enabled { get; init; }
+    public int From { get; init; } = 1;
+    public int To { get; init; } = 5;
+
+    public static BannedHours Disabled { get; } = new();
+
+    public BannedHours Sanitized()
+    {
+        var from = Math.Clamp(From, 0, 23);
+        var to = Math.Clamp(To, 0, 23);
+        return this with { From = from, To = to, Enabled = Enabled && from != to };
+    }
+
+    /// <summary>Az adott helyi órára esik-e a tiltás.</summary>
+    public bool Covers(int localHour) =>
+        Enabled && (From < To ? localHour >= From && localHour < To : localHour >= From || localHour < To);
+}
+
 /// <summary>Az adminisztrátor által módosítható korlátok (limits.json; a telepítő tölti ki).</summary>
 public sealed record LimitSettings
 {
@@ -69,6 +93,18 @@ public sealed record LimitSettings
     public int LolRestDayBonusMatches { get; init; } = 1;
     public int ShortVideoRestDayBonusMinutes { get; init; } = 30;
     public int FacebookFeedRestDayBonusMinutes { get; init; } = 30;
+
+    // Tiltott órák keretenként (alapértelmezés: nincs).
+    public BannedHours LolBannedHours { get; init; } = BannedHours.Disabled;
+    public BannedHours ShortVideoBannedHours { get; init; } = BannedHours.Disabled;
+    public BannedHours FacebookFeedBannedHours { get; init; } = BannedHours.Disabled;
+
+    public BannedHours WebBannedHours(WebCategory category) => category switch
+    {
+        WebCategory.ShortVideo => ShortVideoBannedHours,
+        WebCategory.FacebookFeed => FacebookFeedBannedHours,
+        _ => throw new ArgumentOutOfRangeException(nameof(category)),
+    };
 
     public static LimitSettings Default { get; } = new();
 
@@ -116,5 +152,8 @@ public sealed record LimitSettings
         LolRestDayBonusMatches = Math.Clamp(LolRestDayBonusMatches, 0, 10),
         ShortVideoRestDayBonusMinutes = Math.Clamp(ShortVideoRestDayBonusMinutes, 0, 24 * 60),
         FacebookFeedRestDayBonusMinutes = Math.Clamp(FacebookFeedRestDayBonusMinutes, 0, 24 * 60),
+        LolBannedHours = (LolBannedHours ?? BannedHours.Disabled).Sanitized(),
+        ShortVideoBannedHours = (ShortVideoBannedHours ?? BannedHours.Disabled).Sanitized(),
+        FacebookFeedBannedHours = (FacebookFeedBannedHours ?? BannedHours.Disabled).Sanitized(),
     };
 }

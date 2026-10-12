@@ -120,9 +120,12 @@ public sealed class TrayContext : ApplicationContext
             _lastActionShown = at;
         }
 
-        Transition(ref _lastLolBlocked, s.Lol?.Blocked == true, "Elfogyott a LoL-keret", view.LolText);
-        Transition(ref _lastShortBlocked, s.ShortVideo?.Blocked == true, "Elfogyott a rövidvideós keret", view.ShortVideoText);
-        Transition(ref _lastFeedBlocked, s.FacebookFeed?.Blocked == true, "Elfogyott a Facebook-hírfolyam kerete", view.FacebookFeedText);
+        Transition(ref _lastLolBlocked, s.Lol?.Blocked == true,
+            s.Lol?.Banned == true ? "LoL: tiltott időszak" : "Elfogyott a LoL-keret", view.LolText);
+        Transition(ref _lastShortBlocked, s.ShortVideo?.Blocked == true,
+            s.ShortVideo?.Banned == true ? "Rövid videók: tiltott időszak" : "Elfogyott a rövidvideós keret", view.ShortVideoText);
+        Transition(ref _lastFeedBlocked, s.FacebookFeed?.Blocked == true,
+            s.FacebookFeed?.Banned == true ? "Facebook-hírfolyam: tiltott időszak" : "Elfogyott a Facebook-hírfolyam kerete", view.FacebookFeedText);
 
         void Transition(ref bool last, bool now, string title, string text)
         {

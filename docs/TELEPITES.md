@@ -19,7 +19,7 @@ Kimenet az `out\` mappában:
 
 | Fájl | Mire való |
 |---|---|
-| `LolScrollLimiter-Setup-1.2.3.exe` | Windows-telepítő |
+| `LolScrollLimiter-Setup-1.3.0.exe` | Windows-telepítő |
 | `extension-store.zip` | Feltöltés a Chrome Web Store-ba |
 | `extension-dev.zip` | Fejlesztői tesztverzió (kicsomagolt betöltés, fix azonosító: `iidlgdeiobckahalgoabbobfdlefkagi`) |
 | `app\` | A telepítendő programfájlok |
@@ -38,7 +38,7 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
 
 ## 4. Telepítés (éles)
 
-1. Futtasd a `LolScrollLimiter-Setup-1.2.3.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
+1. Futtasd a `LolScrollLimiter-Setup-1.3.0.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
 2. Telepítési mód: **Éles**.
 3. Bővítményazonosító: az áruházi azonosító (3. pont).
 4. **Korlátok** oldal:
@@ -59,6 +59,17 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
    | Facebook kezdőlapi hírfolyam | 0–1440 perc | +30 perc |
 
    0 = az adott jutalom kikapcsolva.
+
+   **Tiltott órák** oldal: keretenként egy jelölőnégyzet és két óra (kezdete, vége). Bejelölve a megadott órák között
+   az adott dolog egyáltalán nem használható, akkor sem, ha a keretből még maradt (részletek: 6. pont).
+
+   | Sor | Alapértelmezés |
+   |---|---|
+   | LoL PvP-meccsek | nincs bejelölve (01:00–05:00 előre kitöltve) |
+   | Rövid videók | nincs bejelölve (01:00–05:00) |
+   | Facebook-hírfolyam | nincs bejelölve (01:00–05:00) |
+
+   A kezdete és a vége nem lehet ugyanaz az óra; ilyenkor a telepítő nem lép tovább.
 
    Napi nullázásnál a „hétvége” a választott órától számít: 03:00-s nullázásnál szombat 03:00-tól hétfő 03:00-ig tart.
    Gördülő módban szombat 00:00-tól hétfő 00:00-ig. Ha pénteken elfogy egy keret, a hétvége kezdetén feloldódik.
@@ -114,7 +125,10 @@ Kézzel: rendszergazdai jogú szerkesztővel (pl. Jegyzettömb „Futtatás rend
   "enforceOnWeekends": false,
   "lolRestDayBonusMatches": 1,
   "shortVideoRestDayBonusMinutes": 30,
-  "facebookFeedRestDayBonusMinutes": 30
+  "facebookFeedRestDayBonusMinutes": 30,
+  "lolBannedHours": { "enabled": false, "from": 1, "to": 5 },
+  "shortVideoBannedHours": { "enabled": false, "from": 1, "to": 5 },
+  "facebookFeedBannedHours": { "enabled": false, "from": 1, "to": 5 }
 }
 ```
 
@@ -127,6 +141,7 @@ Kézzel: rendszergazdai jogú szerkesztővel (pl. Jegyzettömb „Futtatás rend
 | `enforceOnWeekends` | `true`: hétvégén is van korlát; `false`: hétvégén nincs |
 | `lolRestDayBonusMatches` | Pihenőnap-jutalom: ennyi meccs jár pluszban, ha előző nap egy PvP-meccs sem volt (0–10; 0 = kikapcsolva) |
 | `shortVideoRestDayBonusMinutes`, `facebookFeedRestDayBonusMinutes` | Pihenőnap-jutalom percben, ha előző nap 0 perc fogyott az adott keretből (0 = kikapcsolva) |
+| `lolBannedHours`, `shortVideoBannedHours`, `facebookFeedBannedHours` | Tiltott órák: `enabled` (be/ki), `from` (kezdő óra, 0–23, benne van), `to` (záró óra, 0–23, nincs benne). `from` = `to` esetén nincs tiltás |
 
 ### Pihenőnap-jutalom
 
@@ -141,6 +156,19 @@ Kézzel: rendszergazdai jogú szerkesztővel (pl. Jegyzettömb „Futtatás rend
 
 A szolgáltatás 30 másodpercen belül átveszi. Hibás fájlnál az előző korlát marad érvényben, és a tálcaikon figyelmeztet.
 Módváltáskor a már rögzített használat az új szabály szerint számít (pl. gördülőről napira váltva csak az utolsó nullázás óta eltelt használat).
+
+### Tiltott órák
+
+- A tiltott időszakban az adott dolog nem használható: LoL-nál az új PvP-keresést a program megszakítja,
+  a meccselfogadást elutasítja; a rövid videóknál és a hírfolyamnál a blokkoló felület jelenik meg „Tiltott időszak” címmel.
+- **A keretet és a nullázást nem érinti:** tiltás alatt semmi sem fogy, és a napi nullázás a tiltás alatt is megtörténik.
+  Ha a tiltás végén a keret is elfogyott, a feloldás a későbbi időpont.
+- Egész órák, helyi idő szerint; a kezdő óra benne van, a záró nincs (01:00–05:00 = 01:00:00-tól 04:59:59-ig).
+  Átnyúlhat éjfélen (22:00–06:00).
+- **Folyamatban lévő meccs:** a tiltás kezdetekor futó meccs befejezhető, és az újracsatlakozás is működik.
+- TFT, botmeccs, gyakorlás, egyéni játék és néző mód tiltott időben is elérhető.
+- **Hétvége:** ha hétvégén nincs korlát, tiltás sincs. Napi nullázásnál a hétvége a nullázás órájától számít
+  (03:00-s nullázásnál szombat 02:00 még a pénteki naphoz tartozik, így akkor még tilt).
 
 ## 7. Mit jelent a tálcaikon színe?
 

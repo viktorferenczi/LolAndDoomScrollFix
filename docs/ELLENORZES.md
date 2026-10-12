@@ -49,6 +49,7 @@ node --test extension/test/*.test.js
 | Felismerés | `detect.test.js`: URL-szabályok, felugró Reels, Messenger/profil/csoport kivétel |
 | Napi nullázás, hétvége | `ScheduleTests`: nullázás a választott órában (webes és LoL-keret), 00:00-s nullázás, hétvégi mentesség, vasárnap este indult meccs hétfőn sem számít, hétvége a nullázási órától, hétvégi korlát bekapcsolva, péntek esti tiltás a hétvége kezdetén feloldódik, nyári időszámítás, a telepítő által írt `limits.json` beolvasása |
 | Pihenőnap-jutalom | `RestDayBonusTests`: +30 perc / +1 meccs üres nap után, a keretek függetlenek, nem halmozódik, bármilyen előző napi használat kizárja, remake nem rontja el, napi módban a nullázástól számított nap, mentes hétvégénél hétfőn a péntek, hétvégi korlátnál a vasárnap, 0-s keretre nem jár, gördülő módban a jutalom éjféli megszűnését a feloldási idő figyelembe veszi |
+| Tiltott órák | `BannedHoursTests`: kezdő óra benne, záró nincs, éjfélen átnyúló időszak, azonos kezdet és vég = nincs tiltás, LoL-keresés tiltva maradék kerettel is (TFT nem), folyamatban lévő meccs és újracsatlakozás engedett, a webes keretek külön tilthatók, a keret és a nullázás nem változik, elfogyott keretnél a későbbi feloldás, mentes hétvégén nincs tiltás, helyi idő, `limits.json` beolvasása |
 
 ## 2. Windowsos próbák (LoL)
 
@@ -96,6 +97,9 @@ Tipp: `"shortVideoMinutes": 2`, `"facebookFeedMinutes": 2`.
 | 3b.9 | Hétfő reggel, pénteken nem volt LoL (mentes hétvégével) | +1 meccs |
 | 3b.10 | Telepítés a Pihenőnap-jutalom oldalon: LoL 2, rövid videó 15, hírfolyam 0 | `limits.json`: `2` / `15` / `0`; üres nap után a tálcán +2 meccs és +15 perc, a hírfolyamnál nincs jutalom |
 | 3b.11 | Érvénytelen jutalom (pl. LoL `11`, perc `abc`) | A telepítő hibaüzenettel nem lép tovább |
+| 3b.12 | Tiltott órák: LoL bejelölve, a jelenlegi órától a következőig (pl. 14:00–15:00) | PvP-keresés azonnal leáll, értesítés: „…tiltott időszak van”; tálca: „LoL PvP: tiltott időszak (14:00–15:00) — újra: ma 15:00”; TFT és gyakorlás elérhető; 15:00 után a keresés újra működik |
+| 3b.13 | Tiltott órák: rövid videók bejelölve a jelenlegi órára | YouTube Shorts / TikTok azonnal „Tiltott időszak” blokkoló felületet mutat, a Facebook-hírfolyam nem (ha az nincs bejelölve) |
+| 3b.14 | Tiltott időszak: kezdete = vége (pl. 03:00–03:00) | A telepítő hibaüzenettel nem lép tovább |
 
 ## 4. Védelempróbák (normál felhasználóként)
 

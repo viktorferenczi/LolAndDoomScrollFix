@@ -70,6 +70,19 @@ public sealed class LimitSchedule
         return null;
     }
 
+    /// <summary>
+    /// Tart-e most a tiltott időszak, és ha igen, meddig. Mentes időszakban (hétvége) nincs tiltás.
+    /// </summary>
+    public (bool Active, DateTimeOffset? Until) Ban(BannedHours ban, DateTimeOffset now)
+    {
+        if (!ban.Enabled || IsExempt(now)) return (false, null);
+        var local = TimeZoneInfo.ConvertTime(now, _zone);
+        if (!ban.Covers(local.Hour)) return (false, null);
+        var end = local.Date.AddHours(ban.To);
+        if (end <= local.DateTime) end = end.AddDays(1);
+        return (true, ToUtc(end));
+    }
+
     private static bool IsWeekend(DateTime date) => date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
 
     private DateTimeOffset ToUtc(DateTime localWallClock)

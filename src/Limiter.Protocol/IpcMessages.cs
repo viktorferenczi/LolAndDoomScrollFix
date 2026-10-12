@@ -90,6 +90,8 @@ public sealed class LolLimitDto
     public bool Exempt { get; set; }
     /// <summary>Pihenőnap-jutalom (már benne van a <see cref="Limit"/>-ben).</summary>
     public int Bonus { get; set; }
+    /// <summary>Tiltott időszak van (ilyenkor <see cref="Blocked"/> is igaz).</summary>
+    public bool Banned { get; set; }
 }
 
 public sealed class WebLimitDto
@@ -104,6 +106,8 @@ public sealed class WebLimitDto
     public bool Exempt { get; set; }
     /// <summary>Pihenőnap-jutalom másodpercben (már benne van a <see cref="LimitSeconds"/>-ben).</summary>
     public double BonusSeconds { get; set; }
+    /// <summary>Tiltott időszak van (ilyenkor <see cref="Blocked"/> is igaz).</summary>
+    public bool Banned { get; set; }
 }
 
 /// <summary>A telepítéskor választott időbeosztás.</summary>
@@ -119,6 +123,18 @@ public sealed class ScheduleDto
     public int LolRestDayBonusMatches { get; set; }
     public int ShortVideoRestDayBonusMinutes { get; set; }
     public int FacebookFeedRestDayBonusMinutes { get; set; }
+    /// <summary>Tiltott órák keretenként.</summary>
+    public BannedHoursDto? LolBannedHours { get; set; }
+    public BannedHoursDto? ShortVideoBannedHours { get; set; }
+    public BannedHoursDto? FacebookFeedBannedHours { get; set; }
+}
+
+/// <summary>Tiltott időszak: From órától (benne) To óráig (nincs benne), helyi idő.</summary>
+public sealed class BannedHoursDto
+{
+    public bool Enabled { get; set; }
+    public int From { get; set; }
+    public int To { get; set; }
 }
 
 public sealed class ProtectionDto

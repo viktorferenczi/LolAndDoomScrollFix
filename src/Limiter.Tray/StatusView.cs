@@ -65,6 +65,8 @@ public sealed record StatusView(
             ? "LoL PvP: –"
             : exempt
                 ? "LoL PvP: hétvége — nincs korlát"
+            : lol.Banned
+                ? $"LoL PvP: tiltott időszak ({Range(s.Schedule?.LolBannedHours)}) — újra: {When(lol.AvailableAgainAt, now)}"
             : lol.Blocked
                 ? $"LoL PvP: elfogyott ({lol.Used}/{lol.Limit}) — újra: {When(lol.AvailableAgainAt, now)}"
                 : $"LoL PvP: {lol.Remaining} meccs maradt ({lol.Limit}-ból{(lol.Bonus > 0 ? $", ebből +{lol.Bonus} pihenőnap-jutalom" : "")})";
@@ -81,18 +83,19 @@ public sealed record StatusView(
             health,
             health == Health.Ok ? "Védelem: rendben" : "Figyelmeztetés: " + problems[0],
             lolText,
-            Web("Rövid videók", s.ShortVideo, now),
-            Web("Facebook-hírfolyam", s.FacebookFeed, now),
+            Web("Rövid videók", s.ShortVideo, s.Schedule?.ShortVideoBannedHours, now),
+            Web("Facebook-hírfolyam", s.FacebookFeed, s.Schedule?.FacebookFeedBannedHours, now),
             exempt ? "Hétvégén nincs korlát"
                 : next.Count > 0 ? "Következő felszabadulás: " + string.Join(", ", next) : "Minden keret szabad",
             DescribeSchedule(s.Schedule),
             problems);
     }
 
-    private static string Web(string label, WebLimitDto? w, DateTimeOffset now)
+    private static string Web(string label, WebLimitDto? w, BannedHoursDto? ban, DateTimeOffset now)
     {
         if (w is null) return $"{label}: –";
         if (w.Exempt) return $"{label}: hétvége — nincs korlát";
+        if (w.Banned) return $"{label}: tiltott időszak ({Range(ban)}) — újra: {When(w.AvailableAgainAt, now)}";
         var limitMin = (int)Math.Round(w.LimitSeconds / 60);
         if (w.Blocked) return $"{label}: elfogyott — újra: {When(w.AvailableAgainAt, now)}";
         var bonusMin = (int)Math.Round(w.BonusSeconds / 60);
@@ -118,8 +121,19 @@ public sealed record StatusView(
             ? "\nPihenőnap-jutalom: ha egy napon valamiből semmit sem használsz, másnap ahhoz több jár (" +
               string.Join(", ", bonuses) + "); nem halmozódik."
             : "";
-        return reset + "\n" + weekend + bonus;
+        var bans = new List<string>();
+        if (schedule.LolBannedHours is { Enabled: true } lb) bans.Add($"LoL {Range(lb)}");
+        if (schedule.ShortVideoBannedHours is { Enabled: true } sb) bans.Add($"rövid videó {Range(sb)}");
+        if (schedule.FacebookFeedBannedHours is { Enabled: true } fb) bans.Add($"hírfolyam {Range(fb)}");
+        var banText = bans.Count > 0
+            ? "\nTiltott órák (naponta, a korlátozott napokon): " + string.Join(", ", bans) + "."
+            : "";
+        return reset + "\n" + weekend + bonus + banText;
     }
+
+    /// <summary>„01:00–05:00”.</summary>
+    public static string Range(BannedHoursDto? ban) =>
+        ban is null ? "–" : $"{ban.From:00}:00–{ban.To:00}:00";
 
     public static string Minutes(double seconds)
     {

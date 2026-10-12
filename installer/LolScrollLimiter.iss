@@ -2,7 +2,7 @@
 ; Fordítás: installer\build.ps1 (előtte a programfájlok az out\app mappába kerülnek).
 
 #define AppName "LoL- és görgetéskorlátozó"
-#define AppVersion "1.2.3"
+#define AppVersion "1.3.0"
 #define DevExtensionId "iidlgdeiobckahalgoabbobfdlefkagi"
 
 [Setup]
@@ -48,6 +48,9 @@ var
   WeekendCheck: TNewCheckBox;
   BonusPage: TWizardPage;
   LolBonusEdit, ShortVideoBonusEdit, FeedBonusEdit: TNewEdit;
+  BanPage: TWizardPage;
+  LolBanCheck, ShortVideoBanCheck, FeedBanCheck: TNewCheckBox;
+  LolBanFrom, LolBanTo, ShortVideoBanFrom, ShortVideoBanTo, FeedBanFrom, FeedBanTo: TNewComboBox;
 
 procedure ResetModeChanged(Sender: TObject);
 begin
@@ -186,6 +189,95 @@ begin
   FeedBonusEdit := AddNumberEdit(BonusPage, 'Facebook kezdőlapi hírfolyam:', Y, '30', 'perc');
 end;
 
+procedure BanCheckChanged(Sender: TObject);
+begin
+  LolBanFrom.Enabled := LolBanCheck.Checked;
+  LolBanTo.Enabled := LolBanCheck.Checked;
+  ShortVideoBanFrom.Enabled := ShortVideoBanCheck.Checked;
+  ShortVideoBanTo.Enabled := ShortVideoBanCheck.Checked;
+  FeedBanFrom.Enabled := FeedBanCheck.Checked;
+  FeedBanTo.Enabled := FeedBanCheck.Checked;
+end;
+
+function AddHourCombo(Parent: TWizardPage; Left, Top, Hour: Integer): TNewComboBox;
+var
+  I: Integer;
+begin
+  Result := TNewComboBox.Create(Parent);
+  Result.Parent := Parent.Surface;
+  Result.Style := csDropDownList;
+  Result.Left := Left;
+  Result.Top := Top;
+  Result.Width := ScaleX(70);
+  for I := 0 to 23 do
+    Result.Items.Add(TwoDigits(I) + ':00');
+  Result.ItemIndex := Hour;
+  Result.Enabled := False;
+end;
+
+function AddBanCheck(Parent: TWizardPage; const Caption: String; Top: Integer): TNewCheckBox;
+begin
+  Result := TNewCheckBox.Create(Parent);
+  Result.Parent := Parent.Surface;
+  Result.Top := Top + ScaleY(2);
+  Result.Width := ScaleX(220);
+  Result.Caption := Caption;
+  Result.Checked := False;
+  Result.OnClick := @BanCheckChanged;
+end;
+
+procedure CreateBanPage(AfterID: Integer);
+var
+  Y: Integer;
+  Note: TNewStaticText;
+begin
+  BanPage := CreateCustomPage(AfterID, 'Tiltott órák',
+    'Mely órákban ne lehessen játszani vagy görgetni?');
+
+  Note := AddLabel(BanPage,
+    'Bejelölve a megadott órák között (pl. 01:00–05:00) az adott dolog egyáltalán nem használható, akkor sem, ' +
+    'ha a keretből még maradt. A keretet és a nullázást nem érinti. Átnyúlhat éjfélen (pl. 22:00–06:00). ' +
+    'Ha hétvégén nincs korlát, akkor hétvégén tiltás sincs.', 0, 0);
+  Note.AutoSize := False;
+  Note.WordWrap := True;
+  Note.Width := BanPage.SurfaceWidth;
+  Note.Height := ScaleY(56);
+  Y := ScaleY(66);
+
+  AddLabel(BanPage, 'kezdete', ScaleX(230), Y);
+  AddLabel(BanPage, 'vége', ScaleX(330), Y);
+  Y := Y + ScaleY(20);
+
+  LolBanCheck := AddBanCheck(BanPage, 'LoL PvP-meccsek', Y);
+  LolBanFrom := AddHourCombo(BanPage, ScaleX(230), Y, 1);
+  AddLabel(BanPage, '–', ScaleX(310), Y + ScaleY(3));
+  LolBanTo := AddHourCombo(BanPage, ScaleX(330), Y, 5);
+  Y := Y + ScaleY(30);
+
+  ShortVideoBanCheck := AddBanCheck(BanPage, 'Rövid videók', Y);
+  ShortVideoBanFrom := AddHourCombo(BanPage, ScaleX(230), Y, 1);
+  AddLabel(BanPage, '–', ScaleX(310), Y + ScaleY(3));
+  ShortVideoBanTo := AddHourCombo(BanPage, ScaleX(330), Y, 5);
+  Y := Y + ScaleY(30);
+
+  FeedBanCheck := AddBanCheck(BanPage, 'Facebook-hírfolyam', Y);
+  FeedBanFrom := AddHourCombo(BanPage, ScaleX(230), Y, 1);
+  AddLabel(BanPage, '–', ScaleX(310), Y + ScaleY(3));
+  FeedBanTo := AddHourCombo(BanPage, ScaleX(330), Y, 5);
+end;
+
+function BanValid(Check: TNewCheckBox; FromCombo, ToCombo: TNewComboBox): Boolean;
+begin
+  Result := not Check.Checked or (FromCombo.ItemIndex <> ToCombo.ItemIndex);
+end;
+
+function BanParams(const Name: String; Check: TNewCheckBox; FromCombo, ToCombo: TNewComboBox): String;
+begin
+  Result := '';
+  if Check.Checked then
+    Result := ' -' + Name + 'BanFrom ' + IntToStr(FromCombo.ItemIndex) + ' -' + Name + 'BanTo ' + IntToStr(ToCombo.ItemIndex);
+end;
+
 procedure InitializeWizard;
 begin
   ModePage := CreateInputOptionPage(wpWelcome,
@@ -206,6 +298,7 @@ begin
 
   CreateLimitsPage(ExtensionPage.ID);
   CreateBonusPage(LimitsPage.ID);
+  CreateBanPage(BonusPage.ID);
 end;
 
 function IsValidExtensionId(const Id: String): Boolean;
@@ -230,6 +323,17 @@ begin
     if not MinutesValid(ShortVideoEdit) or not MinutesValid(FeedEdit) then
     begin
       MsgBox('Az időkeret 0 és 1440 közötti egész szám (perc) lehet.', mbError, MB_OK);
+      Result := False;
+    end;
+    Exit;
+  end;
+  if CurPageID = BanPage.ID then
+  begin
+    if not BanValid(LolBanCheck, LolBanFrom, LolBanTo) or
+       not BanValid(ShortVideoBanCheck, ShortVideoBanFrom, ShortVideoBanTo) or
+       not BanValid(FeedBanCheck, FeedBanFrom, FeedBanTo) then
+    begin
+      MsgBox('A tiltott időszak kezdete és vége nem lehet ugyanaz az óra.', mbError, MB_OK);
       Result := False;
     end;
     Exit;
@@ -296,7 +400,10 @@ begin
     Params := Params +
       ' -LolRestDayBonusMatches ' + IntToStr(StrToInt(Trim(LolBonusEdit.Text))) +
       ' -ShortVideoRestDayBonusMinutes ' + IntToStr(StrToInt(Trim(ShortVideoBonusEdit.Text))) +
-      ' -FacebookFeedRestDayBonusMinutes ' + IntToStr(StrToInt(Trim(FeedBonusEdit.Text)));
+      ' -FacebookFeedRestDayBonusMinutes ' + IntToStr(StrToInt(Trim(FeedBonusEdit.Text))) +
+      BanParams('Lol', LolBanCheck, LolBanFrom, LolBanTo) +
+      BanParams('ShortVideo', ShortVideoBanCheck, ShortVideoBanFrom, ShortVideoBanTo) +
+      BanParams('FacebookFeed', FeedBanCheck, FeedBanFrom, FeedBanTo);
     WizardForm.StatusLabel.Caption := 'Szolgáltatás, jogosultságok és Chrome-szabályok beállítása…';
     if not Exec('powershell.exe', Params, '', SW_HIDE, ewWaitUntilTerminated, Code) or (Code <> 0) then
       MsgBox('A rendszerbeállítás sikertelen (kód: ' + IntToStr(Code) + '). ' +

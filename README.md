@@ -16,6 +16,8 @@ Telepítéskor választható:
 
 **Pihenőnap-jutalom:** ha egy napon egy PvP-meccset sem játszol, másnap +1 meccs jár; ha egy napon 0 percet nézel rövid videót, másnap +30 perc; ugyanígy a Facebook-hírfolyamnál +30 perc. A három jutalom független egymástól, és nem halmozódik: több üres nap után is csak egyszer jár. A jutalmak mértéke telepítéskor állítható (0 = kikapcsolva).
 
+**Tiltott órák:** telepítéskor keretenként (LoL, rövid videók, Facebook-hírfolyam) megadható egy napi tiltott időszak, pl. 01:00–05:00. Ilyenkor az adott dolog egyáltalán nem használható, akkor sem, ha a keretből maradt; a keretet és a nullázást nem érinti.
+
 TFT, botmeccs, gyakorlás, egyéni játék és néző mód nem fogyasztja a LoL-keretet; az igazolt remake visszaadja az alkalmat.
 Felismerési vagy működési hibánál a program **enged tovább, és hibát jelez** (tálcaikon, a bővítmény piros „!” jelvénye).
 
@@ -38,9 +40,10 @@ A cél az, hogy megfékezze a végtelen görgetést és a túlzott League of Leg
 3. **Rövidvideók.** Instagram Reels, TikTok, YouTube Shorts és Facebook Reels **közös** keretet használ (alapértelmezés: 60 perc, telepítéskor állítható).
 4. **Facebook-hírfolyam.** A kezdőlapi hírfolyam **külön** keretet kap (alapértelmezés: 60 perc, telepítéskor állítható).
 5. **Pihenőnap-jutalom.** Ha az előző napon egy keretből semmi sem fogyott, aznap ahhoz több jár (LoL +1 meccs, rövid videó +30 perc, hírfolyam +30 perc). Nem halmozódik. Mentes hétvégénél hétfőn a péntek számít.
-6. **Hibatűrés.** Ha a felismerés vagy a működés hibázik, a program nem zár ki, hanem tovább enged, és hibát jelez (piros tálcaikon, a bővítmény piros „!” jelvénye).
-7. **Inkognitó mód.** Engedélyezett. A bővítmény inkognitó ablakban csak akkor mér és korlátoz, ha a chrome://extensions oldalon be van kapcsolva az „Engedélyezés inkognitó módban” kapcsoló; ezt a felhasználó maga dönti el.
-8. **Kijátszás elleni védelem.** Éles telepítésben a Chrome-szabályok kötelezővé teszik a bővítményt, tiltják a vendégmódot és a bővítmények fejlesztői módját; a beállítások módosításához rendszergazdai jelszó kell (a gondolat: ezt egy megbízható személy ismeri, nem te).
+6. **Tiltott órák.** Bekapcsolva a megadott órák között (pl. 01:00–05:00) nincs új PvP-meccs, illetve a rövid videó vagy a hírfolyam blokkolva van, akkor is, ha a keretből maradt. A folyamatban lévő meccs befejezhető.
+7. **Hibatűrés.** Ha a felismerés vagy a működés hibázik, a program nem zár ki, hanem tovább enged, és hibát jelez (piros tálcaikon, a bővítmény piros „!” jelvénye).
+8. **Inkognitó mód.** Engedélyezett. A bővítmény inkognitó ablakban csak akkor mér és korlátoz, ha a chrome://extensions oldalon be van kapcsolva az „Engedélyezés inkognitó módban” kapcsoló; ezt a felhasználó maga dönti el.
+9. **Kijátszás elleni védelem.** Éles telepítésben a Chrome-szabályok kötelezővé teszik a bővítményt, tiltják a vendégmódot és a bővítmények fejlesztői módját; a beállítások módosításához rendszergazdai jelszó kell (a gondolat: ezt egy megbízható személy ismeri, nem te).
 
 A telepítésről és az ellenőrzésről lásd lent a hivatkozott útmutatókat.
 

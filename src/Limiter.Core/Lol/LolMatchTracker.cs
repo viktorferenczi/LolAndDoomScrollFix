@@ -20,7 +20,8 @@ public enum MatchmakingAction
     DeclineReadyCheck,
 }
 
-public sealed record MatchmakingDecision(MatchmakingAction Action, GameKind Kind);
+/// <param name="Banned">A tiltást a tiltott időszak okozza (nem az elfogyott keret).</param>
+public sealed record MatchmakingDecision(MatchmakingAction Action, GameKind Kind, bool Banned = false);
 
 /// <summary>
 /// A LoL-meccsek számlálása és a keresés tiltásának döntése. Állapotot csak a tárban tart,
@@ -93,10 +94,11 @@ public sealed class LolMatchTracker
         var kind = LolQueueClassifier.Classify(queue);
         if (phase is not ("Matchmaking" or "ReadyCheck") || kind != GameKind.Pvp)
             return new MatchmakingDecision(MatchmakingAction.Allow, kind);
-        if (!_engine.GetLolStatus(userSid).Blocked)
+        var status = _engine.GetLolStatus(userSid);
+        if (!status.Blocked)
             return new MatchmakingDecision(MatchmakingAction.Allow, kind);
         return new MatchmakingDecision(
-            phase == "ReadyCheck" ? MatchmakingAction.DeclineReadyCheck : MatchmakingAction.CancelSearch, kind);
+            phase == "ReadyCheck" ? MatchmakingAction.DeclineReadyCheck : MatchmakingAction.CancelSearch, kind, status.Banned);
     }
 
     /// <summary>Remake-ellenőrzés eredményének rögzítése. Csak igazolt remake adja vissza az alkalmat.</summary>

@@ -22,6 +22,7 @@ public sealed class StatusBuilder(LimitEngine engine, ProtectionState protection
                 AvailableAgainAt = lol.AvailableAgainAt,
                 Exempt = lol.Exempt,
                 Bonus = lol.Bonus,
+                Banned = lol.Banned,
             },
             ShortVideo = Web(engine.GetWebStatus(sid, WebCategory.ShortVideo)),
             FacebookFeed = Web(engine.GetWebStatus(sid, WebCategory.FacebookFeed)),
@@ -34,6 +35,9 @@ public sealed class StatusBuilder(LimitEngine engine, ProtectionState protection
                 LolRestDayBonusMatches = engine.Settings.LolRestDayBonusMatches,
                 ShortVideoRestDayBonusMinutes = engine.Settings.ShortVideoRestDayBonusMinutes,
                 FacebookFeedRestDayBonusMinutes = engine.Settings.FacebookFeedRestDayBonusMinutes,
+                LolBannedHours = Ban(engine.Settings.LolBannedHours),
+                ShortVideoBannedHours = Ban(engine.Settings.ShortVideoBannedHours),
+                FacebookFeedBannedHours = Ban(engine.Settings.FacebookFeedBannedHours),
             },
             Protection = protection.Snapshot(sid, settings.Warning is { } w ? [w] : []),
         };
@@ -49,7 +53,10 @@ public sealed class StatusBuilder(LimitEngine engine, ProtectionState protection
         AvailableAgainAt = s.AvailableAgainAt,
         Exempt = s.Exempt,
         BonusSeconds = s.Bonus.TotalSeconds,
+        Banned = s.Banned,
     };
+
+    private static BannedHoursDto Ban(BannedHours b) => new() { Enabled = b.Enabled, From = b.From, To = b.To };
 }
 
 /// <summary>

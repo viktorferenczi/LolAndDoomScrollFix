@@ -40,6 +40,19 @@
 .PARAMETER FacebookFeedRestDayBonusMinutes
   Pihenőnap-jutalom percben a Facebook-hírfolyamra. Alapértelmezés: 30.
 
+.PARAMETER LolBanFrom
+  Tiltott órák kezdete a LoL PvP-re (0–23, helyi idő); a LolBanTo órával együtt. -1 = nincs tiltás (alapértelmezés).
+  Pl. -LolBanFrom 1 -LolBanTo 5: 01:00 és 05:00 között nem indítható PvP-meccs. Átnyúlhat éjfélen (22 → 6).
+
+.PARAMETER LolBanTo
+  Tiltott órák vége (nincs benne), lásd LolBanFrom.
+
+.PARAMETER ShortVideoBanFrom
+  Tiltott órák a rövid videókra, lásd LolBanFrom. (ShortVideoBanTo a vége.)
+
+.PARAMETER FacebookFeedBanFrom
+  Tiltott órák a Facebook-hírfolyamra, lásd LolBanFrom. (FacebookFeedBanTo a vége.)
+
 .PARAMETER DevMode
   Fejlesztői tesztverzió: a bővítményt kézzel, kicsomagolva kell betölteni, ezért nem kötelező telepítésű,
   és a fejlesztői mód nincs tiltva. Éles használatra NEM alkalmas.
@@ -57,6 +70,12 @@ param(
     [ValidateRange(0, 10)][int]$LolRestDayBonusMatches = 1,
     [ValidateRange(0, 1440)][int]$ShortVideoRestDayBonusMinutes = 30,
     [ValidateRange(0, 1440)][int]$FacebookFeedRestDayBonusMinutes = 30,
+    [ValidateRange(-1, 23)][int]$LolBanFrom = -1,
+    [ValidateRange(-1, 23)][int]$LolBanTo = -1,
+    [ValidateRange(-1, 23)][int]$ShortVideoBanFrom = -1,
+    [ValidateRange(-1, 23)][int]$ShortVideoBanTo = -1,
+    [ValidateRange(-1, 23)][int]$FacebookFeedBanFrom = -1,
+    [ValidateRange(-1, 23)][int]$FacebookFeedBanTo = -1,
     [switch]$EnforceOnWeekends,
     [switch]$DevMode
 )
@@ -131,6 +150,14 @@ Set-FolderAcl $DataDir @("*${SidSystem}:(OI)(CI)F", "*${SidAdmins}:(OI)(CI)F")
 Assert-Acl $DataDir -Required $SidSystem, $SidAdmins -Forbidden $SidUsers
 
 Step "Korlátok mentése: $ResetMode$(if ($ResetMode -eq 'daily') { " ($('{0:00}' -f $DailyResetHour):00)" }), rövid videó $ShortVideoMinutes perc, hírfolyam $FacebookFeedMinutes perc, $(if ($EnforceOnWeekends) { 'hétvégén is van korlát' } else { 'hétvégén nincs korlát' })"
+# Tiltott órák: mindkét óra megadva és különböző → bekapcsolva.
+function BanSetting([int]$From, [int]$To) {
+    $enabled = ($From -ge 0) -and ($To -ge 0) -and ($From -ne $To)
+    if ($From -lt 0) { $From = 1 }
+    if ($To -lt 0) { $To = 5 }
+    return [ordered]@{ enabled = $enabled; from = $From; to = $To }
+}
+
 # A telepítőben választott értékek mindig felülírják a korábbiakat (a szolgáltatás 30 mp-en belül átveszi).
 $limits = [ordered]@{
     resetMode           = $ResetMode
@@ -142,9 +169,12 @@ $limits = [ordered]@{
     lolRestDayBonusMatches          = $LolRestDayBonusMatches
     shortVideoRestDayBonusMinutes   = $ShortVideoRestDayBonusMinutes
     facebookFeedRestDayBonusMinutes = $FacebookFeedRestDayBonusMinutes
+    lolBannedHours                  = (BanSetting $LolBanFrom $LolBanTo)
+    shortVideoBannedHours           = (BanSetting $ShortVideoBanFrom $ShortVideoBanTo)
+    facebookFeedBannedHours         = (BanSetting $FacebookFeedBanFrom $FacebookFeedBanTo)
 }
 $limitsPath = Join-Path $DataDir 'limits.json'
-[System.IO.File]::WriteAllText($limitsPath, ($limits | ConvertTo-Json), (New-Object System.Text.UTF8Encoding($false)))
+[System.IO.File]::WriteAllText($limitsPath, ($limits | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
 Assert-Acl $limitsPath -Required $SidSystem, $SidAdmins -Forbidden $SidUsers
 
 # --- 2. Szolgáltatás ----------------------------------------------------------------

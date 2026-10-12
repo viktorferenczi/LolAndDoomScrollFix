@@ -17,15 +17,18 @@ function listeners() {
 /** Hamis szolgáltatás: kategóriánként keret, a jelentéseket levonja. */
 function fakeService(limits, schedule = { resetMode: 'rolling', dailyResetHour: 3, enforceOnWeekends: false, exemptNow: false }) {
   const used = { shortVideo: 0, facebookFeed: 0 };
-  return {
+  const service = {
     used,
     schedule,
+    banned: false, // igaz: a rövid videókra tiltott időszak van
     respond(msg) {
       if (msg.type === 'usage') used[msg.category] += msg.seconds;
+      const banned = (c) => service.banned && c === 'shortVideo';
       const web = (c) => ({
         limitSeconds: limits[c], usedSeconds: used[c],
         remainingSeconds: schedule.exemptNow ? limits[c] : Math.max(0, limits[c] - used[c]),
-        blocked: !schedule.exemptNow && used[c] >= limits[c],
+        blocked: !schedule.exemptNow && (used[c] >= limits[c] || banned(c)),
+        banned: banned(c),
         exempt: schedule.exemptNow,
         availableAgainAt: '2026-10-09T10:00:00Z',
       });
@@ -37,6 +40,7 @@ function fakeService(limits, schedule = { resetMode: 'rolling', dailyResetHour: 
       };
     },
   };
+  return service;
 }
 
 function setup({ limits = { shortVideo: 3600, facebookFeed: 3600 }, nativeFails = false, schedule } = {}) {
@@ -224,4 +228,24 @@ test('Hétvégén (mentes időszakban) nem tilt, akkor sem, ha a keret elfogyott
   });
   watch(env, 5);
   assert.equal(env.hb(10).blocked, false);
+});
+
+test('Tiltott időszakban tilt, és a tiltás óráit is átadja a lapnak', () => {
+  const env = setup({
+    schedule: {
+      resetMode: 'rolling', dailyResetHour: 0, enforceOnWeekends: false, exemptNow: false,
+      shortVideoBannedHours: { enabled: true, from: 1, to: 5 },
+    },
+  });
+  // A hamis szolgáltatás tiltott állapotot jelez, miközben a keretből még van.
+  env.service.banned = true;
+  env.hb(10);
+  env.tick();
+  env.flush();
+  const r = env.hb(10);
+  assert.equal(r.blocked, true);
+  assert.equal(r.banned, true);
+  assert.deepEqual({ ...r.bannedHours }, { enabled: true, from: 1, to: 5 });
+  // A másik kategória nincs tiltva.
+  assert.equal(env.hb(11, { category: 'facebookFeed' }).blocked, false);
 });
