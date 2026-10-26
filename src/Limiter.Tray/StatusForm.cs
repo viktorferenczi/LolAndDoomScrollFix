@@ -13,7 +13,7 @@ public sealed class StatusForm : Form
     private readonly Label _problems = Line();
     private readonly Label _schedule = Line();
 
-    public StatusForm()
+    public StatusForm(UpdateFlow update)
     {
         Text = "LoL- és görgetéskorlátozó";
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -37,7 +37,15 @@ public sealed class StatusForm : Form
         var note = Line();
         note.ForeColor = SystemColors.GrayText;
         note.Text = "TFT, botmeccs, gyakorlás, egyéni játék és néző mód nem fogyasztja a LoL-keretet.";
-        layout.Controls.AddRange([_protection, _lol, _short, _feed, _next, _problems, _schedule, note]);
+        var updateButton = new Button { Text = "Frissítések keresése", AutoSize = true, Margin = new Padding(0, 12, 0, 0) };
+        updateButton.Click += async (_, _) => await update.RunAsync(this);
+        Action onUpdateState = () => { if (!IsDisposed) updateButton.Enabled = !update.IsRunning; };
+        update.StateChanged += onUpdateState;
+        FormClosed += (_, _) => update.StateChanged -= onUpdateState;
+        var version = Line();
+        version.ForeColor = SystemColors.GrayText;
+        version.Text = $"Verzió: {UpdateFlow.CurrentVersion}";
+        layout.Controls.AddRange([_protection, _lol, _short, _feed, _next, _problems, _schedule, note, updateButton, version]);
         Controls.Add(layout);
     }
 

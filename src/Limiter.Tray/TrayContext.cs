@@ -19,6 +19,8 @@ public sealed class TrayContext : ApplicationContext
     private readonly ToolStripMenuItem _next = Info();
     private readonly Dictionary<Health, Icon> _icons;
 
+    private readonly UpdateFlow _update = new();
+    private readonly ToolStripMenuItem _updateItem;
     private StatusForm? _form;
     private StatusView? _view;
     private DateTimeOffset? _chromeSeenSince;
@@ -40,6 +42,11 @@ public sealed class TrayContext : ApplicationContext
         menu.Items.AddRange([_protection, new ToolStripSeparator(), _lol, _short, _feed, _next, new ToolStripSeparator()]);
         menu.Items.Add("Részletek…", null, (_, _) => ShowForm());
         menu.Items.Add("Frissítés", null, async (_, _) => await RefreshAsync());
+        _updateItem = new ToolStripMenuItem("Frissítések keresése…");
+        _updateItem.Click += async (_, _) => await _update.RunAsync(null);
+        menu.Items.Add(_updateItem);
+        menu.Items.Add(new ToolStripMenuItem($"Verzió: {UpdateFlow.CurrentVersion}") { Enabled = false });
+        _update.StateChanged += () => _updateItem.Enabled = !_update.IsRunning;
 
         _notify = new NotifyIcon
         {
@@ -161,7 +168,7 @@ public sealed class TrayContext : ApplicationContext
     {
         if (_form is null || _form.IsDisposed)
         {
-            _form = new StatusForm();
+            _form = new StatusForm(_update);
             _form.FormClosed += (_, _) => _form = null;
         }
         if (_view is not null) _form.Update(_view);

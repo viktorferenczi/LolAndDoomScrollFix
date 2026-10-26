@@ -53,6 +53,10 @@
 .PARAMETER FacebookFeedBanFrom
   Tiltott órák a Facebook-hírfolyamra, lásd LolBanFrom. (FacebookFeedBanTo a vége.)
 
+.PARAMETER KeepSettings
+  Frissítéskor: a meglévő limits.json-t nem írja felül (a korlátok, a jutalom és a tiltott órák megmaradnak).
+  Ha még nincs limits.json, az alapértelmezett értékekkel jön létre.
+
 .PARAMETER DevMode
   Fejlesztői tesztverzió: a bővítményt kézzel, kicsomagolva kell betölteni, ezért nem kötelező telepítésű,
   és a fejlesztői mód nincs tiltva. Éles használatra NEM alkalmas.
@@ -77,6 +81,7 @@ param(
     [ValidateRange(-1, 23)][int]$FacebookFeedBanFrom = -1,
     [ValidateRange(-1, 23)][int]$FacebookFeedBanTo = -1,
     [switch]$EnforceOnWeekends,
+    [switch]$KeepSettings,
     [switch]$DevMode
 )
 
@@ -149,7 +154,7 @@ Set-FolderAcl $DataDir @("*${SidSystem}:(OI)(CI)F", "*${SidAdmins}:(OI)(CI)F")
 & icacls.exe $DataDir /setowner "*$SidAdmins" /C /Q | Out-Null
 Assert-Acl $DataDir -Required $SidSystem, $SidAdmins -Forbidden $SidUsers
 
-Step "Korlátok mentése: $ResetMode$(if ($ResetMode -eq 'daily') { " ($('{0:00}' -f $DailyResetHour):00)" }), rövid videó $ShortVideoMinutes perc, hírfolyam $FacebookFeedMinutes perc, $(if ($EnforceOnWeekends) { 'hétvégén is van korlát' } else { 'hétvégén nincs korlát' })"
+if (-not $KeepSettings) { Step "Korlátok mentése: $ResetMode$(if ($ResetMode -eq 'daily') { " ($('{0:00}' -f $DailyResetHour):00)" }), rövid videó $ShortVideoMinutes perc, hírfolyam $FacebookFeedMinutes perc, $(if ($EnforceOnWeekends) { 'hétvégén is van korlát' } else { 'hétvégén nincs korlát' })" }
 # Tiltott órák: mindkét óra megadva és különböző → bekapcsolva.
 function BanSetting([int]$From, [int]$To) {
     $enabled = ($From -ge 0) -and ($To -ge 0) -and ($From -ne $To)
@@ -174,7 +179,11 @@ $limits = [ordered]@{
     facebookFeedBannedHours         = (BanSetting $FacebookFeedBanFrom $FacebookFeedBanTo)
 }
 $limitsPath = Join-Path $DataDir 'limits.json'
-[System.IO.File]::WriteAllText($limitsPath, ($limits | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
+if ($KeepSettings -and (Test-Path -LiteralPath $limitsPath)) {
+    Step 'Frissítés: a meglévő korlátok megmaradnak'
+} else {
+    [System.IO.File]::WriteAllText($limitsPath, ($limits | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
+}
 Assert-Acl $limitsPath -Required $SidSystem, $SidAdmins -Forbidden $SidUsers
 
 # --- 2. Szolgáltatás ----------------------------------------------------------------

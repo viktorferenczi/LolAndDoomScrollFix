@@ -2,7 +2,7 @@
 ; Fordítás: installer\build.ps1 (előtte a programfájlok az out\app mappába kerülnek).
 
 #define AppName "LoL- és görgetéskorlátozó"
-#define AppVersion "1.3.2"
+#define AppVersion "1.4.0"
 #define DevExtensionId "iidlgdeiobckahalgoabbobfdlefkagi"
 
 [Setup]
@@ -33,6 +33,8 @@ Source: "..\out\app\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 
 [Run]
 Filename: "{app}\Limiter.Tray.exe"; Description: "Tálcaalkalmazás indítása"; Flags: nowait postinstall runasoriginaluser skipifsilent
+; Frissítéskor (csendes telepítés) a telepítő leállította a tálcaalkalmazást, ezért újraindítjuk.
+Filename: "{app}\Limiter.Tray.exe"; Flags: nowait runasoriginaluser; Check: IsUpdate
 
 [UninstallRun]
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\uninstall.ps1"""; Flags: runhidden waituntilterminated; RunOnceId: "LimiterUninstall"
@@ -187,6 +189,38 @@ begin
   ShortVideoBonusEdit := AddNumberEdit(BonusPage, 'Rövid videók (Reels, TikTok, Shorts):', Y, '30', 'perc');
   Y := Y + ScaleY(28);
   FeedBonusEdit := AddNumberEdit(BonusPage, 'Facebook kezdőlapi hírfolyam:', Y, '30', 'perc');
+end;
+
+function MarkerKey: String;
+begin
+  Result := 'SOFTWARE\LolScrollLimiter';
+end;
+
+function HasExistingInstall: Boolean;
+begin
+  Result := RegValueExists(HKLM, MarkerKey, 'ExtensionId');
+end;
+
+// Frissítés: a tálcaalkalmazás /UPDATE kapcsolóval indítja a telepítőt. Csak meglévő telepítésen értelmezzük;
+// ilyenkor a beállításokat nem kérdezzük újra, és a meglévő korlátok megmaradnak.
+function IsUpdate: Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  if not HasExistingInstall then
+    Exit;
+  for I := 1 to ParamCount do
+    if CompareText(ParamStr(I), '/UPDATE') = 0 then
+      Result := True;
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := False;
+  if IsUpdate then
+    Result := (PageID = ModePage.ID) or (PageID = ExtensionPage.ID) or (PageID = LimitsPage.ID) or
+              (PageID = BonusPage.ID) or (PageID = BanPage.ID);
 end;
 
 procedure BanCheckChanged(Sender: TObject);
@@ -379,31 +413,43 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  Code: Integer;
-  Params: String;
+  Code, DevModeValue: Integer;
+  Params, ExtId: String;
 begin
   if CurStep = ssPostInstall then
   begin
     Params := '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\install.ps1') + '"' +
-      ' -InstallDir "' + ExpandConstant('{app}') + '"' +
-      ' -ExtensionId ' + ExtensionPage.Values[0];
-    if ModePage.Values[1] then
-      Params := Params + ' -DevMode';
-    if DailyRadio.Checked then
-      Params := Params + ' -ResetMode daily -DailyResetHour ' + IntToStr(ResetHourCombo.ItemIndex)
+      ' -InstallDir "' + ExpandConstant('{app}') + '"';
+    if IsUpdate then
+    begin
+      // Frissítés: a bővítményazonosító és a mód a korábbi telepítésből jön, a korlátok megmaradnak.
+      if RegQueryStringValue(HKLM, MarkerKey, 'ExtensionId', ExtId) then
+        Params := Params + ' -ExtensionId ' + ExtId;
+      if RegQueryDWordValue(HKLM, MarkerKey, 'DevMode', DevModeValue) and (DevModeValue = 1) then
+        Params := Params + ' -DevMode';
+      Params := Params + ' -KeepSettings';
+    end
     else
-      Params := Params + ' -ResetMode rolling';
-    Params := Params + ' -ShortVideoMinutes ' + IntToStr(StrToInt(Trim(ShortVideoEdit.Text))) +
-      ' -FacebookFeedMinutes ' + IntToStr(StrToInt(Trim(FeedEdit.Text)));
-    if WeekendCheck.Checked then
-      Params := Params + ' -EnforceOnWeekends';
-    Params := Params +
-      ' -LolRestDayBonusMatches ' + IntToStr(StrToInt(Trim(LolBonusEdit.Text))) +
-      ' -ShortVideoRestDayBonusMinutes ' + IntToStr(StrToInt(Trim(ShortVideoBonusEdit.Text))) +
-      ' -FacebookFeedRestDayBonusMinutes ' + IntToStr(StrToInt(Trim(FeedBonusEdit.Text))) +
-      BanParams('Lol', LolBanCheck, LolBanFrom, LolBanTo) +
-      BanParams('ShortVideo', ShortVideoBanCheck, ShortVideoBanFrom, ShortVideoBanTo) +
-      BanParams('FacebookFeed', FeedBanCheck, FeedBanFrom, FeedBanTo);
+    begin
+      Params := Params + ' -ExtensionId ' + ExtensionPage.Values[0];
+      if ModePage.Values[1] then
+        Params := Params + ' -DevMode';
+      if DailyRadio.Checked then
+        Params := Params + ' -ResetMode daily -DailyResetHour ' + IntToStr(ResetHourCombo.ItemIndex)
+      else
+        Params := Params + ' -ResetMode rolling';
+      Params := Params + ' -ShortVideoMinutes ' + IntToStr(StrToInt(Trim(ShortVideoEdit.Text))) +
+        ' -FacebookFeedMinutes ' + IntToStr(StrToInt(Trim(FeedEdit.Text)));
+      if WeekendCheck.Checked then
+        Params := Params + ' -EnforceOnWeekends';
+      Params := Params +
+        ' -LolRestDayBonusMatches ' + IntToStr(StrToInt(Trim(LolBonusEdit.Text))) +
+        ' -ShortVideoRestDayBonusMinutes ' + IntToStr(StrToInt(Trim(ShortVideoBonusEdit.Text))) +
+        ' -FacebookFeedRestDayBonusMinutes ' + IntToStr(StrToInt(Trim(FeedBonusEdit.Text))) +
+        BanParams('Lol', LolBanCheck, LolBanFrom, LolBanTo) +
+        BanParams('ShortVideo', ShortVideoBanCheck, ShortVideoBanFrom, ShortVideoBanTo) +
+        BanParams('FacebookFeed', FeedBanCheck, FeedBanFrom, FeedBanTo);
+    end;
     WizardForm.StatusLabel.Caption := 'Szolgáltatás, jogosultságok és Chrome-szabályok beállítása…';
     if not Exec('powershell.exe', Params, '', SW_HIDE, ewWaitUntilTerminated, Code) or (Code <> 0) then
       MsgBox('A rendszerbeállítás sikertelen (kód: ' + IntToStr(Code) + '). ' +

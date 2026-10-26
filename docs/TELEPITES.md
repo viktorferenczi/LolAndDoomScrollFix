@@ -19,7 +19,7 @@ Kimenet az `out\` mappában:
 
 | Fájl | Mire való |
 |---|---|
-| `LolScrollLimiter-Setup-1.3.2.exe` | Windows-telepítő |
+| `LolScrollLimiter-Setup-1.4.0.exe` | Windows-telepítő |
 | `extension-store.zip` | Feltöltés a Chrome Web Store-ba |
 | `extension-dev.zip` | Fejlesztői tesztverzió (kicsomagolt betöltés, fix azonosító: `iidlgdeiobckahalgoabbobfdlefkagi`) |
 | `app\` | A telepítendő programfájlok |
@@ -38,7 +38,7 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
 
 ## 4. Telepítés (éles)
 
-1. Futtasd a `LolScrollLimiter-Setup-1.3.2.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
+1. Futtasd a `LolScrollLimiter-Setup-1.4.0.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
 2. Telepítési mód: **Éles**.
 3. Bővítményazonosító: az áruházi azonosító (3. pont).
 4. **Korlátok** oldal:
@@ -183,6 +183,33 @@ Módváltáskor a már rögzített használat az új szabály szerint számít (
 | Piros | A szolgáltatás nem érhető el — egyik korlát sem érvényesül. Automatikusan helyreáll, amint a szolgáltatás újraindul |
 
 A bővítmény ikonján piros „!” jelzi, ha nincs kapcsolata a szolgáltatással.
+
+## 7/b. Frissítés
+
+A tálcaikon menüjében és a „Részletek” ablakban is van **Frissítések keresése** gomb (és látszik az aktuális verzió).
+
+1. A gomb megnézi a GitHub legújabb kiadását (`viktorferenczi/LolAndDoomScrollFix`). Ha nincs újabb verzió: „A program naprakész”.
+2. Ha van, kiírja az új verziót és a változásokat, és rákérdez, letöltse-e.
+3. Igen esetén letölti a telepítőt, és **ellenőrzi az SHA-256 ellenőrzőösszegét** a kiadáshoz tartozó `SHA256SUMS.txt` (vagy a GitHub által adott összeg) alapján. Eltérés esetén törli a fájlt, és nem indítja el.
+4. Elindítja a telepítőt, ami **rendszergazdai jóváhagyást kér** (Windows UAC). Ide a megbízható személy írja be a rendszergazdai jelszót — a felhasználó önmagában nem tudja telepíteni a frissítést, és ezzel a korlátozásokat sem tudja kikapcsolni.
+5. A telepítő csendben frissít: a **beállítások (korlátok, jutalom, tiltott órák, hétvége) és a számlálók megmaradnak**, a tálcaalkalmazás újraindul. Az új verzió esetleges új beállításai alapértékkel jönnek létre; ha ezeket állítani akarod, futtasd a telepítőt kézzel (a korlátok oldalakkal), vagy szerkeszd a `limits.json`-t.
+
+Biztonsági szabályok: csak a tároló saját kiadásából tölt le (https://github.com/…/releases/download/…), csak **szigorúan újabb** verziót ajánl (visszalépést és azonos verziót nem), ellenőrzőösszeg nélküli kiadást nem telepít, és a letöltés után is csak GitHub-címre engedi az átirányítást.
+A frissítés keresése nem érinti a korlátozások működését; ha a keresés nem sikerül (nincs net, a GitHub nem válaszol), a program ezt jelzi, és minden korlát tovább működik.
+
+**A kiadások előfeltétele:** a tároló kiadásainak nyilvánosnak kell lenniük (a tálcaalkalmazás bejelentkezés nélkül kérdezi le a GitHubot). Privát tárolónál a gomb azt jelzi: „Még nincs közzétett kiadás, vagy a kiadások nem nyilvánosak.”
+
+**Kiadás készítése (fejlesztő):** emeld a verziót a `Directory.Build.props`, az `extension/manifest.json` és az `installer/LolScrollLimiter.iss` fájlban, commit és push, majd:
+
+```bash
+git tag v1.4.0 && git push origin v1.4.0
+```
+
+A `.github/workflows/release.yml` Windows alatt lefordítja a telepítőt, elkészíti a `SHA256SUMS.txt`-t, és közzéteszi a kiadást (`LolScrollLimiter-Setup-1.4.0.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
+A fájlnév és a címke formátuma kötött (`LolScrollLimiter-Setup-X.Y.Z.exe` / `vX.Y.Z`), különben a gomb nem találja a telepítőt.
+
+A Chrome-bővítmény éles módban a Chrome Web Store-ból magától frissül; a fejlesztői tesztverziónál a frissítés után a `chrome://extensions` oldalon újra be kell tölteni a kicsomagolt bővítményt.
+Kódaláírás nélkül a telepítő a Windows-ablakban „Ismeretlen közzétevő”-ként jelenik meg; a jóváhagyás előtt a megbízható személy ellenőrizze, hogy a frissítést a felhasználó tudatosan indította.
 
 ## 8. Eltávolítás (rendszergazda)
 

@@ -20,6 +20,23 @@ Ezek az élő Windows-viselkedésen múlnak, unit-teszt nem fedi le őket.
 | G.3 | Egy teljes meccs végigjátszása a szolgáltatással, majd ugyanaz leállított szolgáltatással | Nincs különbség a képkockasebességben / akadásban |
 | G.4 | Szolgáltatás naplója egy meccs után | Nincs „Új PvP-keresés megszakítva” / „meccselfogadás elutasítva” bejegyzés a meccs fázisai alatt (csak keresés és elfogadás közben lehet) |
 
+## Frissítés gomb
+
+Előfeltétel: a tároló nyilvános, és van legalább két kiadás (pl. 1.3.2 és újabb) a `release.yml` szerint közzétéve.
+
+| # | Lépés | Elvárt eredmény |
+|---|---|---|
+| U.1 | Tálcaikon → Frissítések keresése, a legújabb verzióval | „A program naprakész (verzió: X)” |
+| U.2 | Régebbi verzióról ugyanez | Megjelenik az új verzió és a változások; „Letöltöd és telepíted most?” |
+| U.3 | Nem → | Semmi sem töltődik le |
+| U.4 | Igen → UAC-ablak; a rendszergazdai jelszót beírva | Csendes telepítés előrehaladás-ablakkal, majd a tálcaalkalmazás újraindul az új verzióval (menü: „Verzió: …”) |
+| U.5 | Frissítés után `limits.json`, a tálcán a számlálók | A korlátok, a jutalom, a tiltott órák és a felhasznált idő változatlan; a szolgáltatás fut (`Get-Service LolScrollLimiter`) |
+| U.6 | Frissítés megkezdése, de az UAC-ablakban Mégse | „A rendszergazdai jóváhagyás elmaradt”; semmi sem változik, a korlátok működnek |
+| U.7 | Hálózat kikapcsolva, majd gomb | „Nincs kapcsolat a GitHubbal…”; a korlátok tovább működnek |
+| U.8 | Privát tárolóval vagy kiadás nélkül | „Még nincs közzétett kiadás, vagy a kiadások nem nyilvánosak.” |
+| U.9 | (Fejlesztő) kiadás, amelynek `SHA256SUMS.txt`-je el van rontva | A letöltés után „az ellenőrzőösszeg nem egyezik”, a telepítő nem indul el |
+| U.10 | Kézi telepítés (nem frissítés) egy meglévő telepítés fölé | A teljes varázsló megjelenik a korlátok oldalaival, és az új értékek felülírják a régieket |
+
 ## 0. Első lépés: a LoL-kliens igazolása
 
 A Riot a kliens helyi API-ját nem támogatja hivatalosan, ezért éles használat előtt az **aktuális** kliensen igazolni kell a keresés megszakítását és a remake felismerését. Normál felhasználóként, futó LoL-klienssel:
@@ -58,6 +75,7 @@ node --test extension/test/*.test.js
 | Felismerés | `detect.test.js`: URL-szabályok, felugró Reels, Messenger/profil/csoport kivétel |
 | Napi nullázás, hétvége | `ScheduleTests`: nullázás a választott órában (webes és LoL-keret), 00:00-s nullázás, hétvégi mentesség, vasárnap este indult meccs hétfőn sem számít, hétvége a nullázási órától, hétvégi korlát bekapcsolva, péntek esti tiltás a hétvége kezdetén feloldódik, nyári időszámítás, a telepítő által írt `limits.json` beolvasása |
 | Pihenőnap-jutalom | `RestDayBonusTests`: +30 perc / +1 meccs üres nap után, a keretek függetlenek, nem halmozódik, bármilyen előző napi használat kizárja, remake nem rontja el, napi módban a nullázástól számított nap, mentes hétvégénél hétfőn a péntek, hétvégi korlátnál a vasárnap, 0-s keretre nem jár, gördülő módban a jutalom éjféli megszűnését a feloldási idő figyelembe veszi, friss telepítésnél és részlegesen mért előző napnál nincs jutalom, a mérés kezdete újraindítás után is megmarad, régebbi adatbázisnál az első rögzített használat a kezdet |
+| Frissítés | `UpdateTests`: verziók értelmezése és összehasonlítása (csak szigorúan újabb), csak a tároló saját kiadási címei és GitHub-átirányítás megbízható, ellenőrzőösszeg a `SHA256SUMS.txt`-ből vagy a GitHub `digest` mezőjéből, ellenőrzőösszeg nélküli / telepítő nélküli / túl nagy / vázlat / előzetes kiadás kezelése, privát tároló, korlátozás és hálózati hiba üzenete, letöltés egyező / hibás összeggel és mérettel, idegen cím és átirányítás elutasítása |
 | Tiltott órák | `BannedHoursTests`: kezdő óra benne, záró nincs, éjfélen átnyúló időszak, azonos kezdet és vég = nincs tiltás, LoL-keresés tiltva maradék kerettel is (TFT nem), folyamatban lévő meccs és újracsatlakozás engedett, a webes keretek külön tilthatók, a keret és a nullázás nem változik, elfogyott keretnél a későbbi feloldás, mentes hétvégén nincs tiltás, helyi idő, `limits.json` beolvasása |
 
 ## 2. Windowsos próbák (LoL)
