@@ -50,9 +50,13 @@ public sealed class LimitEngine
         _settings = settings;
         _clock = clock;
         _zone = zone ?? TimeZoneInfo.Local;
+        TrackingStart = store.EnsureTrackingStart(clock.UtcNow);
     }
 
     public LimitSettings Settings => _settings();
+
+    /// <summary>Mióta méri a program a használatot. Pihenőnap-jutalom csak egy ennél későbbi kezdetű, teljes napra jár.</summary>
+    public DateTimeOffset TrackingStart { get; }
 
     public LimitSchedule Schedule => new(_settings(), _zone);
 
@@ -184,14 +188,16 @@ public sealed class LimitEngine
     private TimeSpan WebBonusAfter(string sid, WebCategory category, LimitSettings settings, (DateTimeOffset Start, DateTimeOffset End)? day)
     {
         var bonus = settings.WebRestDayBonus(category);
-        if (day is not { } d || bonus <= TimeSpan.Zero || settings.WebLimit(category) <= TimeSpan.Zero) return TimeSpan.Zero;
+        if (day is not { } d || d.Start < TrackingStart) return TimeSpan.Zero; // nem teljesen mért nap
+        if (bonus <= TimeSpan.Zero || settings.WebLimit(category) <= TimeSpan.Zero) return TimeSpan.Zero;
         return _store.SumWebUsage(sid, category, d.Start, d.End) == 0 ? bonus : TimeSpan.Zero;
     }
 
     private int LolBonusAfter(string sid, LimitSettings settings, (DateTimeOffset Start, DateTimeOffset End)? day)
     {
         var bonus = settings.LolRestDayBonusMatches;
-        if (day is not { } d || bonus <= 0 || settings.LolPvpMatches <= 0) return 0;
+        if (day is not { } d || d.Start < TrackingStart) return 0; // nem teljesen mért nap
+        if (bonus <= 0 || settings.LolPvpMatches <= 0) return 0;
         return _store.CountCountedMatches(sid, d.Start, d.End) == 0 ? bonus : 0;
     }
 

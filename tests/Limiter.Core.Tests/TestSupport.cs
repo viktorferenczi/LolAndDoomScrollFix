@@ -22,15 +22,20 @@ public sealed class TestEnv : IDisposable
     /// Alapértelmezés: 2026. október 1., csütörtök 12:00 UTC, UTC időzónában. A pihenőnap-jutalom csak
     /// <paramref name="restDayBonus"/> esetén él (üres adatbázisnál különben minden teszt „pihenőnap” után indulna).
     /// </summary>
-    public TestEnv(LimitSettings? settings = null, TimeZoneInfo? zone = null, DateTimeOffset? start = null, bool restDayBonus = false)
+    public TestEnv(LimitSettings? settings = null, TimeZoneInfo? zone = null, DateTimeOffset? start = null,
+        bool restDayBonus = false, DateTimeOffset? trackingStart = null)
     {
         Directory.CreateDirectory(_dir);
         Settings = settings ?? LimitSettings.Default;
         if (!restDayBonus) Settings = Settings.WithoutRestDayBonus();
         Zone = zone ?? TimeZoneInfo.Utc;
         Clock = new FakeClock(start ?? new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        // A jutalom teszteiben a program „régóta mér”, kivéve ha a teszt külön megadja a mérés kezdetét.
+        _initialTrackingStart = trackingStart ?? (restDayBonus ? Clock.UtcNow - TimeSpan.FromDays(30) : null);
         Open();
     }
+
+    private DateTimeOffset? _initialTrackingStart;
 
     public TimeZoneInfo Zone { get; }
 
@@ -52,6 +57,11 @@ public sealed class TestEnv : IDisposable
     private void Open()
     {
         Store = new UsageStore(DbPath);
+        if (_initialTrackingStart is { } tracking)
+        {
+            Store.SetTrackingStart(tracking);
+            _initialTrackingStart = null; // újraindításkor a tárolt érték marad
+        }
         Engine = new LimitEngine(Store, () => Settings, Clock, Zone);
         Tracker = new LolMatchTracker(Store, Engine, Clock);
     }

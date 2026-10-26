@@ -187,4 +187,83 @@ public class RestDayBonusTests
         Assert.Equal(0, s.ShortVideoRestDayBonusMinutes);
         Assert.Equal(30, s.FacebookFeedRestDayBonusMinutes);
     }
+
+    // --- Friss telepítés: a program indulása előtti nap nem „üres nap” ---
+
+    [Fact]
+    public void A_fresh_install_gets_no_bonus_for_the_day_before_it_existed()
+    {
+        // Csütörtökön 12:00-kor telepítve, üres adatbázissal; a keretek alaposak: nincs jutalom.
+        using var env = new TestEnv(start: At(10, 1, 12), restDayBonus: true, trackingStart: At(10, 1, 12));
+        Assert.Equal(3, env.Engine.GetLolStatus(A).Limit);
+        Assert.Equal(TimeSpan.FromMinutes(60), env.Engine.GetWebStatus(A, WebCategory.ShortVideo).Limit);
+        Assert.Equal(TimeSpan.FromMinutes(60), env.Engine.GetWebStatus(A, WebCategory.FacebookFeed).Limit);
+    }
+
+    [Fact]
+    public void A_fresh_install_with_the_real_engine_start_gets_no_bonus_either()
+    {
+        // Nincs előre beállított mérési kezdet: az engine az induláskori időt rögzíti (a valódi telepítési eset).
+        using var env = new TestEnv(start: At(10, 1, 12), restDayBonus: true);
+        env.Store.Dispose();
+        File.Delete(env.DbPath);
+        env.Restart(); // új, üres adatbázis
+        Assert.Equal(At(10, 1, 12), env.Engine.TrackingStart);
+        Assert.Equal(3, env.Engine.GetLolStatus(A).Limit);
+    }
+
+    [Fact]
+    public void Installed_in_the_middle_of_the_previous_day_is_still_not_a_full_day()
+    {
+        // Szerdán 15:00-kor telepítve; csütörtökön a szerdai nap csak részben mért → nincs jutalom.
+        using var env = new TestEnv(start: At(10, 1, 9), restDayBonus: true, trackingStart: At(9, 30, 15));
+        Assert.Equal(3, env.Engine.GetLolStatus(A).Limit);
+        Assert.Equal(TimeSpan.FromMinutes(60), env.Engine.GetWebStatus(A, WebCategory.ShortVideo).Limit);
+    }
+
+    [Fact]
+    public void The_bonus_appears_once_the_previous_day_was_fully_tracked()
+    {
+        // Szerdán 00:00 előtt telepítve → csütörtökön a teljes, üres szerdáért jár a jutalom.
+        using var env = new TestEnv(start: At(10, 1, 9), restDayBonus: true, trackingStart: At(9, 29, 23));
+        Assert.Equal(4, env.Engine.GetLolStatus(A).Limit);
+        Assert.Equal(TimeSpan.FromMinutes(90), env.Engine.GetWebStatus(A, WebCategory.ShortVideo).Limit);
+    }
+
+    [Fact]
+    public void Install_day_flow_second_full_day_earns_the_bonus_but_the_first_day_does_not()
+    {
+        // Telepítés kedden 20:00. Szerda: nincs jutalom (kedd nem teljes). Csütörtök: van (szerda teljes és üres).
+        using var env = new TestEnv(start: At(9, 29, 20), restDayBonus: true, trackingStart: At(9, 29, 20));
+        Assert.Equal(3, env.Engine.GetLolStatus(A).Limit);
+
+        env.Clock.UtcNow = At(9, 30, 10);
+        Assert.Equal(3, env.Engine.GetLolStatus(A).Limit);
+
+        env.Clock.UtcNow = At(10, 1, 10);
+        Assert.Equal(4, env.Engine.GetLolStatus(A).Limit);
+    }
+
+    [Fact]
+    public void Tracking_start_survives_restart_and_is_not_moved_forward()
+    {
+        using var env = new TestEnv(start: At(10, 1, 12), restDayBonus: true, trackingStart: At(9, 25, 8));
+        env.Clock.UtcNow = At(10, 3, 12);
+        env.Restart();
+        Assert.Equal(At(9, 25, 8), env.Engine.TrackingStart);
+    }
+
+    [Fact]
+    public void An_existing_database_without_a_tracking_value_uses_its_earliest_usage()
+    {
+        // Frissítés régebbi verzióról: nincs mentett kezdet, de van korábbi használat → az a kezdet.
+        using var env = new TestEnv(start: At(10, 1, 12));
+        env.Store.AddWebUsage(A, WebCategory.ShortVideo, At(9, 20, 18), 60_000);
+        using var fresh = new UsageStore(Path.Combine(Path.GetTempPath(), "limiter-tests-upgrade-" + Guid.NewGuid().ToString("N") + ".db"));
+        fresh.AddWebUsage(A, WebCategory.ShortVideo, At(9, 20, 18), 60_000);
+        fresh.TryRecordMatch(A, 1, At(9, 22, 20), 420);
+        Assert.Equal(At(9, 20, 18), fresh.EnsureTrackingStart(At(10, 1, 12)));
+        // Második hívás ugyanazt adja, akkor is, ha az idő közben telt.
+        Assert.Equal(At(9, 20, 18), fresh.EnsureTrackingStart(At(10, 5, 12)));
+    }
 }

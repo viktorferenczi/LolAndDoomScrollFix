@@ -19,7 +19,7 @@ Kimenet az `out\` mappában:
 
 | Fájl | Mire való |
 |---|---|
-| `LolScrollLimiter-Setup-1.3.1.exe` | Windows-telepítő |
+| `LolScrollLimiter-Setup-1.3.2.exe` | Windows-telepítő |
 | `extension-store.zip` | Feltöltés a Chrome Web Store-ba |
 | `extension-dev.zip` | Fejlesztői tesztverzió (kicsomagolt betöltés, fix azonosító: `iidlgdeiobckahalgoabbobfdlefkagi`) |
 | `app\` | A telepítendő programfájlok |
@@ -38,7 +38,7 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
 
 ## 4. Telepítés (éles)
 
-1. Futtasd a `LolScrollLimiter-Setup-1.3.1.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
+1. Futtasd a `LolScrollLimiter-Setup-1.3.2.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
 2. Telepítési mód: **Éles**.
 3. Bővítményazonosító: az áruházi azonosító (3. pont).
 4. **Korlátok** oldal:
@@ -151,7 +151,11 @@ Kézzel: rendszergazdai jogú szerkesztővel (pl. Jegyzettömb „Futtatás rend
   A jutalom az adott napra emeli a keretet; gördülő módban éjfélkor megszűnik, és a tiltás feloldásának időpontja ezt már figyelembe veszi.
 - **Hétvége:** ha hétvégén nincs korlát, a hétvégi használat nem rögzül, ezért hétfőn a péntek számít (nem a vasárnap).
 - **0 perces / 0 meccses keretre** nem jár jutalom (különben minden második nap feloldódna).
-- Ha a gép egész nap ki volt kapcsolva, az is üres napnak számít.
+- **Friss telepítés:** a program a telepítéskor kezdi a mérést, és jutalom csak olyan napért jár, amelyet **teljes egészében** mért.
+  Telepítés napján és a rá következő napon ezért nincs jutalom (a telepítés napja nem teljes nap); az első jutalom a telepítést követő
+  második napon járhat, ha az előző, teljesen mért nap üres volt. Újratelepítéskor a számlálók és a mérés kezdete megmarad.
+  Régebbi verzióról frissítve a mérés kezdete az első rögzített használat ideje.
+- Ha a gép egész nap ki volt kapcsolva, az üres napnak számít (ha a program korábban már mért).
 - A jutalom mértékét a telepítő **Pihenőnap-jutalom** oldalán lehet megadni (vagy utólag a fenti mezőkben).
 
 A szolgáltatás 30 másodpercen belül átveszi. Hibás fájlnál az előző korlát marad érvényben, és a tálcaikon figyelmeztet.

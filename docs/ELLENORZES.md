@@ -57,7 +57,7 @@ node --test extension/test/*.test.js
 | Webes időmérés | `background.test.js`: fókusz, háttérlap, zárolás, alvás, 1 mp-en belüli tiltás, fail-open |
 | Felismerés | `detect.test.js`: URL-szabályok, felugró Reels, Messenger/profil/csoport kivétel |
 | Napi nullázás, hétvége | `ScheduleTests`: nullázás a választott órában (webes és LoL-keret), 00:00-s nullázás, hétvégi mentesség, vasárnap este indult meccs hétfőn sem számít, hétvége a nullázási órától, hétvégi korlát bekapcsolva, péntek esti tiltás a hétvége kezdetén feloldódik, nyári időszámítás, a telepítő által írt `limits.json` beolvasása |
-| Pihenőnap-jutalom | `RestDayBonusTests`: +30 perc / +1 meccs üres nap után, a keretek függetlenek, nem halmozódik, bármilyen előző napi használat kizárja, remake nem rontja el, napi módban a nullázástól számított nap, mentes hétvégénél hétfőn a péntek, hétvégi korlátnál a vasárnap, 0-s keretre nem jár, gördülő módban a jutalom éjféli megszűnését a feloldási idő figyelembe veszi |
+| Pihenőnap-jutalom | `RestDayBonusTests`: +30 perc / +1 meccs üres nap után, a keretek függetlenek, nem halmozódik, bármilyen előző napi használat kizárja, remake nem rontja el, napi módban a nullázástól számított nap, mentes hétvégénél hétfőn a péntek, hétvégi korlátnál a vasárnap, 0-s keretre nem jár, gördülő módban a jutalom éjféli megszűnését a feloldási idő figyelembe veszi, friss telepítésnél és részlegesen mért előző napnál nincs jutalom, a mérés kezdete újraindítás után is megmarad, régebbi adatbázisnál az első rögzített használat a kezdet |
 | Tiltott órák | `BannedHoursTests`: kezdő óra benne, záró nincs, éjfélen átnyúló időszak, azonos kezdet és vég = nincs tiltás, LoL-keresés tiltva maradék kerettel is (TFT nem), folyamatban lévő meccs és újracsatlakozás engedett, a webes keretek külön tilthatók, a keret és a nullázás nem változik, elfogyott keretnél a későbbi feloldás, mentes hétvégén nincs tiltás, helyi idő, `limits.json` beolvasása |
 
 ## 2. Windowsos próbák (LoL)
@@ -104,6 +104,7 @@ Tipp: `"shortVideoMinutes": 2`, `"facebookFeedMinutes": 2`.
 | 3b.7 | Egy teljes napig (kedd) semmi rövid videó, LoL és hírfolyam; szerdán megnézni a tálcát | „… maradt (90 percből, ebből +30 perc pihenőnap-jutalom)”, LoL: „4-ből, ebből +1 pihenőnap-jutalom” |
 | 3b.8 | Szerdán 1 perc rövid videó; csütörtökön a tálca | Rövid videó: 60 perc (nincs jutalom); a hírfolyamnál, ha szerdán sem volt, továbbra is +30 |
 | 3b.9 | Hétfő reggel, pénteken nem volt LoL (mentes hétvégével) | +1 meccs |
+| 3b.9b | **Friss telepítés** (üres adatbázis), a telepítés napján és másnap megnézni a tálcát | Nincs jutalom: LoL „3-ból”, rövid videó és hírfolyam „60 percből”; az első jutalom a telepítést követő második napon jelenhet meg |
 | 3b.10 | Telepítés a Pihenőnap-jutalom oldalon: LoL 2, rövid videó 15, hírfolyam 0 | `limits.json`: `2` / `15` / `0`; üres nap után a tálcán +2 meccs és +15 perc, a hírfolyamnál nincs jutalom |
 | 3b.11 | Érvénytelen jutalom (pl. LoL `11`, perc `abc`) | A telepítő hibaüzenettel nem lép tovább |
 | 3b.12 | Tiltott órák: LoL bejelölve, a jelenlegi órától a következőig (pl. 14:00–15:00) | PvP-keresés azonnal leáll, értesítés: „…tiltott időszak van”; tálca: „LoL PvP: tiltott időszak (14:00–15:00) — újra: ma 15:00”; TFT és gyakorlás elérhető; 15:00 után a keresés újra működik |

@@ -60,7 +60,58 @@ public sealed class UsageStore : IDisposable
                 remake_status INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (user_sid, game_id)
             );
+            CREATE TABLE IF NOT EXISTS meta (
+                key   TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
             """);
+    }
+
+    private const string TrackingStartKey = "tracking_started_at";
+
+    /// <summary>
+    /// Mióta méri a program a használatot. Első híváskor rögzíti: meglévő adatbázisnál (frissítés) a legkorábbi
+    /// rögzített használat időpontját, üres adatbázisnál (friss telepítés) a <paramref name="now"/>-t.
+    /// </summary>
+    public DateTimeOffset EnsureTrackingStart(DateTimeOffset now)
+    {
+        lock (_gate)
+        {
+            using (var read = _db.CreateCommand())
+            {
+                read.CommandText = "SELECT value FROM meta WHERE key = $k;";
+                read.Parameters.AddWithValue("$k", TrackingStartKey);
+                if (read.ExecuteScalar() is string text && long.TryParse(text, out var ms))
+                    return DateTimeOffset.FromUnixTimeMilliseconds(ms);
+            }
+
+            long start = now.ToUnixTimeMilliseconds();
+            using (var earliest = _db.CreateCommand())
+            {
+                earliest.CommandText = """
+                    SELECT MIN(t) FROM (
+                        SELECT MIN(bucket_start) AS t FROM web_usage
+                        UNION ALL
+                        SELECT MIN(started_at) FROM lol_match
+                    );
+                    """;
+                if (earliest.ExecuteScalar() is long first) start = Math.Min(start, first);
+            }
+            SetTrackingStart(DateTimeOffset.FromUnixTimeMilliseconds(start));
+            return DateTimeOffset.FromUnixTimeMilliseconds(start);
+        }
+    }
+
+    public void SetTrackingStart(DateTimeOffset at)
+    {
+        lock (_gate)
+        {
+            using var cmd = _db.CreateCommand();
+            cmd.CommandText = "INSERT OR REPLACE INTO meta (key, value) VALUES ($k, $v);";
+            cmd.Parameters.AddWithValue("$k", TrackingStartKey);
+            cmd.Parameters.AddWithValue("$v", at.ToUnixTimeMilliseconds().ToString());
+            cmd.ExecuteNonQuery();
+        }
     }
 
     public void AddWebUsage(string userSid, WebCategory category, DateTimeOffset at, long milliseconds)
