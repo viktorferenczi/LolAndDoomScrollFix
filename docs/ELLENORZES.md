@@ -11,6 +11,15 @@ Ezek az élő Windows-viselkedésen múlnak, unit-teszt nem fedi le őket.
 | S.3 | Normál felhasználóként: tálcaikon és a bővítmény felugró ablaka | Zöld ikon, „A védelem működik.” — nem „A szolgáltatás munkamenete nem kérdezhető le” |
 | S.4 | Normál felhasználóként, futó LoL-klienssel: `Limiter.Service.exe --diagnose` | Kiírja a fázist és a játékost — nem „a LoL-kliens felderítése sikertelen” |
 
+## Játék közbeni terhelés és akadás
+
+| # | Lépés | Elvárt eredmény |
+|---|---|---|
+| G.1 | Feladatkezelő → Részletek: `Limiter.Service.exe` és `WmiPrvSE.exe` CPU-használata **nyitott LoL-kliens nélkül** 1 percig | Gyakorlatilag 0 % (a költséges WMI-lekérdezés nem fut, amíg nincs kliens) |
+| G.2 | Ugyanez egy futó meccs közben | A szolgáltatás CPU-használata elhanyagolható, és nincs 3 másodperces ritmusú csúcs |
+| G.3 | Egy teljes meccs végigjátszása a szolgáltatással, majd ugyanaz leállított szolgáltatással | Nincs különbség a képkockasebességben / akadásban |
+| G.4 | Szolgáltatás naplója egy meccs után | Nincs „Új PvP-keresés megszakítva” / „meccselfogadás elutasítva” bejegyzés a meccs fázisai alatt (csak keresés és elfogadás közben lehet) |
+
 ## 0. Első lépés: a LoL-kliens igazolása
 
 A Riot a kliens helyi API-ját nem támogatja hivatalosan, ezért éles használat előtt az **aktuális** kliensen igazolni kell a keresés megszakítását és a remake felismerését. Normál felhasználóként, futó LoL-klienssel:

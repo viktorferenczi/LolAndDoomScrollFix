@@ -19,7 +19,7 @@ Kimenet az `out\` mappában:
 
 | Fájl | Mire való |
 |---|---|
-| `LolScrollLimiter-Setup-1.3.0.exe` | Windows-telepítő |
+| `LolScrollLimiter-Setup-1.3.1.exe` | Windows-telepítő |
 | `extension-store.zip` | Feltöltés a Chrome Web Store-ba |
 | `extension-dev.zip` | Fejlesztői tesztverzió (kicsomagolt betöltés, fix azonosító: `iidlgdeiobckahalgoabbobfdlefkagi`) |
 | `app\` | A telepítendő programfájlok |
@@ -38,7 +38,7 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
 
 ## 4. Telepítés (éles)
 
-1. Futtasd a `LolScrollLimiter-Setup-1.3.0.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
+1. Futtasd a `LolScrollLimiter-Setup-1.3.1.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
 2. Telepítési mód: **Éles**.
 3. Bővítményazonosító: az áruházi azonosító (3. pont).
 4. **Korlátok** oldal:
@@ -202,6 +202,12 @@ A számlálók megmaradnak (újratelepítés után folytatódnak). Teljes törl�
 
   Kiírja a fázist, a sor besorolását (Pvp / NotPvp / Unknown) és az utolsó 10 meccs remake-jelzőjét.
   `--test-cancel` kapcsolóval keresés vagy meccselfogadás közben megszakít / elutasít.
+- **A LoL játék közben akad vagy lefagy:** a program a játék folyamatát soha nem nyitja meg, nem függeszti fel és nem állítja le;
+  a LoL-klienshez csak keresés és meccselfogadás közben küld parancsot (a keresés megszakítása, az elfogadás elutasítása), és
+  azt is csak akkor, ha közvetlenül előtte a kliens még ugyanabban a fázisban van. Játék közben legfeljebb 15 másodpercenként kérdezi le a klienst.
+  Ha mégis akadást tapasztalsz, különítsd el az okot:
+  1. Rendszergazdai PowerShellben: `Stop-Service LolScrollLimiter`, majd játssz egy meccset. Ha így is akad, nem a program okozza (videokártya-illesztőprogram, túlmelegedés, Vanguard stb.).
+  2. Ha csak a szolgáltatással akad: Feladatkezelő → Részletek → `Limiter.Service.exe` és `WmiPrvSE.exe` CPU-használata játék közben; küldd el a naplót (Eseménynapló → Alkalmazás, forrás: `LolScrollLimiter`) a játék időpontjával.
 - **A bővítmény nem jelentkezik:** `chrome://extensions` → a bővítmény részletei → „Service worker” → konzol. Ellenőrizd a `HKLM\SOFTWARE\Google\Chrome\NativeMessagingHosts\hu.kmsoft.lolscrolllimiter` kulcsot és a hivatkozott JSON-fájlban az `allowed_origins` azonosítót.
 
 ## 10. Ismert korlátok

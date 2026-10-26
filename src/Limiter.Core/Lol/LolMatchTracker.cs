@@ -101,6 +101,18 @@ public sealed class LolMatchTracker
             phase == "ReadyCheck" ? MatchmakingAction.DeclineReadyCheck : MatchmakingAction.CancelSearch, kind, status.Banned);
     }
 
+    /// <summary>
+    /// A döntés közvetlenül a végrehajtás előtt is érvényes-e: a keresés megszakítása csak keresés közben,
+    /// az elfogadás elutasítása csak meccselfogadás közben küldhető. Ha közben a fázis változott
+    /// (pl. hősválasztás, meccs), a hívás elmarad — a játék közben soha nem nyúlunk a klienshez.
+    /// </summary>
+    public static bool ActionStillApplies(MatchmakingAction action, string currentPhase) => action switch
+    {
+        MatchmakingAction.CancelSearch => currentPhase == "Matchmaking",
+        MatchmakingAction.DeclineReadyCheck => currentPhase == "ReadyCheck",
+        _ => false,
+    };
+
     /// <summary>Remake-ellenőrzés eredményének rögzítése. Csak igazolt remake adja vissza az alkalmat.</summary>
     public void OnRemakeResult(string userSid, long gameId, bool remade) =>
         _store.SetRemakeStatus(userSid, gameId, remade ? RemakeStatus.Remake : RemakeStatus.NotRemake);

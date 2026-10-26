@@ -22,7 +22,6 @@ public sealed class LcuSession : IDisposable
         "OnJsonApiEvent_lol-lobby_v2_lobby",
     ];
 
-    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan RemakeInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan RemakeGiveUpAfter = TimeSpan.FromHours(6);
     private static readonly TimeSpan ErrorGrace = TimeSpan.FromSeconds(30);
@@ -41,6 +40,7 @@ public sealed class LcuSession : IDisposable
     private long _runningGameId;
     private DateTimeOffset _lastSuccess;
     private string? _degradedReason;
+    private string? _lastPhase;
 
     public LcuSession(LcuProcess process, LolMatchTracker tracker, LimitEngine engine, ProtectionState protection, IClock clock, ILogger log)
     {
@@ -102,7 +102,7 @@ public sealed class LcuSession : IDisposable
         {
             using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct))
             {
-                timeout.CancelAfter(PollInterval);
+                timeout.CancelAfter(LcuPolling.IntervalFor(_lastPhase));
                 try { await _evaluateKick.Reader.ReadAsync(timeout.Token).ConfigureAwait(false); }
                 catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }
             }
@@ -133,6 +133,7 @@ public sealed class LcuSession : IDisposable
     {
         _degradedReason = null;
         var phase = await _api.GetPhaseAsync(ct).ConfigureAwait(false);
+        _lastPhase = phase;
 
         if (phase is "Matchmaking" or "ReadyCheck")
         {
@@ -182,6 +183,16 @@ public sealed class LcuSession : IDisposable
     private async Task ApplyDecisionAsync(MatchmakingDecision decision, CancellationToken ct)
     {
         var reason = decision.Banned ? "tiltott időszak van" : "elfogyott a meccskeret";
+
+        // A döntés óta eltelt néhány kérés; közvetlenül a küldés előtt újra ellenőrizzük a fázist,
+        // hogy hősválasztásba vagy meccsbe lépés után soha ne érkezzen megszakítás/elutasítás a klienshez.
+        if (decision.Action != MatchmakingAction.Allow &&
+            !LolMatchTracker.ActionStillApplies(decision.Action, await _api.GetPhaseAsync(ct).ConfigureAwait(false)))
+        {
+            _log.LogDebug("A fázis közben megváltozott, a(z) {Action} elmarad.", decision.Action);
+            return;
+        }
+
         switch (decision.Action)
         {
             case MatchmakingAction.CancelSearch:
@@ -194,7 +205,9 @@ public sealed class LcuSession : IDisposable
             case MatchmakingAction.DeclineReadyCheck:
             {
                 var status = await _api.DeclineReadyCheckAsync(ct).ConfigureAwait(false);
-                await _api.CancelSearchAsync(ct).ConfigureAwait(false);
+                // Elutasítás után csak akkor szüntetjük meg a keresést, ha a kliens még keres.
+                if (LolMatchTracker.ActionStillApplies(MatchmakingAction.CancelSearch, await _api.GetPhaseAsync(ct).ConfigureAwait(false)))
+                    await _api.CancelSearchAsync(ct).ConfigureAwait(false);
                 Report(status, $"PvP-meccselfogadás elutasítva: {reason}.",
                     "A meccselfogadást nem sikerült elutasítani.");
                 break;
