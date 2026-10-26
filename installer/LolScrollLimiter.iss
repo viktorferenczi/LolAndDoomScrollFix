@@ -413,7 +413,8 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  Code, DevModeValue: Integer;
+  Code: Integer;
+  DevModeValue: Cardinal;
   Params, ExtId: String;
 begin
   if CurStep = ssPostInstall then

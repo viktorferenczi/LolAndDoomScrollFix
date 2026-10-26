@@ -1,0 +1,31 @@
+# Gyors ellenőrzés: lefordul-e az Inno Setup szkript. Csak a `ci/installer-check` ágra küldéskor fut.
+name: Telepítő-fordítás ellenőrzése
+
+on:
+  push:
+    branches: ['ci/installer-check']
+  workflow_dispatch:
+
+jobs:
+  compile:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inno Setup telepítése
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Helyettesítő programfájlok (csak a fordításhoz)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory out/app -Force | Out-Null
+          foreach ($f in 'Limiter.Service.exe', 'Limiter.NativeHost.exe', 'Limiter.Tray.exe', 'install.ps1', 'uninstall.ps1') {
+            Set-Content -Path "out/app/$f" -Value 'x'
+          }
+
+      - name: Fordítás
+        shell: pwsh
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer/LolScrollLimiter.iss
+          if ($LASTEXITCODE -ne 0) { throw 'A telepítő fordítása sikertelen.' }
