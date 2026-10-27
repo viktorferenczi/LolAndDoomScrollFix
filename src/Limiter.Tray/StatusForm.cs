@@ -45,7 +45,9 @@ public sealed class StatusForm : Form
         var version = Line();
         version.ForeColor = SystemColors.GrayText;
         version.Text = $"Verzió: {UpdateFlow.CurrentVersion}";
-        layout.Controls.AddRange([_protection, _lol, _short, _feed, _next, _problems, _schedule, note, updateButton, version]);
+        var adminButton = new Button { Text = "Admin beállítások… (rendszergazdai jelszó kell)", AutoSize = true, Margin = new Padding(0, 6, 0, 0) };
+        adminButton.Click += (_, _) => AdminLauncher.Open(this);
+        layout.Controls.AddRange([_protection, _lol, _short, _feed, _next, _problems, _schedule, note, updateButton, adminButton, version]);
         Controls.Add(layout);
     }
 

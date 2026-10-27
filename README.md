@@ -16,6 +16,8 @@ Telepítéskor választható:
 
 **Pihenőnap-jutalom:** ha egy napon egy PvP-meccset sem játszol, másnap +1 meccs jár; ha egy napon 0 percet nézel rövid videót, másnap +30 perc; ugyanígy a Facebook-hírfolyamnál +30 perc. A három jutalom független egymástól, és nem halmozódik: több üres nap után is csak egyszer jár. A jutalmak mértéke telepítéskor állítható (0 = kikapcsolva).
 
+**Admin beállítások:** a tálcaikon menüjében és a Részletek ablakban („Frissítések keresése” alatt) az „Admin beállítások…” gomb a Windows rendszergazdai jelszavát kéri (UAC), és utána megnyit egy szerkesztőt, ahol a telepítéskor megadott beállítások (visszaállítás, keretek, hétvége, pihenőnap-jutalom, tiltott órák) módosíthatók; újratelepítés nem kell.
+
 **Frissítés:** a tálcaikon menüjében és a Részletek ablakban a „Frissítések keresése” gomb megkeresi a legújabb kiadást, letölti és ellenőrzi (SHA-256), majd elindítja a telepítőt; a telepítéshez rendszergazdai jóváhagyás kell, a beállítások és a számlálók megmaradnak.
 
 **Tiltott órák:** telepítéskor keretenként (LoL, rövid videók, Facebook-hírfolyam) megadható egy napi tiltott időszak, pl. 01:00–05:00. Ilyenkor az adott dolog egyáltalán nem használható, akkor sem, ha a keretből maradt; a keretet és a nullázást nem érinti.

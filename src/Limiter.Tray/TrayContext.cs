@@ -45,6 +45,7 @@ public sealed class TrayContext : ApplicationContext
         _updateItem = new ToolStripMenuItem("Frissítések keresése…");
         _updateItem.Click += async (_, _) => await _update.RunAsync(null);
         menu.Items.Add(_updateItem);
+        menu.Items.Add("Admin beállítások… (jelszó kell)", null, (_, _) => AdminLauncher.Open(null));
         menu.Items.Add(new ToolStripMenuItem($"Verzió: {UpdateFlow.CurrentVersion}") { Enabled = false });
         _update.StateChanged += () => _updateItem.Enabled = !_update.IsRunning;
 

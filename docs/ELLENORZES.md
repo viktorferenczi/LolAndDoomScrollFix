@@ -20,6 +20,23 @@ Ezek az élő Windows-viselkedésen múlnak, unit-teszt nem fedi le őket.
 | G.3 | Egy teljes meccs végigjátszása a szolgáltatással, majd ugyanaz leállított szolgáltatással | Nincs különbség a képkockasebességben / akadásban |
 | G.4 | Szolgáltatás naplója egy meccs után | Nincs „Új PvP-keresés megszakítva” / „meccselfogadás elutasítva” bejegyzés a meccs fázisai alatt (csak keresés és elfogadás közben lehet) |
 
+## Admin beállítások
+
+Normál (nem rendszergazdai) Windows-fiókból.
+
+| # | Lépés | Elvárt eredmény |
+|---|---|---|
+| A.1 | Tálcaikon → Admin beállítások… (vagy a Részletek ablak gombja) | Windows UAC-ablak rendszergazdai jelszót kér; jelszó nélkül nem nyílik semmi |
+| A.2 | UAC-ablakban Mégse | „A rendszergazdai jóváhagyás (jelszó) elmaradt”; semmi sem változik |
+| A.3 | Helyes jelszó után | Megnyílik a szerkesztő a **jelenlegi** értékekkel (telepítéskor megadottakkal egyező) |
+| A.4 | Értékek átírása (pl. rövid videó 20 perc, napi nullázás 04:00, hétvégi korlát be, LoL tiltott órák 23–6) → Mentés | „A beállítások mentve”; `C:\ProgramData\LolScrollLimiter\limits.json` az új értékeket tartalmazza |
+| A.5 | 30 másodperc után a tálcán és a bővítmény felugró ablakában | Az új keret és a visszaállítási szabály látszik; a LoL-keresés tiltott órában leáll |
+| A.6 | Tiltott időszak kezdete = vége bejelölve → Mentés | Hibaüzenet, a fájl nem változik |
+| A.7 | Rendszergazdaként a `limits.json`-t elrontva (`{ nem json`), majd Admin beállítások | Figyelmeztetés, az alapértékekkel nyílik a szerkesztő; mentés után a fájl rendben van |
+| A.8 | Normál felhasználóként közvetlenül `Limiter.Tray.exe --admin` | „csak rendszergazdai jogosultsággal nyitható meg”, nem nyílik szerkesztő |
+| A.9 | Normál felhasználóként a `limits.json` megnyitása / módosítása a Windowsban | Hozzáférés megtagadva (a szerkesztő nélkül sem lehet) |
+| A.10 | Mentés után az eredeti telepítési értékekre visszaállítva, majd frissítés gomb (1.4.x → újabb) | A frissítés megtartja a szerkesztővel mentett beállításokat |
+
 ## Frissítés gomb
 
 Előfeltétel: a tároló nyilvános, és van legalább két kiadás (pl. 1.3.2 és újabb) a `release.yml` szerint közzétéve.
@@ -75,6 +92,7 @@ node --test extension/test/*.test.js
 | Felismerés | `detect.test.js`: URL-szabályok, felugró Reels, Messenger/profil/csoport kivétel |
 | Napi nullázás, hétvége | `ScheduleTests`: nullázás a választott órában (webes és LoL-keret), 00:00-s nullázás, hétvégi mentesség, vasárnap este indult meccs hétfőn sem számít, hétvége a nullázási órától, hétvégi korlát bekapcsolva, péntek esti tiltás a hétvége kezdetén feloldódik, nyári időszámítás, a telepítő által írt `limits.json` beolvasása |
 | Pihenőnap-jutalom | `RestDayBonusTests`: +30 perc / +1 meccs üres nap után, a keretek függetlenek, nem halmozódik, bármilyen előző napi használat kizárja, remake nem rontja el, napi módban a nullázástól számított nap, mentes hétvégénél hétfőn a péntek, hétvégi korlátnál a vasárnap, 0-s keretre nem jár, gördülő módban a jutalom éjféli megszűnését a feloldási idő figyelembe veszi, friss telepítésnél és részlegesen mért előző napnál nincs jutalom, a mérés kezdete újraindítás után is megmarad, régebbi adatbázisnál az első rögzített használat a kezdet |
+| Admin-szerkesztő háttere | `SettingsFileTests`: érték-ellenőrzés (minden tartomány, kezdet = vég csak bekapcsolva hiba), a mentett fájl visszaolvasása ugyanazzal a függvénnyel, mint a szolgáltatás, csere egy lépésben és ideiglenes fájl nélkül, érvénytelen mentés nem nyúl a fájlhoz, hiányzó / hibás / régi fájl kezelése |
 | Frissítés | `UpdateTests`: verziók értelmezése és összehasonlítása (csak szigorúan újabb), csak a tároló saját kiadási címei és GitHub-átirányítás megbízható, ellenőrzőösszeg a `SHA256SUMS.txt`-ből vagy a GitHub `digest` mezőjéből, ellenőrzőösszeg nélküli / telepítő nélküli / túl nagy / vázlat / előzetes kiadás kezelése, privát tároló, korlátozás és hálózati hiba üzenete, letöltés egyező / hibás összeggel és mérettel, idegen cím és átirányítás elutasítása |
 | Tiltott órák | `BannedHoursTests`: kezdő óra benne, záró nincs, éjfélen átnyúló időszak, azonos kezdet és vég = nincs tiltás, LoL-keresés tiltva maradék kerettel is (TFT nem), folyamatban lévő meccs és újracsatlakozás engedett, a webes keretek külön tilthatók, a keret és a nullázás nem változik, elfogyott keretnél a későbbi feloldás, mentes hétvégén nincs tiltás, helyi idő, `limits.json` beolvasása |
 

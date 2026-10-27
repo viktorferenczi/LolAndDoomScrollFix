@@ -19,12 +19,14 @@ Kimenet az `out\` mappában:
 
 | Fájl | Mire való |
 |---|---|
-| `LolScrollLimiter-Setup-1.4.1.exe` | Windows-telepítő |
+| `LolScrollLimiter-Setup-1.5.0.exe` | Windows-telepítő |
 | `extension-store.zip` | Feltöltés a Chrome Web Store-ba |
 | `extension-dev.zip` | Fejlesztői tesztverzió (kicsomagolt betöltés, fix azonosító: `iidlgdeiobckahalgoabbobfdlefkagi`) |
 | `app\` | A telepítendő programfájlok |
 
 ## 3. A bővítmény közzététele (éles használathoz kötelező)
+
+> A feltöltéshez szükséges mindent (áruházi szövegek, engedély-indoklások, tesztelési útmutató, adatvédelmi nyilatkozat) a [CHROME_WEBSTORE.md](CHROME_WEBSTORE.md) tartalmazza; a lépések lent röviden.
 
 A Chrome Windows alatt, tartományba nem léptetett gépen **csak a Chrome Web Store-ból** engedi a kötelező bővítménytelepítést ([Chrome kiadási feltételek](https://support.google.com/chrome/a/answer/7532015)).
 
@@ -38,7 +40,7 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
 
 ## 4. Telepítés (éles)
 
-1. Futtasd a `LolScrollLimiter-Setup-1.4.1.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
+1. Futtasd a `LolScrollLimiter-Setup-1.5.0.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
 2. Telepítési mód: **Éles**.
 3. Bővítményazonosító: az áruházi azonosító (3. pont).
 4. **Korlátok** oldal:
@@ -110,7 +112,18 @@ ezért kikapcsolt állapotban az inkognitó ablak a webes korlát megkerülésé
 
 ## 6. Korlátok módosítása (rendszergazda)
 
-A legegyszerűbb: futtasd újra a telepítőt, és válaszd az új értékeket — a telepítő a **Korlátok** oldal értékeivel mindig felülírja a korábbiakat (a számlálók megmaradnak).
+### Admin beállítások (tálcaalkalmazás)
+
+A legegyszerűbb: a tálcaikon menüjében vagy a „Részletek” ablakban (a „Frissítések keresése” gomb alatt) az **Admin beállítások…** gombbal.
+
+1. A gomb újraindítja a programot rendszergazdai jogosultsággal, ezért a Windows **bekéri a rendszergazdai jelszót** (UAC-ablak). A jelszót a megbízható személy ismeri; jóváhagyás nélkül az ablak meg sem nyílik.
+2. Megjelenik a szerkesztő minden, a telepítéskor megadható beállítással: visszaállítás (gördülő 24 óra / napi nullázás és az óra), a LoL-meccsek száma, a rövid videók és a Facebook-hírfolyam percei, hétvégi korlát, pihenőnap-jutalom, tiltott órák.
+3. **Mentés**: az értékeket ellenőrzi (hibás érték esetén kiírja, mit javíts, és nem ment), majd egy lépésben cseréli a `limits.json`-t. A szolgáltatás legkésőbb 30 másodpercen belül átveszi; újraindítás nem kell. A már rögzített használat az új szabály szerint számít.
+
+Biztonság: a felület nem új „kapu” a szolgáltatáshoz — ugyanazt a fájlt írja, amelyhez amúgy csak a rendszergazdák férnek hozzá, és a szolgáltatás nem kapott új, korlátozást lazító parancsot. Ha a program emelés nélkül kapja az `--admin` kapcsolót, nem nyílik meg.
+Ha a Windows-fiókod nem normál, hanem rendszergazdai fiók, az UAC alapértelmezésben csak jóváhagyást kér jelszó nélkül — a jelszóvédelemhez normál felhasználói fiók kell (lásd 1. pont).
+
+Ugyanez a telepítő újrafuttatásával is megtehető: a **Korlátok** oldalak értékeivel mindig felülírja a korábbiakat (a számlálók megmaradnak).
 
 Kézzel: rendszergazdai jogú szerkesztővel (pl. Jegyzettömb „Futtatás rendszergazdaként”) szerkeszd a
 `C:\ProgramData\LolScrollLimiter\limits.json` fájlt:
@@ -202,10 +215,10 @@ A frissítés keresése nem érinti a korlátozások működését; ha a keresé
 **Kiadás készítése (fejlesztő):** emeld a verziót a `Directory.Build.props`, az `extension/manifest.json` és az `installer/LolScrollLimiter.iss` fájlban, commit és push, majd:
 
 ```bash
-git tag v1.4.1 && git push origin v1.4.1
+git tag v1.5.0 && git push origin v1.5.0
 ```
 
-A `.github/workflows/release.yml` Windows alatt lefordítja a telepítőt, elkészíti a `SHA256SUMS.txt`-t, és közzéteszi a kiadást (`LolScrollLimiter-Setup-1.4.1.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
+A `.github/workflows/release.yml` Windows alatt lefordítja a telepítőt, elkészíti a `SHA256SUMS.txt`-t, és közzéteszi a kiadást (`LolScrollLimiter-Setup-1.5.0.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
 A fájlnév és a címke formátuma kötött (`LolScrollLimiter-Setup-X.Y.Z.exe` / `vX.Y.Z`), különben a gomb nem találja a telepítőt.
 
 A Chrome-bővítmény éles módban a Chrome Web Store-ból magától frissül; a fejlesztői tesztverziónál a frissítés után a `chrome://extensions` oldalon újra be kell tölteni a kicsomagolt bővítményt.

@@ -10,5 +10,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Limiter.Protocol\Limiter.Protocol.csproj" />
     <ProjectReference Include="..\Limiter.Updates\Limiter.Updates.csproj" />
+    <ProjectReference Include="..\Limiter.Core\Limiter.Core.csproj" />
   </ItemGroup>
 </Project>
