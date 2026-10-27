@@ -47,7 +47,7 @@ Fontos tudnivalók
 • Csak Windowson, a hozzá tartozó korlátozó alkalmazással működik; nélküle a bővítmény nem korlátoz, és hibát jelez (piros „!” a bővítmény ikonján).
 • Az adatok nem hagyják el a számítógépet: a számlálót a Chrome Native Messaging kapcsolatán át csak a helyi szolgáltatás kapja. Nincs analitika, követés vagy külső szerver.
 • Inkognitó módban csak akkor működik, ha a chrome://extensions oldalon engeded az „Engedélyezés inkognitó módban” kapcsolót.
-• Nyílt forráskódú (MIT): https://github.com/viktorferenczi/LolAndDoomScrollFix
+• Forráskód (megtekintésre): https://github.com/viktorferenczi/LolAndDoomScrollFix
 ```
 
 ## 4. „Privacy” (adatvédelem) fül

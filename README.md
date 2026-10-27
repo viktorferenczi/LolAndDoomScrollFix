@@ -25,9 +25,9 @@ Telepítéskor választható:
 TFT, botmeccs, gyakorlás, egyéni játék és néző mód nem fogyasztja a LoL-keretet; az igazolt remake visszaadja az alkalmat.
 Felismerési vagy működési hibánál a program **enged tovább, és hibát jelez** (tálcaikon, a bővítmény piros „!” jelvénye).
 
-## Szabad felhasználás
+## Licenc
 
-Nyugodtan használd, másold, módosítsd és terjeszd tovább – személyes és egyéb célra is. A projekt [MIT licenc](LICENSE) alatt áll. A program garancia nélkül, „ahogy van” formában készült; a korlátok értékeit (3 meccs, 60 perc) és a támogatott oldalakat a saját igényeid szerint át lehet írni. Ha hasznosnak találod, egy csillag vagy egy hivatkozás örömet okoz, de nem kötelező.
+A projekt **védett (all rights reserved)**: a forráskód csak megtekintésre látható. Írásos engedély nélkül nem másolható, nem forkolható, nem módosítható és nem használható. Részletek: [LICENSE](LICENSE). A program garancia nélkül, „ahogy van” formában készült.
 
 ## Mit tud az alkalmazás?
 
