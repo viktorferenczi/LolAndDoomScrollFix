@@ -29,7 +29,7 @@ Felismerési vagy működési hibánál a program **enged tovább, és hibát je
 
 A [kiadások oldaláról](https://github.com/viktorferenczi/LolAndDoomScrollFix/releases) szabadon letöltheted és ingyen használhatod a hivatalos, módosítatlan kiadásokat. A forráskód módosítása, továbbadása és a program (vagy bármely része) értékesítése írásos engedély nélkül nem megengedett. Részletek: [LICENSE](LICENSE). A program garancia nélkül, „ahogy van” formában készült.
 
-Ha hasznosnak találod, megvehetsz nekem egy kávét: [buymeacoffee.com/viktorferenczi](https://buymeacoffee.com/viktorferenczi) ☕
+Ha hasznosnak találod és támogatni szeretnéd a szoftvert: [buymeacoffee.com/viktorferenczi](https://buymeacoffee.com/viktorferenczi) ☕
 
 ## Mit tud az alkalmazás?
 
