@@ -2,7 +2,7 @@
 ; Fordítás: installer\build.ps1 (előtte a programfájlok az out\app mappába kerülnek).
 
 #define AppName "LoL- és görgetéskorlátozó"
-#define AppVersion "1.5.0"
+#define AppVersion "1.5.1"
 #define DevExtensionId "iidlgdeiobckahalgoabbobfdlefkagi"
 
 [Setup]
