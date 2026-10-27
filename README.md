@@ -31,6 +31,17 @@ A [kiadások oldaláról](https://github.com/viktorferenczi/LolAndDoomScrollFix/
 
 Ha hasznosnak találod és támogatni szeretnéd a szoftvert: [buymeacoffee.com/viktorferenczi](https://buymeacoffee.com/viktorferenczi) ☕
 
+## Képek
+
+<p align="center"><img src="docs/images/promo.png" alt="LoL- és görgetéskorlátozó" width="440"></p>
+
+| | |
+|---|---|
+| <img src="docs/images/keret.png" alt="Elfogyott a rövidvideós keret"><br>**Elfogyott a rövidvideós keret** | <img src="docs/images/hirfolyam.png" alt="Elfogyott a Facebook-hírfolyam kerete"><br>**Facebook-hírfolyam: a Messenger továbbra is elérhető** |
+| <img src="docs/images/tiltott-ora.png" alt="Tiltott időszak"><br>**Tiltott órák** | <img src="docs/images/popup.png" alt="A bővítmény felugró ablaka"><br>**Mindig látod, mennyi idő maradt** |
+
+*A képek szemléltető ábrák: a bővítmény valódi felületét mutatják, semleges példaoldalakon.*
+
 ## Mit tud az alkalmazás?
 
 A cél az, hogy megfékezze a végtelen görgetést és a túlzott League of Legends-játékot. Három, egymással együttműködő rész dolgozik:
