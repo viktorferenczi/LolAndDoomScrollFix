@@ -1,26 +1,25 @@
 Copyright (c) 2026 Viktor Ferenczi. All rights reserved.
 
-This repository, including all source code, documentation, installer scripts,
-browser extension files and release artifacts (together, the "Software"), is
-proprietary. It is made visible for reference only.
+You are welcome to download the official, unmodified releases published on this
+repository's Releases page and to use them free of charge, for yourself.
 
-No license or permission of any kind is granted. Without the prior written
-permission of the copyright holder, you may NOT:
+Everything else is reserved. Without the prior written permission of the
+copyright holder, you may NOT:
 
-  - copy, reproduce or redistribute the Software or any part of it;
-  - fork, mirror or re-host the Software, except for the technical copies that
-    the hosting platform itself makes as part of displaying the repository;
-  - modify the Software or create derivative works from it;
-  - use, run, install or deploy the Software or any part of it;
-  - sell, sublicense or otherwise make the Software available to others.
+  - modify the source code, the installer, the browser extension or any other
+    part of the repository, or create derivative works from it;
+  - sell, resell, sublicense, rent or otherwise charge for the software or any
+    part of it, alone or bundled with something else;
+  - copy the source code into other projects, or republish, mirror or re-host
+    the repository or its releases under another name or location. (The copies
+    that the hosting platform itself makes in order to display the repository,
+    and links to the official Releases page, are fine.)
 
-Only persons that the copyright holder has explicitly authorized in writing
-may use the compiled releases, and only for the purpose and period stated in
-that authorization.
+The source code is visible for reference only.
 
-The Software is provided "as is", without warranty of any kind. The copyright
+The software is provided "as is", without warranty of any kind. The copyright
 holder is not liable for any damage arising from it.
 
-Versions of the Software published before this notice (1.5.0 and earlier,
-originally under the MIT License) remain available under the terms under which
-they were obtained; this notice applies to all later versions.
+Versions published before this notice (1.5.0 and earlier, originally under the
+MIT License) remain available under the terms under which they were obtained;
+this notice applies to all later versions.
