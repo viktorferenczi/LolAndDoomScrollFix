@@ -4,3 +4,4 @@ out/
 *.user
 .vs/
 *.pem
+.DS_Store
