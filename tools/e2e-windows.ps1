@@ -242,7 +242,7 @@ $limitsPath = Join-Path $DataDir 'limits.json'
 Copy-Item $limitsPath (Join-Path $Evidence 'limits.after.json')
 $limits = Get-Content $limitsPath -Raw | ConvertFrom-Json
 Check ($limits.extraGrants.Count -eq 1 -and $limits.extraGrants[0].lolMatches -eq 2) 'limits.json contains the extra allowance (LoL +2)'
-Check ($limits.extraGrants.Count -eq 1 -and $limits.extraGrants[0].date -match '^\d{4}-\d{2}-\d{2}$') 'The extra\'s day is yyyy-MM-dd'
+Check ($limits.extraGrants.Count -eq 1 -and $limits.extraGrants[0].date -match '^\d{4}-\d{2}-\d{2}$') 'The extra''s day is yyyy-MM-dd'
 $e2eIdx = 0
 Start-Sleep -Seconds 35
 Write-Host '== Service and the new extra'

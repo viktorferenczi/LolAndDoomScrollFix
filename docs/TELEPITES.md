@@ -1,5 +1,7 @@
 # Telepítési útmutató
 
+[English](INSTALL.md) | Magyar
+
 ## 1. Szerepek és előfeltételek
 
 - **Te** normál (nem rendszergazdai) Windows-fiókot használsz.
@@ -8,6 +10,14 @@
 - Fordításhoz (egyszer, bármelyik gépen): .NET 10 SDK, Node.js 18+, [Inno Setup 6](https://jrsoftware.org/isdl.php).
 
 Ha a géped jelenleg rendszergazdai fiók, előbb hozz létre egy rendszergazdai fiókot a megbízható személynek, majd a saját fiókodat állítsd normál felhasználóra (Gépház → Fiókok → Más felhasználók → Fióktípus módosítása).
+
+### Nyelv
+
+A telepítő, a tálcaalkalmazás, az admin felület, a szolgáltatás üzenetei és a Chrome-bővítmény **angol és magyar** nyelven is elérhető.
+
+- A telepítő a Windows megjelenítési nyelvét követi; ha az sem angol, sem magyar, rákérdez. `/LANG=hu` vagy `/LANG=en` kapcsolóval kényszeríthető a nyelv.
+- A telepítőben választott nyelv a `HKLM\SOFTWARE\LolScrollLimiter\Language` értékben (`en` vagy `hu`) rögzül, és a tálcaalkalmazás, az admin felület és a szolgáltatás is ezt használja. Frissítéskor a tárolt nyelv marad. Érték nélkül a Windows megjelenítési nyelve dönt.
+- A Chrome-bővítmény a böngésző megjelenítési nyelvét követi (alapértelmezés: angol).
 
 ## 2. Fordítás
 
@@ -257,6 +267,7 @@ A számlálók megmaradnak (újratelepítés után folytatódnak). Teljes törl�
 ## 9. Hibaelhárítás
 
 - **Naplók:** Eseménynapló → Windows-naplók → Alkalmazás, forrás: `LolScrollLimiter`.
+- **Telepítési napló:** csendes telepítésnél `/LOG=setup.log` naplót ír; a rendszerbeállító szkript kimenete a futtató rendszergazda `%TEMP%\LolScrollLimiter-install.log` fájljában is megvan.
 - **LoL-kapcsolat kézi ellenőrzése** (normál felhasználóként is futtatható, a LoL-kliens fusson):
 
   ```powershell

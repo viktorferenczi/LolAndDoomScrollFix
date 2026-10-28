@@ -1,5 +1,11 @@
 # Ellenőrzés és próbák
 
+[English](VERIFICATION.md) | Magyar
+
+A „Elvárt eredmény” oszlopok szövegei a **magyar** felület szövegei. Az angol felületen ugyanezek az üzenetek angolul jelennek meg
+(lásd [VERIFICATION.md](VERIFICATION.md)). A nyelv próbához kényszeríthető: a telepítőben `/LANG=hu` / `/LANG=en`, vagy a
+`HKLM\SOFTWARE\LolScrollLimiter\Language` érték átírásával (a szolgáltatás és a tálcaalkalmazás újraindítása után).
+
 ## Telepítés utáni gyorsellenőrzés (minden telepítés után)
 
 Ezek az élő Windows-viselkedésen múlnak, unit-teszt nem fedi le őket.
@@ -121,8 +127,13 @@ node --test extension/test/*.test.js
 | Napi nullázás, hétvége | `ScheduleTests`: nullázás a választott órában (webes és LoL-keret), 00:00-s nullázás, hétvégi mentesség, vasárnap este indult meccs hétfőn sem számít, hétvége a nullázási órától, hétvégi korlát bekapcsolva, péntek esti tiltás a hétvége kezdetén feloldódik, nyári időszámítás, a telepítő által írt `limits.json` beolvasása |
 | Pihenőnap-jutalom | `RestDayBonusTests`: +30 perc / +1 meccs üres nap után, a keretek függetlenek, nem halmozódik, bármilyen előző napi használat kizárja, remake nem rontja el, napi módban a nullázástól számított nap, mentes hétvégénél hétfőn a péntek, hétvégi korlátnál a vasárnap, 0-s keretre nem jár, gördülő módban a jutalom éjféli megszűnését a feloldási idő figyelembe veszi, friss telepítésnél és részlegesen mért előző napnál nincs jutalom, a mérés kezdete újraindítás után is megmarad, régebbi adatbázisnál az első rögzített használat a kezdet |
 | Admin-szerkesztő háttere | `SettingsFileTests`: érték-ellenőrzés (minden tartomány, kezdet = vég csak bekapcsolva hiba), a mentett fájl visszaolvasása ugyanazzal a függvénnyel, mint a szolgáltatás, csere egy lépésben és ideiglenes fájl nélkül, érvénytelen mentés nem nyúl a fájlhoz, hiányzó / hibás / régi fájl kezelése |
+| Nyelvek | `LocalizationTests`, `LimitSettingsEqualityTests`: az aktív nyelv választja a szöveget, az érték- és jelszóellenőrző üzenetek fordítottak; `locales.test.js`: az angol és a magyar szövegkatalógus kulcsai és helyőrzői azonosak, minden használt kulcs létezik, nincs halott szöveg |
 | Frissítés | `UpdateTests`: verziók értelmezése és összehasonlítása (csak szigorúan újabb), csak a tároló saját kiadási címei és GitHub-átirányítás megbízható, ellenőrzőösszeg a `SHA256SUMS.txt`-ből vagy a GitHub `digest` mezőjéből, ellenőrzőösszeg nélküli / telepítő nélküli / túl nagy / vázlat / előzetes kiadás kezelése, privát tároló, korlátozás és hálózati hiba üzenete, letöltés egyező / hibás összeggel és mérettel, idegen cím és átirányítás elutasítása |
 | Tiltott órák | `BannedHoursTests`: kezdő óra benne, záró nincs, éjfélen átnyúló időszak, azonos kezdet és vég = nincs tiltás, LoL-keresés tiltva maradék kerettel is (TFT nem), folyamatban lévő meccs és újracsatlakozás engedett, a webes keretek külön tilthatók, a keret és a nullázás nem változik, elfogyott keretnél a későbbi feloldás, mentes hétvégén nincs tiltás, helyi idő, `limits.json` beolvasása |
+
+### Windowsos végpontok közötti próba
+
+A `.github/workflows/e2e-windows.yml` (küldés a `ci/e2e` ágra, vagy kézi indítás) Windows gépen csendben telepíti a programot, és UI Automation-nel vezérli, **egyszer angolul és egyszer magyarul**: a telepítő nyelvének rögzítése, a jelszó-segédparancs, a jelszókérő ablak (hibás jelszó, helyes ékezetes jelszó), az admin felület (napválasztó, extra mentése) és az eltávolító (hibás jelszóra megszakad, helyesre eltávolít). A képernyőképek és naplók a futás „Artifacts” részében érhetők el. Lásd `tools/e2e-windows.ps1`.
 
 ## 2. Windowsos próbák (LoL)
 
@@ -154,6 +165,7 @@ Tipp: `"shortVideoMinutes": 2`, `"facebookFeedMinutes": 2`.
 | 3.8 | Videó szól, egér nem mozdul 3 percig | Az idő fogy |
 | 3.9 | Gép zárolása (Win+L) videó közben | Zárolás alatt nem fogy |
 | 3.10 | Második Chrome-profil | Ugyanaz a keret, ugyanaz a tiltás |
+| 3.11 | A böngésző angolul, majd magyarul (Chrome megjelenítési nyelve) | A felugró ablak és a blokkoló felület nyelvet vált; a tálca a telepítő nyelvét követi |
 
 ## 3/b. Telepítési beállítások próbái
 
@@ -181,6 +193,7 @@ Tipp: `"shortVideoMinutes": 2`, `"facebookFeedMinutes": 2`.
 | 3b.19 | Eltávolítás (Gépház) hibás jelszóval / Mégse | Az eltávolítás megszakad, a program és a szolgáltatás megmarad |
 | 3b.20 | Eltávolítás helyes jelszóval | Eltávolítja a programot; az `admin.json` törlődik |
 | 3b.21 | Csendes telepítés (`/SILENT`), jelszó-oldal nélkül | A telepítés sikerül; az Admin beállítások első megnyitásakor jelszót kell megadni |
+| 3b.22 | Telepítő nyelve: magyar Windows, angol Windows, más nyelv (párbeszédablak kérdez), `/LANG=hu` | A telepítő, a tálca és az admin felület a megfelelő nyelvet használja; a `HKLM\SOFTWARE\LolScrollLimiter\Language` értéke `en` vagy `hu`; frissítéskor a tárolt nyelv marad |
 
 ## 4. Védelempróbák (normál felhasználóként)
 
