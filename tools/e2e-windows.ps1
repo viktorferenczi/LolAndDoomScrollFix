@@ -121,6 +121,8 @@ if (-not (Test-Path (Join-Path $DataDir 'limits.json'))) {
         Tee-Object -FilePath (Join-Path $Evidence 'install-ps1.log') | Out-Host
     Write-Host "install.ps1 kilépési kód: $LASTEXITCODE"
 }
+$tr = Join-Path $env:TEMP 'LolScrollLimiter-install.log'
+if (Test-Path $tr) { Copy-Item $tr (Join-Path $Evidence 'install-transcript.log') }
 Check (Test-Path $TrayExe) 'A tálcaalkalmazás telepítve van'
 Check (Test-Path (Join-Path $DataDir 'limits.json')) 'limits.json létrejött'
 Check (-not (Test-Path $AdminJson)) 'Csendes telepítés után még nincs admin.json'
@@ -248,14 +250,14 @@ if ($win) { Type-Password $win 'nem-jo-jelszo'; Click (Find-Named $win 'OK') }
 Start-Sleep -Seconds 3
 $win = Find-Window 'Admin jelszó' 15
 if ($win) { Click (Find-Named $win 'Mégse') }
-[void]$proc.WaitForExit(60000)
+[void](Wait-Process-Bounded $proc 60 'eltávolítás hibás jelszóval')
 Check ($proc.HasExited -and (Test-Path $TrayExe)) 'Hibás jelszó/Mégse: az eltávolítás megszakad, a program megmarad'
 Check ((Get-Service LolScrollLimiter -ErrorAction SilentlyContinue) -ne $null) 'A szolgáltatás megmaradt'
 
 $proc = Start-Process -FilePath $unins.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -PassThru
 $win = Find-Window 'Admin jelszó' 40
 if ($win) { Type-Password $win $Password; Click (Find-Named $win 'OK') }
-[void]$proc.WaitForExit(120000)
+[void](Wait-Process-Bounded $proc 120 'eltávolítás helyes jelszóval')
 Start-Sleep -Seconds 3
 Check (-not (Test-Path $TrayExe)) 'Helyes jelszóval az eltávolítás lefut'
 Check ($null -eq (Get-Service LolScrollLimiter -ErrorAction SilentlyContinue)) 'A szolgáltatás törlődött'

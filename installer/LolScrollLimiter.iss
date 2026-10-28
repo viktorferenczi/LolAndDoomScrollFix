@@ -547,6 +547,7 @@ begin
         BanParams('ShortVideo', ShortVideoBanCheck, ShortVideoBanFrom, ShortVideoBanTo) +
         BanParams('FacebookFeed', FeedBanCheck, FeedBanFrom, FeedBanTo);
     end;
+    Log('install.ps1 paraméterei: ' + Params);
     WizardForm.StatusLabel.Caption := 'Szolgáltatás, jogosultságok és Chrome-szabályok beállítása…';
     if not Exec('powershell.exe', Params, '', SW_HIDE, ewWaitUntilTerminated, Code) or (Code <> 0) then
       SuppressibleMsgBox('A rendszerbeállítás sikertelen (kód: ' + IntToStr(Code) + '). ' +
@@ -566,7 +567,7 @@ begin
   if not FileExists(Helper) then Exit;
   if not Exec(Helper, '--verify-password', '', SW_SHOWNORMAL, ewWaitUntilTerminated, Code) or (Code <> 0) then
   begin
-    MsgBox('Az eltávolításhoz az admin jelszó szükséges. A program nem lett eltávolítva.', mbInformation, MB_OK);
+    SuppressibleMsgBox('Az eltávolításhoz az admin jelszó szükséges. A program nem lett eltávolítva.', mbInformation, MB_OK, IDOK);
     Result := False;
   end;
 end;
