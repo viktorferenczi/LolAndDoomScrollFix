@@ -29,7 +29,7 @@ Output in the `out\` folder:
 
 | File | Purpose |
 |---|---|
-| `LolScrollLimiter-Setup-1.6.1.exe` | Windows installer |
+| `LolScrollLimiter-Setup-1.7.0.exe` | Windows installer |
 | `extension-store.zip` | Upload to the Chrome Web Store |
 | `extension-dev.zip` | Development test version (loaded unpacked, fixed ID: `iidlgdeiobckahalgoabbobfdlefkagi`) |
 | `app\` | The program files to install |
@@ -52,7 +52,7 @@ Until the approval arrives, the development test version can be used (section 6)
 
 ## 5. Installation (production)
 
-1. Run `LolScrollLimiter-Setup-1.6.1.exe` from your own account; the trusted person types the administrator password into the UAC prompt.
+1. Run `LolScrollLimiter-Setup-1.7.0.exe` from your own account; the trusted person types the administrator password into the UAC prompt.
 2. Installation mode: **Production**.
 3. Extension ID: the default is the published store ID (`mkoeoadekdfnbjpmhiabpjlmhdoimcml`); leave it. In development mode the development ID is put into the field.
 4. **Limits** page:
@@ -245,10 +245,10 @@ Checking for updates does not affect how the limits work; if the check fails (no
 **Making a release (developer):** raise the version in `Directory.Build.props`, `extension/manifest.json` and `installer/LolScrollLimiter.iss`, commit and push, then:
 
 ```bash
-git tag v1.6.1 && git push origin v1.6.1
+git tag v1.7.0 && git push origin v1.7.0
 ```
 
-`.github/workflows/release.yml` builds the installer on Windows, creates `SHA256SUMS.txt`, and publishes the release (`LolScrollLimiter-Setup-1.6.1.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
+`.github/workflows/release.yml` builds the installer on Windows, creates `SHA256SUMS.txt`, and publishes the release (`LolScrollLimiter-Setup-1.7.0.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
 The file name and the tag format are fixed (`LolScrollLimiter-Setup-X.Y.Z.exe` / `vX.Y.Z`), otherwise the button does not find the installer.
 
 In production mode the Chrome extension updates itself from the Chrome Web Store; with the development test version, the unpacked extension has to be reloaded on the `chrome://extensions` page after an update.

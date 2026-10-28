@@ -78,7 +78,7 @@ For installation and verification see the guides linked below.
 
 The published releases can be downloaded from the [releases page](https://github.com/viktorferenczi/LolAndDoomScrollFix/releases) (the installer, the extension packages and the checksums). The tray application's "Check for updates" button installs the latest one. The list starts with the newest.
 
-### Unreleased
+### 1.7.0 - 2026-10-28
 
 - **Bilingual interface (English and Hungarian):** installer, tray application, admin panel, service messages and the Chrome extension (via `_locales`). The language follows the Windows display language; the installer records the chosen language for the programs.
 - English documentation (`docs/INSTALL.md`, `docs/VERIFICATION.md`, English Web Store listing) and this English README first.
@@ -252,7 +252,10 @@ A telepítésről és az ellenőrzésről lásd lent a hivatkozott útmutatókat
 
 ## Verziók
 
-_Még ki nem adott változtatások:_ kétnyelvű (angol és magyar) felület (telepítő, tálcaalkalmazás, admin felület, szolgáltatásüzenetek, Chrome-bővítmény), angol dokumentáció, és az angol README az első.
+### 1.7.0 — 2026-10-28
+
+- **Kétnyelvű felület (angol és magyar):** telepítő, tálcaalkalmazás, admin felület, szolgáltatásüzenetek és Chrome-bővítmény. A nyelv a Windows megjelenítési nyelvét követi.
+- Angol dokumentáció, és az angol README az első.
 
 A közzétett kiadások a [kiadások oldalán](https://github.com/viktorferenczi/LolAndDoomScrollFix/releases) tölthetők le (a telepítő, a bővítménycsomagok és az ellenőrzőösszegek). A tálcaalkalmazás „Frissítések keresése” gombja a legújabbat telepíti. A lista a legújabbal kezdődik.
 

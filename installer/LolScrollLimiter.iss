@@ -2,7 +2,7 @@
 ; Build: installer\build.ps1 (the program files must be in out\app first).
 
 #define AppName "LoL & Doomscroll Limiter"
-#define AppVersion "1.6.1"
+#define AppVersion "1.7.0"
 #define DevExtensionId "iidlgdeiobckahalgoabbobfdlefkagi"
 #define StoreExtensionId "mkoeoadekdfnbjpmhiabpjlmhdoimcml"
 
