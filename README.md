@@ -74,6 +74,10 @@ A telepítésről és az ellenőrzésről lásd lent a hivatkozott útmutatókat
 
 A közzétett kiadások a [kiadások oldalán](https://github.com/viktorferenczi/LolAndDoomScrollFix/releases) tölthetők le (a telepítő, a bővítménycsomagok és az ellenőrzőösszegek). A tálcaalkalmazás „Frissítések keresése” gombja a legújabbat telepíti. A lista a legújabbal kezdődik.
 
+### 1.6.1 — 2026-10-28
+
+- Dokumentáció: verziólista a README-ben; a program működése nem változott.
+
 ### 1.6.0 — 2026-10-28
 
 - **Extra keret egy napra:** az admin beállításokban egy kiválasztott napra extra LoL-meccs, rövid videós és Facebook-hírfolyam-idő adható. A napválasztóban a múltbeli napok nem szerepelnek, a hétvégék pedig nem választhatók, ha a hétvégi korlát ki van kapcsolva. Napi nullázásnál a nap a nullázás órájától tart. Az extra látszik a tálcán és a bővítmény felugró ablakában is.
