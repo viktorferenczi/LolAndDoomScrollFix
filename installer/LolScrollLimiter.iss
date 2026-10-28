@@ -549,8 +549,8 @@ begin
     end;
     WizardForm.StatusLabel.Caption := 'Szolgáltatás, jogosultságok és Chrome-szabályok beállítása…';
     if not Exec('powershell.exe', Params, '', SW_HIDE, ewWaitUntilTerminated, Code) or (Code <> 0) then
-      MsgBox('A rendszerbeállítás sikertelen (kód: ' + IntToStr(Code) + '). ' +
-        'Futtasd rendszergazdaként kézzel: ' + ExpandConstant('{app}\install.ps1'), mbError, MB_OK);
+      SuppressibleMsgBox('A rendszerbeállítás sikertelen (kód: ' + IntToStr(Code) + '). ' +
+        'Futtasd rendszergazdaként kézzel: ' + ExpandConstant('{app}\install.ps1'), mbError, MB_OK, IDOK);
     if PwFile <> '' then DeleteFile(PwFile);
   end;
 end;
