@@ -13,21 +13,20 @@ public sealed class AdminForm : Form
 {
     private readonly string _path;
 
-    private readonly RadioButton _rolling = new() { Text = "Gördülő 24 óra (minden felhasználás 24 órával később szabadul fel)", AutoSize = true };
-    private readonly RadioButton _daily = new() { Text = "Naponta nullázás ebben az órában:", AutoSize = true };
+    private readonly RadioButton _rolling = new() { Text = Loc.T("Rolling 24 hours (every use is released exactly 24 hours later)", "Gördülő 24 óra (minden felhasználás 24 órával később szabadul fel)"), AutoSize = true };
+    private readonly RadioButton _daily = new() { Text = Loc.T("Reset daily at this hour:", "Naponta nullázás ebben az órában:"), AutoSize = true };
     private readonly ComboBox _resetHour = Hours();
 
     private readonly NumericUpDown _lolMatches = Number(0, 1000);
     private readonly NumericUpDown _shortMinutes = Number(0, 1440);
     private readonly NumericUpDown _feedMinutes = Number(0, 1440);
-    private readonly CheckBox _weekends = new() { Text = "A korlátok hétvégén (szombaton és vasárnap) is érvényesek", AutoSize = true };
+    private readonly CheckBox _weekends = new() { Text = Loc.T("The limits also apply on weekends (Saturday and Sunday)", "A korlátok hétvégén (szombaton és vasárnap) is érvényesek"), AutoSize = true };
 
     private readonly NumericUpDown _lolBonus = Number(0, 10);
     private readonly NumericUpDown _shortBonus = Number(0, 1440);
     private readonly NumericUpDown _feedBonus = Number(0, 1440);
 
-    // Extra keret egy kiválasztott napra.
-    private static readonly CultureInfo Hu = new("hu-HU");
+    // Extra allowance for a chosen day.
     private readonly ComboBox _grantDay = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 400, DrawMode = DrawMode.OwnerDrawFixed, MaxDropDownItems = 16 };
     private readonly NumericUpDown _grantLol = Number(0, DayGrant.MaxMatches);
     private readonly NumericUpDown _grantShort = Number(0, DayGrant.MaxMinutes);
@@ -37,14 +36,14 @@ public sealed class AdminForm : Form
     private List<DayGrant> _grants = [];
     private int _lastSelectableDay;
 
-    private readonly BanRow _lolBan = new("LoL PvP-meccsek");
-    private readonly BanRow _shortBan = new("Rövid videók");
-    private readonly BanRow _feedBan = new("Facebook-hírfolyam");
+    private readonly BanRow _lolBan = new(Loc.T("LoL PvP matches", "LoL PvP-meccsek"));
+    private readonly BanRow _shortBan = new(Loc.T("Short videos", "Rövid videók"));
+    private readonly BanRow _feedBan = new(Loc.T("Facebook feed", "Facebook-hírfolyam"));
 
     public AdminForm(string path)
     {
         _path = path;
-        Text = "Admin beállítások — LoL- és görgetéskorlátozó";
+        Text = Loc.T("Admin settings — LoL & Doomscroll Limiter", "Admin beállítások — LoL- és görgetéskorlátozó");
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -67,29 +66,29 @@ public sealed class AdminForm : Form
             AutoSize = true,
             MaximumSize = new Size(560, 0),
             ForeColor = SystemColors.GrayText,
-            Text = "Rendszergazdai módban vagy. A mentett értékeket a szolgáltatás legkésőbb 30 másodpercen belül átveszi; " +
-                   "a már rögzített használat az új szabály szerint számít.",
+            Text = Loc.T("You are in administrator mode. The service picks up the saved values within 30 seconds at the latest; usage that is already recorded counts under the new rule.",
+                         "Rendszergazdai módban vagy. A mentett értékeket a szolgáltatás legkésőbb 30 másodpercen belül átveszi; a már rögzített használat az új szabály szerint számít."),
             Margin = new Padding(0, 0, 0, 8),
         };
 
         root.Controls.Add(info);
-        root.Controls.Add(Group("A keretek visszaállítása", ResetPanel()));
+        root.Controls.Add(Group(Loc.T("Resetting the limits", "A keretek visszaállítása"), ResetPanel()));
         root.Controls.Add(Group("Keretek", Grid(
-            ("LoL PvP-meccsek száma:", _lolMatches, "meccs"),
-            ("Rövid videók (Reels, TikTok, Shorts):", _shortMinutes, "perc"),
-            ("Facebook kezdőlapi hírfolyam:", _feedMinutes, "perc")), _weekends));
-        root.Controls.Add(Group("Pihenőnap-jutalom (üres nap után másnap, nem halmozódik; 0 = kikapcsolva)", Grid(
+            (Loc.T("Number of LoL PvP matches:", "LoL PvP-meccsek száma:"), _lolMatches, Loc.T("matches", "meccs")),
+            (Loc.T("Short videos (Reels, TikTok, Shorts):", "Rövid videók (Reels, TikTok, Shorts):"), _shortMinutes, Loc.T("min", "perc")),
+            (Loc.T("Facebook home feed:", "Facebook kezdőlapi hírfolyam:"), _feedMinutes, Loc.T("min", "perc"))), _weekends));
+        root.Controls.Add(Group(Loc.T("Rest-day bonus (the next day after an empty day, does not stack; 0 = off)", "Pihenőnap-jutalom (üres nap után másnap, nem halmozódik; 0 = kikapcsolva)"), Grid(
             ("LoL PvP-meccsek:", _lolBonus, "meccs"),
-            ("Rövid videók:", _shortBonus, "perc"),
-            ("Facebook kezdőlapi hírfolyam:", _feedBonus, "perc"))));
-        root.Controls.Add(Group("Tiltott órák (a megadott órák között nem használható; a keretet nem érinti)",
+            (Loc.T("Short videos:", "Rövid videók:"), _shortBonus, Loc.T("min", "perc")),
+            (Loc.T("Facebook home feed:", "Facebook kezdőlapi hírfolyam:"), _feedBonus, Loc.T("min", "perc")))));
+        root.Controls.Add(Group(Loc.T("Banned hours (cannot be used between the given hours; the limit is not affected)", "Tiltott órák (a megadott órák között nem használható; a keretet nem érinti)"),
             BanGrid(_lolBan, _shortBan, _feedBan)));
-        root.Controls.Add(Group("Extra keret egy kiválasztott napra", GrantPanel()));
+        root.Controls.Add(Group(Loc.T("Extra allowance for a chosen day", "Extra keret egy kiválasztott napra"), GrantPanel()));
 
-        var changePassword = new Button { Text = "Jelszó módosítása…", AutoSize = true };
+        var changePassword = new Button { Text = Loc.T("Change password…", "Jelszó módosítása…"), AutoSize = true };
         changePassword.Click += (_, _) => ChangePassword();
-        var save = new Button { Text = "Mentés", AutoSize = true, DialogResult = DialogResult.None, MinimumSize = new Size(90, 0) };
-        var cancel = new Button { Text = "Mégse", AutoSize = true, DialogResult = DialogResult.Cancel, MinimumSize = new Size(90, 0) };
+        var save = new Button { Text = Loc.T("Save", "Mentés"), AutoSize = true, DialogResult = DialogResult.None, MinimumSize = new Size(90, 0) };
+        var cancel = new Button { Text = Loc.T("Cancel", "Mégse"), AutoSize = true, DialogResult = DialogResult.Cancel, MinimumSize = new Size(90, 0) };
         save.Click += (_, _) => Save();
         var buttons = new FlowLayoutPanel
         {
@@ -110,11 +109,11 @@ public sealed class AdminForm : Form
         _daily.CheckedChanged += (_, _) => { _resetHour.Enabled = _daily.Checked; RefreshGrantDays(); };
         _resetHour.SelectedIndexChanged += (_, _) => RefreshGrantDays();
         _weekends.CheckedChanged += (_, _) => RefreshGrantDays();
-        // Hozzáférhetőségi nevek (képernyőolvasók és az automatikus Windows-próba is ezeket keresi).
-        _grantDay.AccessibleName = "Extra napja";
-        _grantLol.AccessibleName = "Extra LoL-meccsek";
-        _grantShort.AccessibleName = "Extra rövid videó percek";
-        _grantFeed.AccessibleName = "Extra hírfolyam percek";
+        // Accessible names (screen readers and the automated Windows test look for these).
+        _grantDay.AccessibleName = Loc.T("Extra day", "Extra napja");
+        _grantLol.AccessibleName = Loc.T("Extra LoL matches", "Extra LoL-meccsek");
+        _grantShort.AccessibleName = Loc.T("Extra short-video minutes", "Extra rövid videó percek");
+        _grantFeed.AccessibleName = Loc.T("Extra feed minutes", "Extra hírfolyam percek");
         _grantDay.DrawItem += DrawGrantDay;
         _grantDay.SelectionChangeCommitted += (_, _) => OnGrantDayChosen();
         _grantList.SelectedIndexChanged += (_, _) => OnGrantListChosen();
@@ -147,7 +146,7 @@ public sealed class AdminForm : Form
         _shortBan.Set(s.ShortVideoBannedHours);
         _feedBan.Set(s.FacebookFeedBannedHours);
 
-        // A lejárt (múltbeli) extráknak nincs hatásuk, ezért nem is jelennek meg; mentéskor eltűnnek a fájlból.
+        // Expired (past) extras have no effect, so they are not shown; they disappear from the file when saving.
         _grants = [.. GrantDays.Pruned(s, DateTimeOffset.UtcNow, TimeZoneInfo.Local).ExtraGrants];
         RefreshGrantList();
         RefreshGrantDays();
@@ -186,11 +185,11 @@ public sealed class AdminForm : Form
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            MessageBox.Show(this, "A beállítások mentése nem sikerült:\n" + ex.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, Loc.T("Saving the settings failed:\n", "A beállítások mentése nem sikerült:\n") + ex.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
 
-        MessageBox.Show(this, "A beállítások mentve. A szolgáltatás 30 másodpercen belül átveszi őket.", Text,
+        MessageBox.Show(this, Loc.T("The settings were saved. The service picks them up within 30 seconds.", "A beállítások mentve. A szolgáltatás 30 másodpercen belül átveszi őket."), Text,
             MessageBoxButtons.OK, MessageBoxIcon.Information);
         DialogResult = DialogResult.OK;
         Close();
@@ -198,8 +197,8 @@ public sealed class AdminForm : Form
 
     private void ChangePassword()
     {
-        if (AdminGate.SetNew(this, prompt: "Add meg az új admin jelszót."))
-            MessageBox.Show(this, "Az admin jelszó megváltozott.", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        if (AdminGate.SetNew(this))
+            MessageBox.Show(this, Loc.T("The admin password was changed.", "Az admin jelszó megváltozott."), Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     // ---------- extra keret egy napra ----------
@@ -211,40 +210,43 @@ public sealed class AdminForm : Form
         panel.Controls.Add(new Label
         {
             AutoSize = true, MaximumSize = new Size(540, 0), Margin = new Padding(0, 0, 0, 6),
-            Text = "Az extra a nap alapkeretéhez és a pihenőnap-jutalomhoz adódik, csak azon az egy napon. " +
-                   "A tiltott órákat nem írja felül. A „nap” napi nullázásnál a nullázás órájától a következőig tart, gördülő 24 óránál éjféltől éjfélig.",
+            Text = Loc.T("The extra is added to the day's base limit and the rest-day bonus, on that one day only. It does not override banned hours. With daily reset a \"day\" lasts from the reset hour to the next one; with rolling 24 hours, from midnight to midnight.",
+                         "Az extra a nap alapkeretéhez és a pihenőnap-jutalomhoz adódik, csak azon az egy napon. A tiltott órákat nem írja felül. A „nap” napi nullázásnál a nullázás órájától a következőig tart, gördülő 24 óránál éjféltől éjfélig."),
         });
-        panel.Controls.Add(new Label { Text = "Nap:", AutoSize = true });
+        panel.Controls.Add(new Label { Text = Loc.T("Day:", "Nap:"), AutoSize = true });
         panel.Controls.Add(_grantDay);
         _grantNote.Margin = new Padding(0, 2, 0, 6);
         panel.Controls.Add(_grantNote);
 
         panel.Controls.Add(Grid(
-            ("LoL PvP-meccsek:", _grantLol, "extra meccs"),
-            ("Rövid videók:", _grantShort, "extra perc"),
-            ("Facebook kezdőlapi hírfolyam:", _grantFeed, "extra perc")));
+            (Loc.T("LoL PvP matches:", "LoL PvP-meccsek:"), _grantLol, Loc.T("extra matches", "extra meccs")),
+            (Loc.T("Short videos:", "Rövid videók:"), _grantShort, Loc.T("extra min", "extra perc")),
+            (Loc.T("Facebook home feed:", "Facebook kezdőlapi hírfolyam:"), _grantFeed, Loc.T("extra min", "extra perc"))));
 
-        var set = new Button { Text = "Extra mentése a napra", AutoSize = true };
-        var remove = new Button { Text = "Extra törlése a napról", AutoSize = true };
+        var set = new Button { Text = Loc.T("Save extra for the day", "Extra mentése a napra"), AutoSize = true };
+        var remove = new Button { Text = Loc.T("Delete extra from the day", "Extra törlése a napról"), AutoSize = true };
         set.Click += (_, _) => SetGrant();
         remove.Click += (_, _) => RemoveGrant();
         var row = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Margin = new Padding(0, 4, 0, 6) };
         row.Controls.AddRange([set, remove]);
         panel.Controls.Add(row);
 
-        panel.Controls.Add(new Label { Text = "Megadott extrák (a Mentés gombbal lépnek érvénybe):", AutoSize = true });
+        panel.Controls.Add(new Label { Text = Loc.T("Extras given (they take effect with the Save button):", "Megadott extrák (a Mentés gombbal lépnek érvénybe):"), AutoSize = true });
         panel.Controls.Add(_grantList);
         return panel;
     }
+
+    private static string FormatDay(DateOnly day) =>
+        day.ToDateTime(TimeOnly.MinValue).ToString(Loc.IsHungarian ? "yyyy. MM. dd., dddd" : "yyyy-MM-dd, dddd", Loc.Culture);
 
     private sealed record DayItem(GrantDayOption Option)
     {
         public override string ToString()
         {
-            var text = Option.Date.ToDateTime(TimeOnly.MinValue).ToString("yyyy. MM. dd., dddd", Hu);
-            if (Option.IsToday) text += " — most tartó nap";
-            if (!Option.Selectable) text += " — nem választható: hétvége, nincs korlát";
-            else if (Option.HasGrant) text += " — van extra";
+            var text = FormatDay(Option.Date);
+            if (Option.IsToday) text += Loc.T(" — current day", " — most tartó nap");
+            if (!Option.Selectable) text += Loc.T(" — not selectable: weekend, no limit", " — nem választható: hétvége, nincs korlát");
+            else if (Option.HasGrant) text += Loc.T(" — has an extra", " — van extra");
             return text;
         }
     }
@@ -271,10 +273,12 @@ public sealed class AdminForm : Form
 
         var weekendGrants = _grants.Count(g => GrantDays.Check(settings, g.Date, TimeZoneInfo.Local) == GrantDayStatus.ExemptWeekend);
         _grantNote.Text = weekendGrants > 0
-            ? $"Figyelem: {weekendGrants} extra hétvégére esik, ahol nincs korlát. Töröld őket, vagy kapcsold be a hétvégi korlátot, különben a mentés hibát jelez."
+            ? Loc.T($"Warning: {weekendGrants} extra(s) fall on a weekend, where there is no limit. Delete them or turn on the weekend limit, otherwise saving reports an error.",
+                    $"Figyelem: {weekendGrants} extra hétvégére esik, ahol nincs korlát. Töröld őket, vagy kapcsold be a hétvégi korlátot, különben a mentés hibát jelez.")
             : index < 0
-                ? "Nincs választható nap."
-                : "A szürke napok nem választhatók: hétvégén nincs korlát (hacsak a hétvégi korlát nincs bekapcsolva), ezért ott az extra felesleges.";
+                ? Loc.T("There is no selectable day.", "Nincs választható nap.")
+                : Loc.T("Grey days cannot be selected: there is no limit on weekends (unless the weekend limit is turned on), so an extra would be pointless there.",
+                        "A szürke napok nem választhatók: hétvégén nincs korlát (hacsak a hétvégi korlát nincs bekapcsolva), ezért ott az extra felesleges.");
         _grantNote.ForeColor = weekendGrants > 0 ? Color.Firebrick : SystemColors.GrayText;
     }
 
@@ -294,7 +298,7 @@ public sealed class AdminForm : Form
         {
             // Tiltott nap: visszaállunk az előzőre.
             _grantDay.SelectedIndex = _lastSelectableDay;
-            MessageBox.Show(this, "Erre a napra nem adható extra: hétvégén nincs korlát. Kapcsold be a hétvégi korlátot, ha szükséged van rá.",
+            MessageBox.Show(this, Loc.T("No extra can be given for this day: there is no limit on weekends. Turn on the weekend limit if you need it.", "Erre a napra nem adható extra: hétvégén nincs korlát. Kapcsold be a hétvégi korlátot, ha szükséged van rá."),
                 Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
@@ -315,7 +319,7 @@ public sealed class AdminForm : Form
     {
         if (_grantDay.SelectedItem is not DayItem { Option.Selectable: true } item)
         {
-            MessageBox.Show(this, "Válassz egy napot.", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(this, Loc.T("Choose a day.", "Válassz egy napot."), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
         var grant = new DayGrant
@@ -327,7 +331,7 @@ public sealed class AdminForm : Form
         };
         if (grant.IsEmpty)
         {
-            MessageBox.Show(this, "Adj meg legalább egy értéket (meccs vagy perc). Meglévő extra eltávolításához használd a törlés gombot.",
+            MessageBox.Show(this, Loc.T("Enter at least one value (matches or minutes). To remove an existing extra, use the delete button.", "Adj meg legalább egy értéket (meccs vagy perc). Meglévő extra eltávolításához használd a törlés gombot."),
                 Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
@@ -339,7 +343,7 @@ public sealed class AdminForm : Form
     {
         if (_grantDay.SelectedItem is not DayItem item || _grants.All(g => g.Date != item.Option.Date))
         {
-            MessageBox.Show(this, "A kiválasztott napra nincs extra.", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, Loc.T("There is no extra for the selected day.", "A kiválasztott napra nincs extra."), Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
         _grants = [.. _grants.Where(g => g.Date != item.Option.Date)];
@@ -353,10 +357,10 @@ public sealed class AdminForm : Form
         foreach (var g in _grants)
         {
             var parts = new List<string>();
-            if (g.LolMatches > 0) parts.Add($"LoL +{g.LolMatches} meccs");
-            if (g.ShortVideoMinutes > 0) parts.Add($"rövid videó +{g.ShortVideoMinutes} perc");
-            if (g.FacebookFeedMinutes > 0) parts.Add($"hírfolyam +{g.FacebookFeedMinutes} perc");
-            _grantList.Items.Add($"{g.Date.ToDateTime(TimeOnly.MinValue).ToString("yyyy. MM. dd., dddd", Hu)}: {string.Join(", ", parts)}");
+            if (g.LolMatches > 0) parts.Add(Loc.T($"LoL +{g.LolMatches} matches", $"LoL +{g.LolMatches} meccs"));
+            if (g.ShortVideoMinutes > 0) parts.Add(Loc.T($"short videos +{g.ShortVideoMinutes} min", $"rövid videó +{g.ShortVideoMinutes} perc"));
+            if (g.FacebookFeedMinutes > 0) parts.Add(Loc.T($"feed +{g.FacebookFeedMinutes} min", $"hírfolyam +{g.FacebookFeedMinutes} perc"));
+            _grantList.Items.Add($"{FormatDay(g.Date)}: {string.Join(", ", parts)}");
         }
         _grantList.EndUpdate();
     }
@@ -416,9 +420,9 @@ public sealed class AdminForm : Form
     {
         var table = new TableLayoutPanel { AutoSize = true, ColumnCount = 4, Margin = new Padding(0) };
         table.Controls.Add(new Label { Text = "", AutoSize = true });
-        table.Controls.Add(new Label { Text = "kezdete", AutoSize = true });
+        table.Controls.Add(new Label { Text = Loc.T("start", "kezdete"), AutoSize = true });
         table.Controls.Add(new Label { Text = "", AutoSize = true });
-        table.Controls.Add(new Label { Text = "vége", AutoSize = true });
+        table.Controls.Add(new Label { Text = Loc.T("end", "vége"), AutoSize = true });
         foreach (var row in rows) row.AddTo(table);
         return table;
     }

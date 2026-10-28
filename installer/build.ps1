@@ -1,13 +1,13 @@
 ﻿<#
 .SYNOPSIS
-  Teljes build Windows alatt: tesztek, a három program közzététele, bővítménycsomagok és a telepítő.
+  Full build on Windows: tests, publishing the three programs, extension packages and the installer.
 
 .DESCRIPTION
-  Kimenet az out\ mappában:
-    out\app\                          a telepítendő programfájlok (önálló .NET 10, win-x64)
-    out\extension-dev.zip             kicsomagolt betöltéshez (fix fejlesztői azonosító, "key" mezővel)
-    out\extension-store.zip           Chrome Web Store-feltöltéshez ("key" mező nélkül)
-    out\LolScrollLimiter-Setup-*.exe  Windows-telepítő (ha az Inno Setup 6 telepítve van)
+  Output in the out\ folder:
+    out\app\                          the program files to install (self-contained .NET 10, win-x64)
+    out\extension-dev.zip             for loading unpacked (fixed development ID, with the "key" field)
+    out\extension-store.zip           for the Chrome Web Store upload (without the "key" field)
+    out\LolScrollLimiter-Setup-*.exe  Windows installer (if Inno Setup 6 is installed)
 #>
 [CmdletBinding()]
 param(
@@ -29,20 +29,20 @@ if (-not $SkipTests) {
     dotnet test (Join-Path $root 'tests\Limiter.Core.Tests') -c $Configuration
     if ($LASTEXITCODE -ne 0) { throw 'A .NET-tesztek elbuktak.' }
 
-    Write-Host '==> Bővítménytesztek'
+    Write-Host '==> Extension tests'
     Push-Location (Join-Path $root 'extension')
     try { node --test (Get-ChildItem test\*.test.js | ForEach-Object FullName) } finally { Pop-Location }
-    if ($LASTEXITCODE -ne 0) { throw 'A bővítménytesztek elbuktak.' }
+    if ($LASTEXITCODE -ne 0) { throw 'The extension tests failed.' }
 }
 
 foreach ($project in 'Limiter.Service', 'Limiter.NativeHost', 'Limiter.Tray') {
-    Write-Host "==> $project közzététele"
+    Write-Host "==> Publishing $project"
     dotnet publish (Join-Path $root "src\$project") -c $Configuration -r win-x64 --self-contained true -o $app
-    if ($LASTEXITCODE -ne 0) { throw "$project közzététele sikertelen." }
+    if ($LASTEXITCODE -ne 0) { throw "Publishing $project failed." }
 }
 Copy-Item (Join-Path $PSScriptRoot 'install.ps1'), (Join-Path $PSScriptRoot 'uninstall.ps1') $app
 
-Write-Host '==> Bővítménycsomagok'
+Write-Host '==> Extension packages'
 $ext = Join-Path $root 'extension'
 $stage = Join-Path $out 'ext-stage'
 New-Item -ItemType Directory -Path $stage | Out-Null
@@ -64,12 +64,12 @@ if (-not $SkipInstaller) {
         "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
     ) | Where-Object { Test-Path $_ } | Select-Object -First 1
     if (-not $iscc) {
-        Write-Warning 'Az Inno Setup 6 nem található (https://jrsoftware.org/isdl.php) — a telepítő kimarad. A programfájlok: out\app'
+        Write-Warning 'Inno Setup 6 was not found (https://jrsoftware.org/isdl.php) - the installer is skipped. The program files: out\app'
     } else {
-        Write-Host '==> Telepítő'
+        Write-Host '==> Installer'
         & $iscc (Join-Path $PSScriptRoot 'LolScrollLimiter.iss')
-        if ($LASTEXITCODE -ne 0) { throw 'A telepítő fordítása sikertelen.' }
+        if ($LASTEXITCODE -ne 0) { throw 'Compiling the installer failed.' }
     }
 }
 
-Write-Host "==> Kész: $out"
+Write-Host "==> Done: $out"

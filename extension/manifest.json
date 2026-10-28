@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "LoL- és görgetéskorlátozó",
+  "name": "__MSG_extName__",
+  "default_locale": "en",
   "version": "1.6.1",
-  "description": "Korlátozza a rövid videók és a Facebook-hírfolyam használatát a gépen futó társalkalmazás szabályai szerint.",
+  "description": "__MSG_extDescription__",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoWbAGZBDAMU21sWlNZt9XCsX8wUvhQy1bGj4VnOfijX9K1zgVITaF1Yswdl8CInfBoe3OfJAlqW5v0C3mY7ji+V9pUYj516Z0a0pzyFVlnY+qImciEstRVvdOupI9I4ThBSe9eVT9N0A4Op27106BYpdqjm7MyVpdEOk2Dk9hbyRoPkbJtOEC7uEIkZlwhsLIVKg/AFtZHiyhpYWLd/t1KPR6Tbl7I2sExTl/Xbr0pef98k7DAQKqnzSb2fBSmxEBIlX45f8bC+kjoqW+IK6hwq7u3P4qkOUusnZOeKroKOPnB1kahN1WyOXz6U2xNQG34wt+lR5dA9AtZHaQ7SQ0QIDAQAB",
   "minimum_chrome_version": "116",
   "permissions": [
@@ -30,7 +31,7 @@
     }
   ],
   "action": {
-    "default_title": "LoL- és görgetéskorlátozó",
+    "default_title": "__MSG_extName__",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",

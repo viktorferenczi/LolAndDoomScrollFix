@@ -79,14 +79,14 @@ public sealed class RequestHandler(LimitEngine engine, StatusBuilder status, Pro
                 break;
             case IpcConstants.RequestTypes.Usage:
                 if (!WebCategoryNames.TryParse(request.Category, out var category))
-                    return IpcResponse.Failure(request.Id, "Ismeretlen kategória.");
+                    return IpcResponse.Failure(request.Id, "Unknown category.");
                 if (request.Seconds is not { } seconds || !double.IsFinite(seconds))
-                    return IpcResponse.Failure(request.Id, "Hiányzó időtartam.");
+                    return IpcResponse.Failure(request.Id, "Missing duration.");
                 accepted = engine.ReportWebUsage(sid, category, TimeSpan.FromSeconds(Math.Max(0, seconds))).TotalSeconds;
                 if (request.Source == IpcConstants.Sources.Extension) protection.ExtensionPing(sid);
                 break;
             default:
-                return IpcResponse.Failure(request.Id, "Ismeretlen kéréstípus.");
+                return IpcResponse.Failure(request.Id, "Unknown request type.");
         }
 
         var response = status.Build(sid);

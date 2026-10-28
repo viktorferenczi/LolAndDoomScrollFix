@@ -58,7 +58,7 @@ public sealed class LcuSession : IDisposable
 
     public async Task RunAsync(CancellationToken ct)
     {
-        _protection.SetLcu(Sid, IpcConstants.LcuStates.Connecting, "Kapcsolódás a LoL-klienshez…");
+        _protection.SetLcu(Sid, IpcConstants.LcuStates.Connecting, Loc.T("Connecting to the LoL client…", "Kapcsolódás a LoL-klienshez…"));
         try
         {
             await Task.WhenAll(EventLoopAsync(ct), EvaluateLoopAsync(ct), RemakeLoopAsync(ct)).ConfigureAwait(false);
@@ -90,7 +90,7 @@ public sealed class LcuSession : IDisposable
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
             catch (Exception ex) when (ex is WebSocketException or HttpRequestException or IOException)
             {
-                _log.LogDebug(ex, "LCU WebSocket hiba, újrapróbálás.");
+                _log.LogDebug(ex, "LCU WebSocket error, retrying.");
             }
             await Task.Delay(TimeSpan.FromSeconds(3), ct).ConfigureAwait(false);
         }
@@ -119,11 +119,11 @@ public sealed class LcuSession : IDisposable
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
             catch (Exception ex)
             {
-                _log.LogDebug(ex, "LCU kiértékelési hiba.");
+                _log.LogDebug(ex, "LCU evaluation error.");
                 if (_clock.UtcNow - _lastSuccess > ErrorGrace)
                 {
                     _protection.SetLcu(Sid, IpcConstants.LcuStates.Error,
-                        "A LoL-kliens nem válaszol — a meccskorlát most nem érvényesül.");
+                        Loc.T("The LoL client is not responding — the match limit is not enforced right now.", "A LoL-kliens nem válaszol — a meccskorlát most nem érvényesül."));
                 }
             }
         }
@@ -141,7 +141,7 @@ public sealed class LcuSession : IDisposable
             var queue = await _api.ResolveQueueAsync(ct).ConfigureAwait(false);
             var decision = _tracker.DecideMatchmaking(Sid, phase, queue);
             if (decision.Kind == GameKind.Unknown)
-                _degradedReason = "Nem azonosítható játékmód — a program enged, de jelzi a hibát.";
+                _degradedReason = Loc.T("Unidentifiable game mode — the program allows it but reports the problem.", "Nem azonosítható játékmód — a program enged, de jelzi a hibát.");
             await ApplyDecisionAsync(decision, ct).ConfigureAwait(false);
             return;
         }
@@ -162,14 +162,14 @@ public sealed class LcuSession : IDisposable
             {
                 case MatchRecordOutcome.Recorded:
                     var status = _engine.GetLolStatus(Sid);
-                    _log.LogInformation("PvP-meccs rögzítve: {GameId} (sor {Queue}), {Used}/{Limit}",
+                    _log.LogInformation("PvP match recorded: {GameId} (queue {Queue}), {Used}/{Limit}",
                         snapshot.GameId, snapshot.Queue.QueueId, status.Used, status.Limit);
                     break;
                 case MatchRecordOutcome.Exempt:
-                    _log.LogInformation("Hétvégi PvP-meccs rögzítve, nem számít a keretbe: {GameId}", snapshot.GameId);
+                    _log.LogInformation("Weekend PvP match recorded, not counted toward the limit: {GameId}", snapshot.GameId);
                     break;
                 case MatchRecordOutcome.Unknown:
-                    _degradedReason = "A futó meccs nem azonosítható — nem került rögzítésre.";
+                    _degradedReason = Loc.T("The running match cannot be identified — it was not recorded.", "A futó meccs nem azonosítható — nem került rögzítésre.");
                     break;
             }
             return;
@@ -182,14 +182,16 @@ public sealed class LcuSession : IDisposable
 
     private async Task ApplyDecisionAsync(MatchmakingDecision decision, CancellationToken ct)
     {
-        var reason = decision.Banned ? "tiltott időszak van" : "elfogyott a meccskeret";
+        var reason = decision.Banned
+            ? Loc.T("a banned period is active", "tiltott időszak van")
+            : Loc.T("the match limit is used up", "elfogyott a meccskeret");
 
         // A döntés óta eltelt néhány kérés; közvetlenül a küldés előtt újra ellenőrizzük a fázist,
         // hogy hősválasztásba vagy meccsbe lépés után soha ne érkezzen megszakítás/elutasítás a klienshez.
         if (decision.Action != MatchmakingAction.Allow &&
             !LolMatchTracker.ActionStillApplies(decision.Action, await _api.GetPhaseAsync(ct).ConfigureAwait(false)))
         {
-            _log.LogDebug("A fázis közben megváltozott, a(z) {Action} elmarad.", decision.Action);
+            _log.LogDebug("The phase changed in the meantime, skipping {Action}.", decision.Action);
             return;
         }
 
@@ -198,8 +200,8 @@ public sealed class LcuSession : IDisposable
             case MatchmakingAction.CancelSearch:
             {
                 var status = await _api.CancelSearchAsync(ct).ConfigureAwait(false);
-                Report(status, $"Új PvP-keresés megszakítva: {reason}.",
-                    "A PvP-keresést nem sikerült megszakítani; a meccselfogadást a program el fogja utasítani.");
+                Report(status, Loc.T($"New PvP search cancelled: {reason}.", $"Új PvP-keresés megszakítva: {reason}."),
+                    Loc.T("Could not cancel the PvP search; the program will decline the match accept.", "A PvP-keresést nem sikerült megszakítani; a meccselfogadást a program el fogja utasítani."));
                 break;
             }
             case MatchmakingAction.DeclineReadyCheck:
@@ -208,8 +210,8 @@ public sealed class LcuSession : IDisposable
                 // Elutasítás után csak akkor szüntetjük meg a keresést, ha a kliens még keres.
                 if (LolMatchTracker.ActionStillApplies(MatchmakingAction.CancelSearch, await _api.GetPhaseAsync(ct).ConfigureAwait(false)))
                     await _api.CancelSearchAsync(ct).ConfigureAwait(false);
-                Report(status, $"PvP-meccselfogadás elutasítva: {reason}.",
-                    "A meccselfogadást nem sikerült elutasítani.");
+                Report(status, Loc.T($"PvP match accept declined: {reason}.", $"PvP-meccselfogadás elutasítva: {reason}."),
+                    Loc.T("Could not decline the match accept.", "A meccselfogadást nem sikerült elutasítani."));
                 break;
             }
         }
@@ -254,8 +256,8 @@ public sealed class LcuSession : IDisposable
                         _tracker.OnRemakeResult(Sid, match.GameId, r);
                         if (r)
                         {
-                            _protection.LolAction(Sid, "Igazolt remake: a meccs nem számít bele a keretbe.");
-                            _log.LogInformation("Remake igazolva: {GameId}", match.GameId);
+                            _protection.LolAction(Sid, Loc.T("Confirmed remake: the match does not count toward the limit.", "Igazolt remake: a meccs nem számít bele a keretbe."));
+                            _log.LogInformation("Remake confirmed: {GameId}", match.GameId);
                         }
                     }
                     else if (_clock.UtcNow - match.StartedAt > RemakeGiveUpAfter)
@@ -267,7 +269,7 @@ public sealed class LcuSession : IDisposable
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
                 catch (Exception ex)
                 {
-                    _log.LogDebug(ex, "Remake-ellenőrzés sikertelen: {GameId}", match.GameId);
+                    _log.LogDebug(ex, "Remake check failed: {GameId}", match.GameId);
                 }
             }
         }

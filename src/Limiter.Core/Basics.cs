@@ -213,7 +213,7 @@ public sealed record LimitSettings
     };
 
     public static LimitSettings Parse(string json) =>
-        (JsonSerializer.Deserialize<LimitSettings>(json, JsonOptions) ?? throw new JsonException("üres fájl")).Sanitized();
+        (JsonSerializer.Deserialize<LimitSettings>(json, JsonOptions) ?? throw new JsonException("empty file")).Sanitized();
 
     public string ToJson() => JsonSerializer.Serialize(this, JsonOptions);
 

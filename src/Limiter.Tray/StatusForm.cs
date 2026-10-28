@@ -1,8 +1,9 @@
 using System.Drawing;
+using Limiter.Core;
 
 namespace Limiter.Tray;
 
-/// <summary>Részletes állapotablak.</summary>
+/// <summary>Detailed status window.</summary>
 public sealed class StatusForm : Form
 {
     private readonly Label _protection = Line(bold: true);
@@ -15,7 +16,7 @@ public sealed class StatusForm : Form
 
     public StatusForm(UpdateFlow update)
     {
-        Text = "LoL- és görgetéskorlátozó";
+        Text = Loc.T("LoL & Doomscroll Limiter", "LoL- és görgetéskorlátozó");
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -36,16 +37,16 @@ public sealed class StatusForm : Form
         _schedule.ForeColor = SystemColors.GrayText;
         var note = Line();
         note.ForeColor = SystemColors.GrayText;
-        note.Text = "TFT, botmeccs, gyakorlás, egyéni játék és néző mód nem fogyasztja a LoL-keretet.";
-        var updateButton = new Button { Text = "Frissítések keresése", AutoSize = true, Margin = new Padding(0, 12, 0, 0) };
+        note.Text = Loc.T("TFT, bot games, practice, custom games and spectating do not use up the LoL limit.", "TFT, botmeccs, gyakorlás, egyéni játék és néző mód nem fogyasztja a LoL-keretet.");
+        var updateButton = new Button { Text = Loc.T("Check for updates", "Frissítések keresése"), AutoSize = true, Margin = new Padding(0, 12, 0, 0) };
         updateButton.Click += async (_, _) => await update.RunAsync(this);
         Action onUpdateState = () => { if (!IsDisposed) updateButton.Enabled = !update.IsRunning; };
         update.StateChanged += onUpdateState;
         FormClosed += (_, _) => update.StateChanged -= onUpdateState;
         var version = Line();
         version.ForeColor = SystemColors.GrayText;
-        version.Text = $"Verzió: {UpdateFlow.CurrentVersion}";
-        var adminButton = new Button { Text = "Admin beállítások… (rendszergazdai jelszó kell)", AutoSize = true, Margin = new Padding(0, 6, 0, 0) };
+        version.Text = Loc.T($"Version: {UpdateFlow.CurrentVersion}", $"Verzió: {UpdateFlow.CurrentVersion}");
+        var adminButton = new Button { Text = Loc.T("Admin settings… (needs the administrator password)", "Admin beállítások… (rendszergazdai jelszó kell)"), AutoSize = true, Margin = new Padding(0, 6, 0, 0) };
         adminButton.Click += (_, _) => AdminLauncher.Open(this);
         layout.Controls.AddRange([_protection, _lol, _short, _feed, _next, _problems, _schedule, note, updateButton, adminButton, version]);
         Controls.Add(layout);

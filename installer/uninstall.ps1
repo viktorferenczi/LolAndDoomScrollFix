@@ -1,16 +1,16 @@
 ﻿#Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-  A LoL- és görgetéskorlátozó rendszerszintű beállításainak eltávolítása (rendszergazdaként).
+  Removes the system-level settings of the LoL & Doomscroll Limiter (as administrator).
 
 .PARAMETER RemoveData
-  A számlálókat és a limits.json-t tartalmazó adatmappát is törli.
+  Also deletes the data folder with the counters and limits.json.
 #>
 [CmdletBinding()]
 param([switch]$RemoveData)
 
-# Ha a telepítőt PowerShell 7-ből indították, az örökölt PSModulePath a Windows PowerShell 5.1 beépített moduljait
-# összeakasztja (Get-Acl: „The member Path is already present”). A gépszintű alapértékre állítjuk.
+# If the installer was started from PowerShell 7, the inherited PSModulePath breaks the built-in modules of
+# Windows PowerShell 5.1 (Get-Acl: "The member Path is already present"). Reset it to the machine-level default.
 $env:PSModulePath = [Environment]::GetEnvironmentVariable('PSModulePath', 'Machine')
 
 $ErrorActionPreference = 'Continue'
@@ -20,14 +20,14 @@ $ChromePolicy = 'HKLM:\SOFTWARE\Policies\Google\Chrome'
 $ForceList = Join-Path $ChromePolicy 'ExtensionInstallForcelist'
 $Marker = 'HKLM:\SOFTWARE\LolScrollLimiter'
 
-Write-Host '==> Tálcaalkalmazás és szolgáltatás leállítása'
+Write-Host '==> Stopping the tray application and the service'
 Get-Process -Name 'Limiter.Tray' -ErrorAction SilentlyContinue | Stop-Process -Force
 if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
     Stop-Service -Name $ServiceName -Force -ErrorAction SilentlyContinue
     & sc.exe delete $ServiceName | Out-Null
 }
 
-Write-Host '==> Regisztrációk és Chrome-szabályok eltávolítása'
+Write-Host '==> Removing the registrations and the Chrome policies'
 Remove-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' -Name 'LolScrollLimiterTray' -ErrorAction SilentlyContinue
 Remove-Item -Path "HKLM:\SOFTWARE\Google\Chrome\NativeMessagingHosts\$HostName" -Recurse -ErrorAction SilentlyContinue
 
@@ -42,12 +42,12 @@ foreach ($p in 'IncognitoModeAvailability', 'BrowserGuestModeEnabled', 'Extensio
     Remove-ItemProperty -Path $ChromePolicy -Name $p -ErrorAction SilentlyContinue
 }
 Remove-Item -Path $Marker -Recurse -ErrorAction SilentlyContinue
-# Az eltávolító már ellenőrizte az admin jelszót; újratelepítéskor újat kell megadni.
+# The uninstaller has already verified the admin password; a new one has to be given when reinstalling.
 Remove-Item -LiteralPath (Join-Path $env:ProgramData 'LolScrollLimiter\admin.json') -Force -ErrorAction SilentlyContinue
 
 if ($RemoveData) {
-    Write-Host '==> Adatmappa törlése'
+    Write-Host '==> Deleting the data folder'
     Remove-Item -Path (Join-Path $env:ProgramData 'LolScrollLimiter') -Recurse -Force -ErrorAction SilentlyContinue
 }
-Write-Host '==> Kész.'
+Write-Host '==> Done.'
 exit 0

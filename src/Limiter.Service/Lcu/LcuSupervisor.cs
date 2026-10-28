@@ -48,8 +48,8 @@ public sealed class LcuSupervisor(
         }
         catch (Exception ex)
         {
-            _log.LogWarning(ex, "A futó LoL-kliens listázása sikertelen.");
-            protection.SetDiscoveryError("A LoL-kliens felderítése sikertelen — a meccskorlát most nem érvényesül.");
+            _log.LogWarning(ex, "Listing the running LoL client failed.");
+            protection.SetDiscoveryError(Loc.T("Discovering the LoL client failed — the match limit is not enforced right now.", "A LoL-kliens felderítése sikertelen — a meccskorlát most nem érvényesül."));
             return;
         }
 
@@ -76,15 +76,15 @@ public sealed class LcuSupervisor(
         }
         catch (Exception ex)
         {
-            _log.LogWarning(ex, "A LoL-kliens felderítése sikertelen.");
-            protection.SetDiscoveryError("A LoL-kliens felderítése sikertelen — a meccskorlát most nem érvényesül.");
+            _log.LogWarning(ex, "Discovering the LoL client failed.");
+            protection.SetDiscoveryError(Loc.T("Discovering the LoL client failed — the match limit is not enforced right now.", "A LoL-kliens felderítése sikertelen — a meccskorlát most nem érvényesül."));
             _nextDiscoveryAllowed = clock.UtcNow + DiscoveryRetry;
             return;
         }
 
         foreach (var process in found.Where(p => unresolved.Contains(p.ProcessId) && !_sessions.ContainsKey(p)))
         {
-            _log.LogInformation("LoL-kliens észlelve: PID {Pid}, felhasználó {Sid}", process.ProcessId, process.OwnerSid);
+            _log.LogInformation("LoL client detected: PID {Pid}, user {Sid}", process.ProcessId, process.OwnerSid);
             var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             var session = new LcuSession(process, tracker, engine, protection, clock, loggers.CreateLogger<LcuSession>());
             _sessions[process] = (cts, Task.Run(() => session.RunAsync(cts.Token), cts.Token), session);
@@ -108,7 +108,7 @@ public sealed class LcuSupervisor(
     private async Task StopAsync(LcuProcess process)
     {
         if (!_sessions.Remove(process, out var entry)) return;
-        _log.LogInformation("LoL-kliens leállt: PID {Pid}", process.ProcessId);
+        _log.LogInformation("LoL client stopped: PID {Pid}", process.ProcessId);
         await entry.Cts.CancelAsync().ConfigureAwait(false);
         try { await entry.Task.ConfigureAwait(false); }
         catch (Exception ex) when (ex is OperationCanceledException or TaskCanceledException) { }

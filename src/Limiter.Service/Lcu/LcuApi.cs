@@ -8,7 +8,7 @@ using Limiter.Core.Lol;
 namespace Limiter.Service.Lcu;
 
 public sealed class LcuHttpException(HttpStatusCode status, string path)
-    : Exception($"A LoL-kliens {(int)status} választ adott: {path}")
+    : Exception($"The LoL client answered {(int)status}: {path}")
 {
     public HttpStatusCode Status { get; } = status;
 }

@@ -1,10 +1,10 @@
-# Kiadás: egy `vX.Y.Z` címke feltöltésekor lefordítja a telepítőt Windows alatt, és közzéteszi a GitHub-kiadások között.
-# A tálcaalkalmazás „Frissítések keresése” gombja innen tölti le a legújabb telepítőt (és az ellenőrzőösszegét).
+# Release: when a `vX.Y.Z` tag is pushed, builds the installer on Windows and publishes it among the GitHub releases.
+# The tray application's "Check for updates" button downloads the latest installer (and its checksum) from here.
 #
-# Használat:
-#   1. Emeld a verziót (Directory.Build.props, extension/manifest.json, installer/LolScrollLimiter.iss), commit, push.
+# Usage:
+#   1. Raise the version (Directory.Build.props, extension/manifest.json, installer/LolScrollLimiter.iss), commit, push.
 #   2. git tag v1.4.0 && git push origin v1.4.0
-name: Kiadás
+name: Release
 
 on:
   push:
@@ -27,25 +27,25 @@ jobs:
         with:
           node-version: 22
 
-      - name: A címke és a verzió egyezésének ellenőrzése
+      - name: Check that the tag matches the version
         shell: pwsh
         run: |
           $tag = '${{ github.ref_name }}'.TrimStart('v')
           $props = [xml](Get-Content Directory.Build.props)
           $version = $props.Project.PropertyGroup.Version
-          if ($version -ne $tag) { throw "A címke ($tag) nem egyezik a Directory.Build.props verziójával ($version)." }
+          if ($version -ne $tag) { throw "The tag ($tag) does not match the version in Directory.Build.props ($version)." }
           $iss = Get-Content installer/LolScrollLimiter.iss -Raw
-          if ($iss -notmatch "#define AppVersion `"$([regex]::Escape($tag))`"") { throw "Az installer verziója nem $tag." }
+          if ($iss -notmatch "#define AppVersion `"$([regex]::Escape($tag))`"") { throw "The installer version is not $tag." }
 
-      - name: Inno Setup telepítése
+      - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --no-progress -y
 
-      - name: Tesztek, fordítás, telepítő
+      - name: Tests, build, installer
         shell: pwsh
         run: ./installer/build.ps1
 
-      - name: Ellenőrzőösszegek
+      - name: Checksums
         shell: pwsh
         run: |
           $files = Get-ChildItem out/LolScrollLimiter-Setup-*.exe, out/extension-store.zip, out/extension-dev.zip
@@ -53,7 +53,7 @@ jobs:
             Set-Content -Path out/SHA256SUMS.txt -Encoding ascii
           Get-Content out/SHA256SUMS.txt
 
-      - name: Kiadás közzététele
+      - name: Publish the release
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

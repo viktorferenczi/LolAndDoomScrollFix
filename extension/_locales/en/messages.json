@@ -1,0 +1,280 @@
+{
+  "extName": {
+    "message": "LoL & Doomscroll Limiter"
+  },
+  "extDescription": {
+    "message": "Limits short videos and the Facebook feed according to the rules of the companion app running on this computer."
+  },
+  "popupTitle": {
+    "message": "Limiter"
+  },
+  "lolPvp": {
+    "message": "LoL PvP"
+  },
+  "shortVideos": {
+    "message": "Short videos"
+  },
+  "facebookFeed": {
+    "message": "Facebook feed"
+  },
+  "weekendNoLimit": {
+    "message": "weekend — no limit"
+  },
+  "bannedAgain": {
+    "message": "banned period — available again: $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1"
+      }
+    }
+  },
+  "usedUpAgain": {
+    "message": "used up — available again: $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1"
+      }
+    }
+  },
+  "timeLeft": {
+    "message": "$TIME$ left",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "bonusMin": {
+    "message": " (+$N$ min bonus)",
+    "placeholders": {
+      "n": {
+        "content": "$1"
+      }
+    }
+  },
+  "extraMin": {
+    "message": " (+$N$ min extra)",
+    "placeholders": {
+      "n": {
+        "content": "$1"
+      }
+    }
+  },
+  "lolLeft": {
+    "message": "$REMAINING$ / $LIMIT$ matches left",
+    "placeholders": {
+      "remaining": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "bonusMatches": {
+    "message": " (+$N$ bonus)",
+    "placeholders": {
+      "n": {
+        "content": "$1"
+      }
+    }
+  },
+  "extraMatches": {
+    "message": " (+$N$ extra)",
+    "placeholders": {
+      "n": {
+        "content": "$1"
+      }
+    }
+  },
+  "whenToday": {
+    "message": "today $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "whenTomorrow": {
+    "message": "tomorrow $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "minutesUnit": {
+    "message": "$N$ min",
+    "placeholders": {
+      "n": {
+        "content": "$1"
+      }
+    }
+  },
+  "secondsUnit": {
+    "message": "$N$ s",
+    "placeholders": {
+      "n": {
+        "content": "$1"
+      }
+    }
+  },
+  "scheduleDaily": {
+    "message": "The limits reset daily at $HOUR$:00.",
+    "placeholders": {
+      "hour": {
+        "content": "$1"
+      }
+    }
+  },
+  "scheduleRolling": {
+    "message": "Every limit covers the previous 24 hours."
+  },
+  "weekendsEnforced": {
+    "message": " Applies on weekends too."
+  },
+  "weekendsFree": {
+    "message": " No limit on weekends."
+  },
+  "restBonus": {
+    "message": " A bonus is given the day after an empty day."
+  },
+  "stateWorks": {
+    "message": "Protection is working."
+  },
+  "stateError": {
+    "message": "Error: $ERROR$ The limit is not enforced right now.",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "noConnection": {
+    "message": "no connection"
+  },
+  "incognitoOn": {
+    "message": "Measures and limits in incognito mode too."
+  },
+  "incognitoOff": {
+    "message": "Does not measure or limit in incognito mode (chrome://extensions → Allow in Incognito)."
+  },
+  "connecting": {
+    "message": "Connecting to the limiter service…"
+  },
+  "connectionLost": {
+    "message": "The connection was lost."
+  },
+  "serviceUnreachable": {
+    "message": "The limiter service is not reachable: $MESSAGE$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "unknownServiceError": {
+    "message": "Unknown error in the service."
+  },
+  "titleWorks": {
+    "message": "LoL & Doomscroll Limiter — protection is working"
+  },
+  "titleError": {
+    "message": "Error: $ERROR$ — the limit is not enforced right now.",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "titleErrorFallback": {
+    "message": "the limiter service is not reachable"
+  },
+  "limitShortTitle": {
+    "message": "Short-video limit used up"
+  },
+  "limitShortBody": {
+    "message": "Instagram Reels, TikTok, YouTube Shorts and Facebook Reels together can be used for at most $LIMIT$.",
+    "placeholders": {
+      "limit": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitFeedTitle": {
+    "message": "Facebook feed limit used up"
+  },
+  "limitFeedBody": {
+    "message": "The home feed can be used for at most $LIMIT$. Messenger, profiles and groups are still available.",
+    "placeholders": {
+      "limit": {
+        "content": "$1"
+      }
+    }
+  },
+  "bannedWhatShort": {
+    "message": "Instagram Reels, TikTok, YouTube Shorts and Facebook Reels"
+  },
+  "bannedWhatFeed": {
+    "message": "The Facebook home feed"
+  },
+  "bannedBody": {
+    "message": "$WHAT$ cannot be used $RANGE$.",
+    "placeholders": {
+      "what": {
+        "content": "$1"
+      },
+      "range": {
+        "content": "$2"
+      }
+    }
+  },
+  "bannedRange": {
+    "message": "between $FROM$ and $TO$",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitPerDay": {
+    "message": "$MINUTES$ minutes per day (reset at $HOUR$:00)",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      },
+      "hour": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitRolling": {
+    "message": "$MINUTES$ minutes in 24 hours",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "bannedTitle": {
+    "message": "Banned period"
+  },
+  "availableAgain": {
+    "message": "Available again"
+  },
+  "nextRelease": {
+    "message": "Time is next released at"
+  },
+  "linkMessenger": {
+    "message": "Messenger"
+  },
+  "linkProfile": {
+    "message": "My profile"
+  },
+  "linkGroups": {
+    "message": "Groups"
+  }
+}

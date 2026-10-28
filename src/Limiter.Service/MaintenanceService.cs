@@ -23,7 +23,7 @@ public sealed class MaintenanceService(SettingsProvider settings, UsageStore sto
                 }
                 catch (Exception ex)
                 {
-                    log.LogWarning(ex, "Régi rekordok törlése sikertelen.");
+                    log.LogWarning(ex, "Deleting old records failed.");
                 }
             }
         } while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false));

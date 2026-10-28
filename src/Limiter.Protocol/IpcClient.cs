@@ -1,6 +1,7 @@
 using System.IO.Pipes;
 using System.Security.Principal;
 using System.Text;
+using Limiter.Core;
 
 namespace Limiter.Protocol;
 
@@ -45,18 +46,18 @@ public sealed class IpcClient : IDisposable
     /// <summary>Egy nyers JSON sort küld, és a válaszsort adja vissza.</summary>
     public async Task<string> SendLineAsync(string jsonLine, TimeSpan timeout, CancellationToken ct = default)
     {
-        if (jsonLine.Contains('\n')) throw new ArgumentException("A kérés nem tartalmazhat sortörést.", nameof(jsonLine));
+        if (jsonLine.Contains('\n')) throw new ArgumentException(Loc.T("A request cannot contain a line break.", "A kérés nem tartalmazhat sortörést."), nameof(jsonLine));
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(timeout);
         await _writer.WriteLineAsync(jsonLine.AsMemory(), cts.Token).ConfigureAwait(false);
         var line = await _reader.ReadLineAsync(cts.Token).ConfigureAwait(false);
-        return line ?? throw new IOException("A szolgáltatás bontotta a kapcsolatot.");
+        return line ?? throw new IOException(Loc.T("The service closed the connection.", "A szolgáltatás bontotta a kapcsolatot."));
     }
 
     public async Task<IpcResponse> SendAsync(IpcRequest request, TimeSpan timeout, CancellationToken ct = default)
     {
         var line = await SendLineAsync(IpcJson.Serialize(request), timeout, ct).ConfigureAwait(false);
-        return IpcJson.Deserialize<IpcResponse>(line) ?? throw new IOException("Üres válasz a szolgáltatástól.");
+        return IpcJson.Deserialize<IpcResponse>(line) ?? throw new IOException(Loc.T("Empty response from the service.", "Üres válasz a szolgáltatástól."));
     }
 
     /// <summary>Egyszeri kérés saját kapcsolattal (pl. a tálcaalkalmazás periodikus lekérdezéséhez).</summary>

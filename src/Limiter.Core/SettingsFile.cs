@@ -13,17 +13,17 @@ public static class SettingsFile
     public static IReadOnlyList<string> Validate(LimitSettings s, TimeZoneInfo? zone = null)
     {
         var errors = new List<string>();
-        if (!Enum.IsDefined(s.ResetMode)) errors.Add("Ismeretlen visszaállítási mód.");
-        if (s.DailyResetHour is < 0 or > 23) errors.Add("A napi nullázás órája 0 és 23 között lehet.");
-        if (s.LolPvpMatches is < 0 or > 1000) errors.Add("A LoL-meccsek száma 0 és 1000 között lehet.");
-        CheckMinutes("A rövid videók keretének", s.ShortVideoMinutes);
-        CheckMinutes("A Facebook-hírfolyam keretének", s.FacebookFeedMinutes);
-        if (s.LolRestDayBonusMatches is < 0 or > 10) errors.Add("A LoL pihenőnap-jutalma 0 és 10 meccs között lehet.");
-        CheckMinutes("A rövid videók jutalmának", s.ShortVideoRestDayBonusMinutes);
-        CheckMinutes("A Facebook-hírfolyam jutalmának", s.FacebookFeedRestDayBonusMinutes);
+        if (!Enum.IsDefined(s.ResetMode)) errors.Add(Loc.T("Unknown reset mode.", "Ismeretlen visszaállítási mód."));
+        if (s.DailyResetHour is < 0 or > 23) errors.Add(Loc.T("The daily reset hour must be between 0 and 23.", "A napi nullázás órája 0 és 23 között lehet."));
+        if (s.LolPvpMatches is < 0 or > 1000) errors.Add(Loc.T("The number of LoL matches must be between 0 and 1000.", "A LoL-meccsek száma 0 és 1000 között lehet."));
+        CheckMinutes(Loc.T("The short-video limit", "A rövid videók keretének"), s.ShortVideoMinutes);
+        CheckMinutes(Loc.T("The Facebook feed limit", "A Facebook-hírfolyam keretének"), s.FacebookFeedMinutes);
+        if (s.LolRestDayBonusMatches is < 0 or > 10) errors.Add(Loc.T("The LoL rest-day bonus must be between 0 and 10 matches.", "A LoL pihenőnap-jutalma 0 és 10 meccs között lehet."));
+        CheckMinutes(Loc.T("The short-video bonus", "A rövid videók jutalmának"), s.ShortVideoRestDayBonusMinutes);
+        CheckMinutes(Loc.T("The Facebook feed bonus", "A Facebook-hírfolyam jutalmának"), s.FacebookFeedRestDayBonusMinutes);
         CheckBan("LoL", s.LolBannedHours);
-        CheckBan("Rövid videók", s.ShortVideoBannedHours);
-        CheckBan("Facebook-hírfolyam", s.FacebookFeedBannedHours);
+        CheckBan(Loc.T("Short videos", "Rövid videók"), s.ShortVideoBannedHours);
+        CheckBan(Loc.T("Facebook feed", "Facebook-hírfolyam"), s.FacebookFeedBannedHours);
         CheckGrants();
         return errors;
 
@@ -34,32 +34,32 @@ public static class SettingsFile
             foreach (var g in s.ExtraGrants ?? [])
             {
                 var day = g.Date.ToString("yyyy-MM-dd");
-                if (g.Date == default) errors.Add("Az extra keretnél hiányzik a nap.");
-                else if (!seen.Add(g.Date)) errors.Add($"Extra keret: {day} napra több bejegyzés van.");
-                if (g.IsEmpty) errors.Add($"Extra keret ({day}): adj meg legalább egy értéket.");
+                if (g.Date == default) errors.Add(Loc.T("An extra allowance has no day.", "Az extra keretnél hiányzik a nap."));
+                else if (!seen.Add(g.Date)) errors.Add(Loc.T($"Extra allowance: there is more than one entry for {day}.", $"Extra keret: {day} napra több bejegyzés van."));
+                if (g.IsEmpty) errors.Add(Loc.T($"Extra allowance ({day}): enter at least one value.", $"Extra keret ({day}): adj meg legalább egy értéket."));
                 if (g.LolMatches is < 0 or > DayGrant.MaxMatches)
-                    errors.Add($"Extra keret ({day}): a LoL-meccsek száma 0 és {DayGrant.MaxMatches} között lehet.");
+                    errors.Add(Loc.T($"Extra allowance ({day}): the number of LoL matches must be between 0 and {DayGrant.MaxMatches}.", $"Extra keret ({day}): a LoL-meccsek száma 0 és {DayGrant.MaxMatches} között lehet."));
                 if (g.ShortVideoMinutes is < 0 or > DayGrant.MaxMinutes || g.FacebookFeedMinutes is < 0 or > DayGrant.MaxMinutes)
-                    errors.Add($"Extra keret ({day}): a perc 0 és {DayGrant.MaxMinutes} között lehet.");
+                    errors.Add(Loc.T($"Extra allowance ({day}): minutes must be between 0 and {DayGrant.MaxMinutes}.", $"Extra keret ({day}): a perc 0 és {DayGrant.MaxMinutes} között lehet."));
                 if (g.Date != default && schedule.IsExemptDay(g.Date))
-                    errors.Add($"Extra keret ({day}): hétvégén nincs korlát, ezért nem adható rá extra. Töröld a bejegyzést, vagy kapcsold be a hétvégi korlátot.");
+                    errors.Add(Loc.T($"Extra allowance ({day}): there is no limit on weekends, so no extra can be given for it. Delete the entry or turn on the weekend limit.", $"Extra keret ({day}): hétvégén nincs korlát, ezért nem adható rá extra. Töröld a bejegyzést, vagy kapcsold be a hétvégi korlátot."));
             }
             if ((s.ExtraGrants?.Count ?? 0) > LimitSettings.MaxGrants)
-                errors.Add($"Legfeljebb {LimitSettings.MaxGrants} extra keret adható meg.");
+                errors.Add(Loc.T($"At most {LimitSettings.MaxGrants} extra allowances can be given.", $"Legfeljebb {LimitSettings.MaxGrants} extra keret adható meg."));
         }
 
         void CheckMinutes(string what, int minutes)
         {
-            if (minutes is < 0 or > 24 * 60) errors.Add($"{what} értéke 0 és 1440 perc között lehet.");
+            if (minutes is < 0 or > 24 * 60) errors.Add(Loc.T($"{what} must be between 0 and 1440 minutes.", $"{what} értéke 0 és 1440 perc között lehet."));
         }
 
         void CheckBan(string what, BannedHours ban)
         {
             if (ban is null) return;
             if (ban.From is < 0 or > 23 || ban.To is < 0 or > 23)
-                errors.Add($"{what}: a tiltott órák 0 és 23 között lehetnek.");
+                errors.Add(Loc.T($"{what}: banned hours must be between 0 and 23.", $"{what}: a tiltott órák 0 és 23 között lehetnek."));
             else if (ban.Enabled && ban.From == ban.To)
-                errors.Add($"{what}: a tiltott időszak kezdete és vége nem lehet ugyanaz az óra.");
+                errors.Add(Loc.T($"{what}: the start and the end of the banned period cannot be the same hour.", $"{what}: a tiltott időszak kezdete és vége nem lehet ugyanaz az óra."));
         }
     }
 
@@ -73,7 +73,7 @@ public static class SettingsFile
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
-            return (LimitSettings.Default, "A meglévő limits.json nem olvasható, ezért az alapértékekkel indul a szerkesztő: " + ex.Message);
+            return (LimitSettings.Default, Loc.T("The existing limits.json cannot be read, so the editor starts with the defaults: ", "A meglévő limits.json nem olvasható, ezért az alapértékekkel indul a szerkesztő: ") + ex.Message);
         }
     }
 

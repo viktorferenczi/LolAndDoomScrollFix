@@ -4,15 +4,15 @@ using Limiter.Core;
 namespace Limiter.Tray;
 
 /// <summary>
-/// Az admin jelszó védelme: az admin-felület megnyitásához és a program eltávolításához kell. A jelszó-ellenőrzőt
-/// (admin.json) csak a rendszergazdák és a SYSTEM olvashatja, ezért minden ellenőrzés emelt jogosultságú folyamatban fut.
+/// Protection by the admin password: needed to open the admin panel and to uninstall the program. The password verifier
+/// (admin.json) is readable only by administrators and SYSTEM, so every check runs in an elevated process.
 /// </summary>
 public static class AdminGate
 {
     public const string VerifyArgument = "--verify-password";
     public const string SetFileArgument = "--set-password-file";
 
-    // Az eltávolító (Inno Setup) ezeket a kilépési kódokat várja.
+    // The uninstaller (Inno Setup) expects these exit codes.
     public const int ExitAllowed = 0;
     public const int ExitDenied = 1;
     public const int ExitFileDamaged = 2;
@@ -21,10 +21,10 @@ public static class AdminGate
     private const int MaxAttempts = 5;
     private static readonly TimeSpan WrongPasswordDelay = TimeSpan.FromSeconds(1);
 
-    private const string Title = "Admin jelszó";
+    private static string Title => Loc.T("Admin password", "Admin jelszó");
 
     /// <summary>
-    /// Az admin-felület kapuja. Ha még nincs jelszó (régebbi verzióról frissítettek), az első megnyitáskor újat állíttat be.
+    /// Gate of the admin panel. If there is no password yet (updated from an older version), the first opening asks for a new one.
     /// </summary>
     public static bool Unlock(IWin32Window? owner, string? path = null)
     {
@@ -33,19 +33,21 @@ public static class AdminGate
         {
             case PasswordFileState.Missing:
                 return SetNew(owner, path,
-                    "Még nincs admin jelszó beállítva. Adj meg egyet: ez kell majd az admin beállításokhoz és a program eltávolításához.");
+                    Loc.T("No admin password is set yet. Enter one: it will be needed for the admin settings and for uninstalling the program.",
+                          "Még nincs admin jelszó beállítva. Adj meg egyet: ez kell majd az admin beállításokhoz és a program eltávolításához."));
             case PasswordFileState.Corrupt:
                 MessageBox.Show(owner, DamagedMessage(path), Title, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             default:
-                return Prompt(owner, record!, "Az admin beállítások megnyitásához add meg az admin jelszót.");
+                return Prompt(owner, record!, Loc.T("Enter the admin password to open the admin settings.", "Az admin beállítások megnyitásához add meg az admin jelszót."));
         }
     }
 
-    /// <summary>Új jelszó beállítása (megerősítéssel); a meglévőt cseréli.</summary>
-    public static bool SetNew(IWin32Window? owner, string? path = null, string prompt = "Add meg az új admin jelszót.")
+    /// <summary>Sets a new password (with confirmation); replaces the existing one.</summary>
+    public static bool SetNew(IWin32Window? owner, string? path = null, string? prompt = null)
     {
         path ??= AdminPassword.DefaultPath;
+        prompt ??= Loc.T("Enter the new admin password.", "Add meg az új admin jelszót.");
         using var form = new PasswordForm(Title, prompt, confirm: true);
         if (form.ShowDialog(owner) != DialogResult.OK) return false;
         try
@@ -55,16 +57,16 @@ public static class AdminGate
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
-            MessageBox.Show(owner, "A jelszó mentése nem sikerült: " + ex.Message, Title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(owner, Loc.T("Saving the password failed: ", "A jelszó mentése nem sikerült: ") + ex.Message, Title, MessageBoxButtons.OK, MessageBoxIcon.Error);
             return false;
         }
     }
 
-    /// <summary>Az eltávolítóhoz: kilépési kód (<see cref="ExitAllowed"/> = mehet). Jelszó nélküli telepítésnél nincs akadály.</summary>
+    /// <summary>For the uninstaller: exit code (<see cref="ExitAllowed"/> = may proceed). An installation without a password has no obstacle.</summary>
     public static int VerifyForUninstall(string? path = null)
     {
         path ??= AdminPassword.DefaultPath;
-        // Nem emelt folyamat nem olvashatja a fájlt: ilyenkor nem engedünk át semmit.
+        // A non-elevated process cannot read the file: nothing is let through then.
         if (!AdminLauncher.IsElevated()) return ExitDenied;
 
         switch (AdminPassword.Load(path, out var record))
@@ -72,15 +74,15 @@ public static class AdminGate
             case PasswordFileState.Missing:
                 return ExitAllowed;
             case PasswordFileState.Corrupt:
-                MessageBox.Show(DamagedMessage(path), "Eltávolítás", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(DamagedMessage(path), Loc.T("Uninstall", "Eltávolítás"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return ExitFileDamaged;
             default:
-                return Prompt(null, record!, "A program eltávolításához add meg az admin jelszót.") ? ExitAllowed : ExitDenied;
+                return Prompt(null, record!, Loc.T("Enter the admin password to uninstall the program.", "A program eltávolításához add meg az admin jelszót.")) ? ExitAllowed : ExitDenied;
         }
     }
 
     /// <summary>
-    /// A telepítő által átadott ideiglenes fájlból (hexa karakterkódok) beállítja a jelszót, majd törli a fájlt.
+    /// Sets the password from the temporary file handed over by the installer (hexadecimal character codes), then deletes the file.
     /// </summary>
     public static int SetPasswordFromFile(string file, string? path = null)
     {
@@ -108,14 +110,16 @@ public static class AdminGate
             if (form.ShowDialog(owner) != DialogResult.OK) return false;
             if (AdminPassword.Verify(form.Password, record)) return true;
 
-            Thread.Sleep(WrongPasswordDelay); // lassítja a találgatást
-            notice = string.Create(CultureInfo.CurrentCulture, $"Hibás jelszó ({attempt}/{MaxAttempts}).");
+            Thread.Sleep(WrongPasswordDelay); // slows down guessing
+            notice = Loc.T($"Wrong password ({attempt}/{MaxAttempts}).", $"Hibás jelszó ({attempt}/{MaxAttempts}).");
         }
-        MessageBox.Show(owner, "Túl sok sikertelen próbálkozás.", Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        MessageBox.Show(owner, Loc.T("Too many failed attempts.", "Túl sok sikertelen próbálkozás."), Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
         return false;
     }
 
     private static string DamagedMessage(string path) =>
-        "A jelszófájl nem olvasható vagy sérült, ezért a jelszó nem ellenőrizhető.\n\n" +
-        $"Rendszergazdaként töröld ezt a fájlt: {path}\nUtána új jelszót állíthatsz be.";
+        Loc.T("The password file is unreadable or damaged, so the password cannot be verified.\n\n",
+              "A jelszófájl nem olvasható vagy sérült, ezért a jelszó nem ellenőrizhető.\n\n") +
+        Loc.T($"As an administrator, delete this file: {path}\nThen you can set a new password.",
+              $"Rendszergazdaként töröld ezt a fájlt: {path}\nUtána új jelszót állíthatsz be.");
 }

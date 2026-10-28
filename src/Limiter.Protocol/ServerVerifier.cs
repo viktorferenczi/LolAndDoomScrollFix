@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
+using Limiter.Core;
 
 namespace Limiter.Protocol;
 
@@ -23,19 +24,19 @@ public static class ServerVerifier
         return;
 #else
         if (!GetNamedPipeServerSessionId(pipe.SafePipeHandle, out var sessionId))
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "A pipe-szerver munkamenete nem kérdezhető le.");
+            throw new Win32Exception(Marshal.GetLastWin32Error(), Loc.T("The pipe server's session cannot be queried.", "A pipe-szerver munkamenete nem kérdezhető le."));
         if (sessionId != 0)
-            throw new UnauthorizedAccessException("A pipe-ot nem a korlátozó szolgáltatás birtokolja (nem a 0-s munkamenetben fut).");
+            throw new UnauthorizedAccessException(Loc.T("The pipe is not owned by the limiter service (it does not run in session 0).", "A pipe-ot nem a korlátozó szolgáltatás birtokolja (nem a 0-s munkamenetben fut)."));
 
         if (!GetNamedPipeServerProcessId(pipe.SafePipeHandle, out var pipePid))
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "A pipe-szerver folyamata nem azonosítható.");
+            throw new Win32Exception(Marshal.GetLastWin32Error(), Loc.T("The pipe server's process cannot be identified.", "A pipe-szerver folyamata nem azonosítható."));
 
         var servicePid = QueryServiceProcessId(IpcConstants.ServiceName);
         if (servicePid == 0)
-            throw new UnauthorizedAccessException("A korlátozó szolgáltatás nem fut.");
+            throw new UnauthorizedAccessException(Loc.T("The limiter service is not running.", "A korlátozó szolgáltatás nem fut."));
         if (servicePid != pipePid)
             throw new UnauthorizedAccessException(
-                $"A pipe-ot nem a korlátozó szolgáltatás birtokolja (pipe: {pipePid}, szolgáltatás: {servicePid}).");
+                Loc.T($"The pipe is not owned by the limiter service (pipe: {pipePid}, service: {servicePid}).", $"A pipe-ot nem a korlátozó szolgáltatás birtokolja (pipe: {pipePid}, szolgáltatás: {servicePid})."));
 #endif
     }
 
@@ -48,14 +49,14 @@ public static class ServerVerifier
 
         using var scm = OpenSCManager(null, null, ScManagerConnect);
         if (scm.IsInvalid)
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "A Szolgáltatásvezérlő nem érhető el.");
+            throw new Win32Exception(Marshal.GetLastWin32Error(), Loc.T("The Service Control Manager is not reachable.", "A Szolgáltatásvezérlő nem érhető el."));
 
         using var service = OpenService(scm, serviceName, ServiceQueryStatus);
         if (service.IsInvalid)
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "A korlátozó szolgáltatás nem található.");
+            throw new Win32Exception(Marshal.GetLastWin32Error(), Loc.T("The limiter service was not found.", "A korlátozó szolgáltatás nem található."));
 
         if (!QueryServiceStatusEx(service, ScStatusProcessInfo, out var status, Marshal.SizeOf<ServiceStatusProcess>(), out _))
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "A korlátozó szolgáltatás állapota nem kérdezhető le.");
+            throw new Win32Exception(Marshal.GetLastWin32Error(), Loc.T("The limiter service's state cannot be queried.", "A korlátozó szolgáltatás állapota nem kérdezhető le."));
 
         return status.ProcessId;
     }

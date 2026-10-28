@@ -46,10 +46,10 @@ public static class AdminPassword
     /// <summary>Hibaszöveg, ha a jelszó nem fogadható el; különben null.</summary>
     public static string? Validate(string? password)
     {
-        if (string.IsNullOrEmpty(password)) return "Add meg a jelszót.";
-        if (string.IsNullOrWhiteSpace(password)) return "A jelszó nem állhat csupa szóközből.";
-        if (password.Length < MinLength) return $"A jelszó legalább {MinLength} karakter legyen.";
-        if (password.Length > MaxLength) return $"A jelszó legfeljebb {MaxLength} karakter lehet.";
+        if (string.IsNullOrEmpty(password)) return Loc.T("Enter the password.", "Add meg a jelszót.");
+        if (string.IsNullOrWhiteSpace(password)) return Loc.T("The password cannot consist of spaces only.", "A jelszó nem állhat csupa szóközből.");
+        if (password.Length < MinLength) return Loc.T($"The password must be at least {MinLength} characters long.", $"A jelszó legalább {MinLength} karakter legyen.");
+        if (password.Length > MaxLength) return Loc.T($"The password can be at most {MaxLength} characters long.", $"A jelszó legfeljebb {MaxLength} karakter lehet.");
         return null;
     }
 
@@ -94,7 +94,7 @@ public static class AdminPassword
     /// <summary>Egy lépésben cseréli a fájlt (ideiglenes fájl, majd átnevezés), így sosem marad félig megírt jelszófájl.</summary>
     public static void Save(string path, PasswordRecord record)
     {
-        if (!IsWellFormed(record, out _, out _)) throw new ArgumentException("Érvénytelen jelszó-ellenőrző.", nameof(record));
+        if (!IsWellFormed(record, out _, out _)) throw new ArgumentException("Invalid password verifier.", nameof(record));
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var temp = path + ".tmp-" + Guid.NewGuid().ToString("N");
         try

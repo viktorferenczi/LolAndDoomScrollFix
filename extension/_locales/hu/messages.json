@@ -1,0 +1,280 @@
+{
+  "extName": {
+    "message": "LoL- és görgetéskorlátozó"
+  },
+  "extDescription": {
+    "message": "Korlátozza a rövid videók és a Facebook-hírfolyam használatát a gépen futó társalkalmazás szabályai szerint."
+  },
+  "popupTitle": {
+    "message": "Korlátozó"
+  },
+  "lolPvp": {
+    "message": "LoL PvP"
+  },
+  "shortVideos": {
+    "message": "Rövid videók"
+  },
+  "facebookFeed": {
+    "message": "Facebook-hírfolyam"
+  },
+  "weekendNoLimit": {
+    "message": "hétvége — nincs korlát"
+  },
+  "bannedAgain": {
+    "message": "tiltott időszak — újra: $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1"
+      }
+    }
+  },
+  "usedUpAgain": {
+    "message": "elfogyott — újra: $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1"
+      }
+    }
+  },
+  "timeLeft": {
+    "message": "$TIME$ maradt",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "bonusMin": {
+    "message": " (+$N$ p jutalom)",
+    "placeholders": {
+      "n": {
+        "content": "$1"
+      }
+    }
+  },
+  "extraMin": {
+    "message": " (+$N$ p extra)",
+    "placeholders": {
+      "n": {
+        "content": "$1"
+      }
+    }
+  },
+  "lolLeft": {
+    "message": "$REMAINING$ / $LIMIT$ meccs maradt",
+    "placeholders": {
+      "remaining": {
+        "content": "$1"
+      },
+      "limit": {
+        "content": "$2"
+      }
+    }
+  },
+  "bonusMatches": {
+    "message": " (+$N$ jutalom)",
+    "placeholders": {
+      "n": {
+        "content": "$1"
+      }
+    }
+  },
+  "extraMatches": {
+    "message": " (+$N$ extra)",
+    "placeholders": {
+      "n": {
+        "content": "$1"
+      }
+    }
+  },
+  "whenToday": {
+    "message": "ma $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "whenTomorrow": {
+    "message": "holnap $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "minutesUnit": {
+    "message": "$N$ perc",
+    "placeholders": {
+      "n": {
+        "content": "$1"
+      }
+    }
+  },
+  "secondsUnit": {
+    "message": "$N$ mp",
+    "placeholders": {
+      "n": {
+        "content": "$1"
+      }
+    }
+  },
+  "scheduleDaily": {
+    "message": "A keretek naponta $HOUR$:00-kor nullázódnak.",
+    "placeholders": {
+      "hour": {
+        "content": "$1"
+      }
+    }
+  },
+  "scheduleRolling": {
+    "message": "Minden keret az előző 24 órára vonatkozik."
+  },
+  "weekendsEnforced": {
+    "message": " Hétvégén is érvényes."
+  },
+  "weekendsFree": {
+    "message": " Hétvégén nincs korlát."
+  },
+  "restBonus": {
+    "message": " Üres nap után másnap jutalom jár."
+  },
+  "stateWorks": {
+    "message": "A védelem működik."
+  },
+  "stateError": {
+    "message": "Hiba: $ERROR$ A korlát most nem érvényesül.",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "noConnection": {
+    "message": "nincs kapcsolat"
+  },
+  "incognitoOn": {
+    "message": "Inkognitó módban is mér és korlátoz."
+  },
+  "incognitoOff": {
+    "message": "Inkognitó módban nem mér és nem korlátoz (chrome://extensions → Engedélyezés inkognitó módban)."
+  },
+  "connecting": {
+    "message": "Kapcsolódás a korlátozó szolgáltatáshoz…"
+  },
+  "connectionLost": {
+    "message": "A kapcsolat megszakadt."
+  },
+  "serviceUnreachable": {
+    "message": "A korlátozó szolgáltatás nem érhető el: $MESSAGE$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "unknownServiceError": {
+    "message": "Ismeretlen hiba a szolgáltatásban."
+  },
+  "titleWorks": {
+    "message": "LoL- és görgetéskorlátozó — a védelem működik"
+  },
+  "titleError": {
+    "message": "Hiba: $ERROR$ — a korlát most nem érvényesül.",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "titleErrorFallback": {
+    "message": "a korlátozó szolgáltatás nem érhető el"
+  },
+  "limitShortTitle": {
+    "message": "Elfogyott a rövidvideós keret"
+  },
+  "limitShortBody": {
+    "message": "Az Instagram Reels, a TikTok, a YouTube Shorts és a Facebook Reels együtt legfeljebb $LIMIT$ használható.",
+    "placeholders": {
+      "limit": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitFeedTitle": {
+    "message": "Elfogyott a Facebook-hírfolyam kerete"
+  },
+  "limitFeedBody": {
+    "message": "A kezdőlapi hírfolyam legfeljebb $LIMIT$ használható. A Messenger, a profilok és a csoportok továbbra is elérhetők.",
+    "placeholders": {
+      "limit": {
+        "content": "$1"
+      }
+    }
+  },
+  "bannedWhatShort": {
+    "message": "Az Instagram Reels, a TikTok, a YouTube Shorts és a Facebook Reels"
+  },
+  "bannedWhatFeed": {
+    "message": "A Facebook kezdőlapi hírfolyama"
+  },
+  "bannedBody": {
+    "message": "$WHAT$ $RANGE$ nem használható.",
+    "placeholders": {
+      "what": {
+        "content": "$1"
+      },
+      "range": {
+        "content": "$2"
+      }
+    }
+  },
+  "bannedRange": {
+    "message": "$FROM$ és $TO$ között",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitPerDay": {
+    "message": "$MINUTES$ percet naponta (nullázás $HOUR$:00-kor)",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      },
+      "hour": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitRolling": {
+    "message": "$MINUTES$ percet 24 óra alatt",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "bannedTitle": {
+    "message": "Tiltott időszak"
+  },
+  "availableAgain": {
+    "message": "Újra elérhető"
+  },
+  "nextRelease": {
+    "message": "Legközelebb ekkortól szabadul fel idő"
+  },
+  "linkMessenger": {
+    "message": "Messenger"
+  },
+  "linkProfile": {
+    "message": "Profilom"
+  },
+  "linkGroups": {
+    "message": "Csoportok"
+  }
+}

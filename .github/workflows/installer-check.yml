@@ -1,5 +1,5 @@
-# Gyors ellenőrzés: lefordul-e az Inno Setup szkript. Csak a `ci/installer-check` ágra küldéskor fut.
-name: Telepítő-fordítás ellenőrzése
+# Quick check: does the Inno Setup script compile? Runs only when pushing to the `ci/installer-check` branch.
+name: Installer compile check
 
 on:
   push:
@@ -12,11 +12,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Inno Setup telepítése
+      - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --no-progress -y
 
-      - name: Helyettesítő programfájlok (csak a fordításhoz)
+      - name: Placeholder program files (for compiling only)
         shell: pwsh
         run: |
           New-Item -ItemType Directory out/app -Force | Out-Null
@@ -24,8 +24,8 @@ jobs:
             Set-Content -Path "out/app/$f" -Value 'x'
           }
 
-      - name: Fordítás
+      - name: Compile
         shell: pwsh
         run: |
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer/LolScrollLimiter.iss
-          if ($LASTEXITCODE -ne 0) { throw 'A telepítő fordítása sikertelen.' }
+          if ($LASTEXITCODE -ne 0) { throw 'Compiling the installer failed.' }

@@ -1,4 +1,5 @@
 using System.Net;
+using Limiter.Core;
 using System.Security.Cryptography;
 using System.Text.Json;
 
@@ -54,11 +55,11 @@ public sealed class UpdateClient
         {
             using var response = await _http.GetAsync($"https://api.github.com/repos/{_repository}/releases/latest", ct).ConfigureAwait(false);
             if (response.StatusCode == HttpStatusCode.NotFound)
-                return Failed(current, "Még nincs közzétett kiadás, vagy a kiadások nem nyilvánosak.");
+                return Failed(current, Loc.T("There is no published release yet, or the releases are not public.", "Még nincs közzétett kiadás, vagy a kiadások nem nyilvánosak."));
             if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests)
-                return Failed(current, "A GitHub átmenetileg korlátozza a lekérdezéseket. Próbáld újra később.");
+                return Failed(current, Loc.T("GitHub is temporarily rate-limiting requests. Try again later.", "A GitHub átmenetileg korlátozza a lekérdezéseket. Próbáld újra később."));
             if (!response.IsSuccessStatusCode)
-                return Failed(current, $"A GitHub hibát jelzett (HTTP {(int)response.StatusCode}).");
+                return Failed(current, Loc.T($"GitHub reported an error (HTTP {(int)response.StatusCode}).", $"A GitHub hibát jelzett (HTTP {(int)response.StatusCode})."));
 
             var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return await EvaluateAsync(current, json, ct).ConfigureAwait(false);
@@ -66,7 +67,7 @@ public sealed class UpdateClient
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or IOException)
         {
-            return Failed(current, ex is TaskCanceledException ? "Időtúllépés a frissítés keresésekor." : "Nincs kapcsolat a GitHubbal: " + ex.Message);
+            return Failed(current, ex is TaskCanceledException ? Loc.T("Timed out while checking for updates.", "Időtúllépés a frissítés keresésekor.") : Loc.T("Cannot reach GitHub: ", "Nincs kapcsolat a GitHubbal: ") + ex.Message);
         }
     }
 
@@ -75,11 +76,11 @@ public sealed class UpdateClient
     {
         using var doc = JsonDocument.Parse(releaseJson);
         var root = doc.RootElement;
-        if (root.ValueKind != JsonValueKind.Object) return Failed(current, "Érthetetlen válasz a GitHubtól.");
+        if (root.ValueKind != JsonValueKind.Object) return Failed(current, Loc.T("GitHub returned a response that could not be understood.", "Érthetetlen válasz a GitHubtól."));
         if (Bool(root, "draft") || Bool(root, "prerelease")) return new UpdateCheckResult(UpdateStatus.UpToDate, current);
 
         var tag = Str(root, "tag_name");
-        if (!UpdateRules.TryParseVersion(tag, out var version)) return Failed(current, $"Ismeretlen verziócímke: „{tag}”.");
+        if (!UpdateRules.TryParseVersion(tag, out var version)) return Failed(current, Loc.T($"Unknown version tag: \"{tag}\".", $"Ismeretlen verziócímke: „{tag}”."));
         if (!UpdateRules.IsNewer(current, version)) return new UpdateCheckResult(UpdateStatus.UpToDate, current);
 
         // Telepítő és ellenőrzőösszeg keresése a kiadás fájljai között.
@@ -107,11 +108,11 @@ public sealed class UpdateClient
         }
 
         if (installerName is null || installerUrl is null)
-            return Failed(current, $"A(z) {version} kiadásban nincs telepítő ({UpdateRules.InstallerFileName(version)}).");
+            return Failed(current, Loc.T($"Release {version} has no installer ({UpdateRules.InstallerFileName(version)}).", $"A(z) {version} kiadásban nincs telepítő ({UpdateRules.InstallerFileName(version)})."));
         if (!UpdateRules.IsTrustedAssetUrl(installerUrl, _repository))
-            return Failed(current, "A telepítő letöltési címe nem megbízható, ezért nem töltjük le.");
+            return Failed(current, Loc.T("The installer download address is not trusted, so it will not be downloaded.", "A telepítő letöltési címe nem megbízható, ezért nem töltjük le."));
         if (size > UpdateRules.MaxInstallerBytes)
-            return Failed(current, "A telepítő a megengedettnél nagyobb.");
+            return Failed(current, Loc.T("The installer is larger than allowed.", "A telepítő a megengedettnél nagyobb."));
 
         var sha = digest;
         if (sha is null && checksumUrl is not null && UpdateRules.IsTrustedAssetUrl(checksumUrl, _repository))
@@ -121,7 +122,7 @@ public sealed class UpdateClient
                 sha = UpdateRules.FindChecksum(await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false), installerName);
         }
         if (sha is null)
-            return Failed(current, "A kiadáshoz nem tartozik ellenőrzőösszeg, ezért nem telepíthető biztonságosan.");
+            return Failed(current, Loc.T("The release has no checksum, so it cannot be installed safely.", "A kiadáshoz nem tartozik ellenőrzőösszeg, ezért nem telepíthető biztonságosan."));
 
         return new UpdateCheckResult(UpdateStatus.Available, current, new ReleaseInfo(
             version, tag!, Str(root, "body") ?? "", Str(root, "html_url") ?? $"https://github.com/{_repository}/releases",
@@ -135,9 +136,9 @@ public sealed class UpdateClient
     public async Task<string> DownloadAsync(ReleaseInfo release, string directory, IProgress<double>? progress = null, CancellationToken ct = default)
     {
         if (!UpdateRules.IsTrustedAssetUrl(release.InstallerUrl, _repository))
-            throw new InvalidDataException("A telepítő letöltési címe nem megbízható.");
+            throw new InvalidDataException(Loc.T("The installer download address is not trusted.", "A telepítő letöltési címe nem megbízható."));
         if (!UpdateRules.InstallerNamePattern().IsMatch(release.InstallerName))
-            throw new InvalidDataException("A telepítő fájlneve érvénytelen.");
+            throw new InvalidDataException(Loc.T("The installer file name is invalid.", "A telepítő fájlneve érvénytelen."));
 
         Directory.CreateDirectory(directory);
         var finalPath = Path.Combine(directory, release.InstallerName);
@@ -146,11 +147,11 @@ public sealed class UpdateClient
         using var response = await _http.GetAsync(release.InstallerUrl, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         if (!UpdateRules.IsTrustedFinalHost(response.RequestMessage?.RequestUri))
-            throw new InvalidDataException("A letöltés nem megbízható címre irányított át.");
+            throw new InvalidDataException(Loc.T("The download was redirected to an untrusted address.", "A letöltés nem megbízható címre irányított át."));
 
         var total = response.Content.Headers.ContentLength ?? release.InstallerSize;
         if (total > UpdateRules.MaxInstallerBytes)
-            throw new InvalidDataException("A telepítő a megengedettnél nagyobb.");
+            throw new InvalidDataException(Loc.T("The installer is larger than allowed.", "A telepítő a megengedettnél nagyobb."));
 
         try
         {
@@ -164,7 +165,7 @@ public sealed class UpdateClient
                 while ((read = await source.ReadAsync(buffer, ct).ConfigureAwait(false)) > 0)
                 {
                     written += read;
-                    if (written > UpdateRules.MaxInstallerBytes) throw new InvalidDataException("A telepítő a megengedettnél nagyobb.");
+                    if (written > UpdateRules.MaxInstallerBytes) throw new InvalidDataException(Loc.T("The installer is larger than allowed.", "A telepítő a megengedettnél nagyobb."));
                     hash.TransformBlock(buffer, 0, read, null, 0);
                     await target.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
                     if (total > 0) progress?.Report(Math.Min(1.0, (double)written / total));
@@ -174,9 +175,9 @@ public sealed class UpdateClient
 
             var actual = Convert.ToHexString(hash.Hash!).ToLowerInvariant();
             if (!string.Equals(actual, release.Sha256, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("A letöltött telepítő ellenőrzőösszege nem egyezik, ezért nem indítjuk el.");
+                throw new InvalidDataException(Loc.T("The downloaded installer's checksum does not match, so it will not be started.", "A letöltött telepítő ellenőrzőösszege nem egyezik, ezért nem indítjuk el."));
             if (release.InstallerSize > 0 && written != release.InstallerSize)
-                throw new InvalidDataException("A letöltött telepítő mérete nem egyezik a kiadáséval.");
+                throw new InvalidDataException(Loc.T("The downloaded installer's size does not match the release.", "A letöltött telepítő mérete nem egyezik a kiadáséval."));
 
             File.Move(partPath, finalPath, overwrite: true);
             progress?.Report(1.0);

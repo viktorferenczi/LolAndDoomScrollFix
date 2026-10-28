@@ -30,13 +30,13 @@ public sealed class PipeServerService(RequestHandler handler, ILogger<PipeServer
             {
                 // Más folyamat már létrehozta ezt a pipe-nevet (pl. megpróbálták „elfoglalni”).
                 // A kliensek ilyenkor a szerver-ellenőrzés miatt hibát jeleznek; mi újrapróbáljuk.
-                log.LogCritical(ex, "A pipe nem hozható létre — egy másik folyamat foglalja a nevet.");
+                log.LogCritical(ex, "The pipe cannot be created — another process holds the name.");
                 await Task.Delay(TimeSpan.FromSeconds(5), ct).ConfigureAwait(false);
                 continue;
             }
             catch (IOException ex)
             {
-                log.LogError(ex, "A pipe nem hozható létre.");
+                log.LogError(ex, "The pipe cannot be created.");
                 await Task.Delay(TimeSpan.FromSeconds(1), ct).ConfigureAwait(false);
                 continue;
             }
@@ -52,7 +52,7 @@ public sealed class PipeServerService(RequestHandler handler, ILogger<PipeServer
             }
             catch (IOException ex)
             {
-                log.LogWarning(ex, "Kapcsolódási hiba a pipe-on.");
+                log.LogWarning(ex, "Connection error on the pipe.");
                 await server.DisposeAsync().ConfigureAwait(false);
                 continue;
             }
@@ -98,7 +98,7 @@ public sealed class PipeServerService(RequestHandler handler, ILogger<PipeServer
                 IpcResponse response;
                 if (line.Length > MaxLineLength)
                 {
-                    response = IpcResponse.Failure(null, "Túl hosszú kérés.");
+                    response = IpcResponse.Failure(null, "Request too long.");
                 }
                 else
                 {
@@ -107,7 +107,7 @@ public sealed class PipeServerService(RequestHandler handler, ILogger<PipeServer
                     catch (JsonException) { }
 
                     response = request is null
-                        ? IpcResponse.Failure(null, "Érvénytelen kérés.")
+                        ? IpcResponse.Failure(null, "Invalid request.")
                         : SafeHandle(sid, request);
                 }
 
@@ -118,7 +118,7 @@ public sealed class PipeServerService(RequestHandler handler, ILogger<PipeServer
         catch (IOException) { /* a kliens bontott */ }
         catch (Exception ex)
         {
-            log.LogWarning(ex, "Hiba a pipe-kliens kezelése közben.");
+            log.LogWarning(ex, "Error while handling the pipe client.");
         }
     }
 
@@ -130,8 +130,8 @@ public sealed class PipeServerService(RequestHandler handler, ILogger<PipeServer
         }
         catch (Exception ex)
         {
-            log.LogError(ex, "Hiba a kérés feldolgozásakor ({Type}).", request.Type);
-            return IpcResponse.Failure(request.Id, "Belső hiba a szolgáltatásban.");
+            log.LogError(ex, "Error while processing the request ({Type}).", request.Type);
+            return IpcResponse.Failure(request.Id, "Internal error in the service.");
         }
     }
 
@@ -143,6 +143,6 @@ public sealed class PipeServerService(RequestHandler handler, ILogger<PipeServer
             using var identity = WindowsIdentity.GetCurrent(TokenAccessLevels.Query);
             sid = identity.User?.Value;
         });
-        return sid ?? throw new UnauthorizedAccessException("A kliens felhasználója nem azonosítható.");
+        return sid ?? throw new UnauthorizedAccessException("The client's user cannot be identified.");
     }
 }

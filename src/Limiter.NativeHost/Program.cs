@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Text;
 using System.Text.Json.Nodes;
 using Limiter.Protocol;
+using Limiter.Core;
 
 // Chrome Native Messaging host: a bővítmény üzeneteit (4 bájtos hossz + UTF-8 JSON) továbbítja a
 // szolgáltatás named pipe-jára, és visszaküldi a választ. Saját logikája nincs; a szolgáltatás nem
@@ -48,9 +49,9 @@ return 0;
 
 static string Describe(Exception ex) => ex switch
 {
-    TimeoutException => "A korlátozó szolgáltatás nem érhető el (időtúllépés).",
-    UnauthorizedAccessException => "A korlátozó szolgáltatás nem hiteles: " + ex.Message,
-    _ => "A korlátozó szolgáltatás nem érhető el: " + ex.Message,
+    TimeoutException => Loc.T("The limiter service is not reachable (timeout).", "A korlátozó szolgáltatás nem érhető el (időtúllépés)."),
+    UnauthorizedAccessException => Loc.T("The limiter service is not authentic: ", "A korlátozó szolgáltatás nem hiteles: ") + ex.Message,
+    _ => Loc.T("The limiter service is not reachable: ", "A korlátozó szolgáltatás nem érhető el: ") + ex.Message,
 };
 
 static async Task<string?> ReadMessageAsync(Stream input)
@@ -58,7 +59,7 @@ static async Task<string?> ReadMessageAsync(Stream input)
     var header = new byte[4];
     if (!await ReadExactAsync(input, header)) return null;
     var length = BinaryPrimitives.ReadInt32LittleEndian(header);
-    if (length is < 0 or > MaxMessageBytes) throw new InvalidDataException("Érvénytelen üzenethossz.");
+    if (length is < 0 or > MaxMessageBytes) throw new InvalidDataException("Invalid message length.");
     var body = new byte[length];
     if (!await ReadExactAsync(input, body)) return null;
     return Encoding.UTF8.GetString(body);

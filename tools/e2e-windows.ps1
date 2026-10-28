@@ -1,13 +1,14 @@
 ﻿<#
 .SYNOPSIS
-  Windows-os végpontok közötti próba (GitHub Actions, windows-latest): csendes telepítés, admin jelszó,
-  az admin felület kezelése UI Automation-nel, extra keret mentése, eltávolítás jelszóval.
-  Bizonyítékok (képernyőkép, naplók) az out\e2e mappába kerülnek.
+  Windows end-to-end test (GitHub Actions, windows-latest): silent install, admin password,
+  driving the admin panel with UI Automation, saving an extra allowance, uninstalling with the password.
+  Evidence (screenshots, logs) goes to the out\e2e folder. Run once per UI language (-Language en | hu).
 #>
 [CmdletBinding()]
 param(
     [string]$Installer = (Get-ChildItem (Join-Path $PSScriptRoot '..\out\LolScrollLimiter-Setup-*.exe') | Select-Object -First 1).FullName,
-    [string]$Evidence = (Join-Path $PSScriptRoot '..\out\e2e')
+    [string]$Evidence = (Join-Path $PSScriptRoot '..\out\e2e'),
+    [ValidateSet('en', 'hu')][string]$Language = 'en'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -32,6 +33,14 @@ $DataDir = Join-Path $env:ProgramData 'LolScrollLimiter'
 $TrayExe = Join-Path $AppDir 'Limiter.Tray.exe'
 $AdminJson = Join-Path $DataDir 'admin.json'
 $Password = 'árvíz-123'
+
+# The texts of the user interface in the language under test (the window titles and button names are looked up by these).
+$Ui = @{
+    en = @{ Pw = 'Admin password'; Cancel = 'Cancel'; Wrong = 'Wrong password \(1/5\)'; Admin = 'Admin settings*'; SaveExtra = 'Save extra for the day';
+            ExtraDay = 'Extra day'; ExtraLol = 'Extra LoL matches'; Save = 'Save'; Weekend = 'Saturday|Sunday'; NotSelectable = 'not selectable'; Current = 'current day' }
+    hu = @{ Pw = 'Admin jelszó'; Cancel = 'Mégse'; Wrong = 'Hibás jelszó \(1/5\)'; Admin = 'Admin beállítások*'; SaveExtra = 'Extra mentése a napra';
+            ExtraDay = 'Extra napja'; ExtraLol = 'Extra LoL-meccsek'; Save = 'Mentés'; Weekend = 'szombat|vasárnap'; NotSelectable = 'nem választható'; Current = 'most tartó nap' }
+}[$Language]
 $failures = New-Object System.Collections.Generic.List[string]
 
 function Check([bool]$ok, [string]$what) {
@@ -57,7 +66,7 @@ function Find-Window([string]$like, [int]$seconds = 30, [string]$withButton = $n
                     if (-not $withButton -or (Find-Named $k $withButton)) { return $k }
                 }
             }
-        } catch { } # az ablak közben megszűnt: újra próbáljuk
+        } catch { } # the window disappeared in the meantime: try again
         Start-Sleep -Milliseconds 300
     }
     return $null
@@ -69,9 +78,9 @@ function Find-Named($parent, [string]$name) {
 }
 
 function Click($el) {
-    # BM_CLICK: nem blokkol, ha a gomb modális ablakot nyit (az InvokePattern ilyenkor megakadhat).
+    # BM_CLICK: does not block if the button opens a modal window (InvokePattern may hang then).
     $h = [IntPtr]$el.Current.NativeWindowHandle
-    if ($h -eq [IntPtr]::Zero) { throw "Nincs ablakkezelője: $($el.Current.Name)" }
+    if ($h -eq [IntPtr]::Zero) { throw "No window handle: $($el.Current.Name)" }
     [void][Win32Click]::PostMessage($h, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)
 }
 
@@ -96,104 +105,106 @@ function Run-Helper([string[]]$arguments) {
     return Start-Process -FilePath $TrayExe -ArgumentList $arguments -PassThru
 }
 
-# Korlátozott várakozás: a próba sosem akadhat el végtelen ideig.
+# Bounded waiting: the test can never get stuck forever.
 function Wait-Process-Bounded($proc, [int]$seconds, [string]$what) {
     if (-not $proc.WaitForExit($seconds * 1000)) {
         Shot "hang-$($what -replace '\W', '-')"
         Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-        $script:failures.Add("Időtúllépés: $what")
-        Write-Host "FAIL  Időtúllépés: $what"
+        $script:failures.Add("Timeout: $what")
+        Write-Host "FAIL  Timeout: $what"
         return $false
     }
     return $true
 }
 
-# ---------------------------------------------------------------- 1. csendes telepítés
-Write-Host "== Telepítés: $Installer"
+# ---------------------------------------------------------------- 1. silent install
+Write-Host "== Install ($Language): $Installer"
 $log = Join-Path $Evidence 'setup.log'
-$p = Start-Process -FilePath $Installer -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$log" -PassThru
-[void](Wait-Process-Bounded $p 240 'csendes telepítés')
-Check ($p.HasExited -and $p.ExitCode -eq 0) "A csendes telepítés sikeres (kód: $($p.ExitCode))"
+$installerArgs = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$log", "/LANG=$Language")
+$p = Start-Process -FilePath $Installer -ArgumentList $installerArgs -PassThru
+[void](Wait-Process-Bounded $p 240 'silent install')
+Check ($p.HasExited -and $p.ExitCode -eq 0) "The silent install succeeds (exit code: $($p.ExitCode))"
 $tr = Join-Path $env:TEMP 'LolScrollLimiter-install.log'
-if (Test-Path $tr) { Copy-Item $tr (Join-Path $Evidence 'install-transcript.log') -Force } # még a diagnosztikus futtatás előtt
+if (Test-Path $tr) { Copy-Item $tr (Join-Path $Evidence 'install-transcript.log') -Force } # before the diagnostic run
 if (-not (Test-Path (Join-Path $DataDir 'limits.json'))) {
-    # A telepítő a rendszerbeállítást rejtetten futtatja; hiba esetén látható kimenettel újrafuttatjuk a diagnózishoz.
-    Write-Host '== Diagnózis: install.ps1 kézi futtatása'
+    # The installer runs the system setup hidden; on failure it is re-run with visible output for diagnosis.
+    Write-Host '== Diagnosis: running install.ps1 by hand'
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $AppDir 'install.ps1') -InstallDir $AppDir *>&1 |
         Tee-Object -FilePath (Join-Path $Evidence 'install-ps1.log') | Out-Host
-    Write-Host "install.ps1 kilépési kód: $LASTEXITCODE"
+    Write-Host "install.ps1 exit code: $LASTEXITCODE"
 }
-Check (Test-Path $TrayExe) 'A tálcaalkalmazás telepítve van'
-Check (Test-Path (Join-Path $DataDir 'limits.json')) 'limits.json létrejött'
-Check (-not (Test-Path $AdminJson)) 'Csendes telepítés után még nincs admin.json'
+Check (Test-Path $TrayExe) 'The tray application is installed'
+Check (Test-Path (Join-Path $DataDir 'limits.json')) 'limits.json was created'
+Check (-not (Test-Path $AdminJson)) 'There is no admin.json yet after a silent install'
 $svc = Get-Service LolScrollLimiter -ErrorAction SilentlyContinue
-Check ($null -ne $svc -and $svc.Status -eq 'Running') 'A szolgáltatás fut'
+Check ($null -ne $svc -and $svc.Status -eq 'Running') 'The service is running'
+Check ((Get-ItemProperty 'HKLM:\SOFTWARE\LolScrollLimiter').Language -eq $Language) "The installer recorded the language ($Language)"
 
-# ---------------------------------------------------------------- 2. jelszó beállítása a telepítő segédparancsával
-Write-Host '== Jelszó beállítása (telepítői segédparancs)'
+# ---------------------------------------------------------------- 2. setting the password with the installer's helper command
+Write-Host '== Setting the password (installer helper)'
 $short = Join-Path $env:TEMP 'lsl-short.dat'
 Set-Content -Path $short -Value (Hex 'abc') -Encoding ascii
 $r = Run-Helper @('--set-password-file', "`"$short`"")
-[void](Wait-Process-Bounded $r 30 'rövid jelszó átadása')
-Check ($r.ExitCode -eq 3) "Rövid jelszót elutasít (kód: $($r.ExitCode))"
-Check (-not (Test-Path $AdminJson)) 'Rövid jelszónál nem jön létre admin.json'
-Check (-not (Test-Path $short)) 'Az átadó fájl törlődik (rövid jelszónál is)'
+[void](Wait-Process-Bounded $r 30 'handing over a short password')
+Check ($r.ExitCode -eq 3) "A short password is rejected (exit code: $($r.ExitCode))"
+Check (-not (Test-Path $AdminJson)) 'A short password does not create admin.json'
+Check (-not (Test-Path $short)) 'The hand-over file is deleted (also for a short password)'
 
 $file = Join-Path $env:TEMP 'lsl-admin.dat'
 Set-Content -Path $file -Value (Hex $Password) -Encoding ascii
 $r = Run-Helper @('--set-password-file', "`"$file`"")
-[void](Wait-Process-Bounded $r 30 'jelszó átadása')
-Check ($r.ExitCode -eq 0) "A jelszó beállítása sikeres (kód: $($r.ExitCode))"
-Check (-not (Test-Path $file)) 'Az átadó fájl törlődik'
-Check (Test-Path $AdminJson) 'admin.json létrejött'
+[void](Wait-Process-Bounded $r 30 'handing over the password')
+Check ($r.ExitCode -eq 0) "Setting the password succeeds (exit code: $($r.ExitCode))"
+Check (-not (Test-Path $file)) 'The hand-over file is deleted'
+Check (Test-Path $AdminJson) 'admin.json was created'
 if (Test-Path $AdminJson) {
     $json = Get-Content $AdminJson -Raw | ConvertFrom-Json
-    Check ($json.salt -and $json.hash -and $json.iterations -ge 100000) 'admin.json: sós PBKDF2-ellenőrző'
-    Check (-not ((Get-Content $AdminJson -Raw) -match 'árvíz|arviz')) 'admin.json nem tartalmaz jelszót'
+    Check ($json.salt -and $json.hash -and $json.iterations -ge 100000) 'admin.json: salted PBKDF2 verifier'
+    Check (-not ((Get-Content $AdminJson -Raw) -match 'árvíz|arviz')) 'admin.json does not contain the password'
     $acl = (& icacls.exe $AdminJson) -join "`n"
     Set-Content -Path (Join-Path $Evidence 'admin-json.acl.txt') -Value $acl
-    Check (-not ($acl -match 'BUILTIN\\Users|Everyone|Authenticated Users')) 'admin.json: normál felhasználó nem fér hozzá'
-    Check ($acl -match 'NT AUTHORITY\\SYSTEM' -and $acl -match 'BUILTIN\\Administrators') 'admin.json: SYSTEM és Rendszergazdák férnek hozzá'
+    Check (-not ($acl -match 'BUILTIN\\Users|Everyone|Authenticated Users')) 'admin.json: normal users have no access'
+    Check ($acl -match 'NT AUTHORITY\\SYSTEM' -and $acl -match 'BUILTIN\\Administrators') 'admin.json: SYSTEM and Administrators have access'
 }
 
-# ---------------------------------------------------------------- 3. ellenőrző párbeszédablak (hibás, majd helyes jelszó)
-Write-Host '== Jelszóellenőrzés (UI)'
+# ---------------------------------------------------------------- 3. verification dialog (wrong, then correct password)
+Write-Host '== Password verification (UI)'
 $proc = Run-Helper @('--verify-password')
-$win = Find-Window 'Admin jelszó' 30
-Check ($null -ne $win) 'Megjelenik a jelszókérő ablak'
+$win = Find-Window $Ui.Pw 30
+Check ($null -ne $win) 'The password prompt appears'
 if ($win) {
     Type-Password $win 'rossz-jelszo'
     Click (Find-Named $win 'OK')
     Start-Sleep -Seconds 3
-    $win = Find-Window 'Admin jelszó' 15
+    $win = Find-Window $Ui.Pw 15
     $texts = if ($win) { Texts $win } else { @() }
-    Check (($texts -join ' ') -match 'Hibás jelszó \(1/5\)') 'Hibás jelszó után „Hibás jelszó (1/5)”'
+    Check (($texts -join ' ') -match $Ui.Wrong) 'After a wrong password: "Wrong password (1/5)"'
     Shot 'verify-wrong'
-    if ($win) { Click (Find-Named $win 'Mégse') }
+    if ($win) { Click (Find-Named $win $Ui.Cancel) }
 }
 [void]$proc.WaitForExit(20000)
-Check ($proc.HasExited -and $proc.ExitCode -eq 1) "Mégse → elutasítva (kód: $($proc.ExitCode))"
+Check ($proc.HasExited -and $proc.ExitCode -eq 1) "Cancel -> denied (exit code: $($proc.ExitCode))"
 
 $proc = Run-Helper @('--verify-password')
-$win = Find-Window 'Admin jelszó' 30
+$win = Find-Window $Ui.Pw 30
 if ($win) { Type-Password $win $Password; Click (Find-Named $win 'OK') }
 [void]$proc.WaitForExit(20000)
-Check ($proc.HasExited -and $proc.ExitCode -eq 0) "Helyes (ékezetes) jelszó → engedélyezve (kód: $($proc.ExitCode))"
+Check ($proc.HasExited -and $proc.ExitCode -eq 0) "The correct (accented) password -> allowed (exit code: $($proc.ExitCode))"
 
-# ---------------------------------------------------------------- 4. admin felület
-Write-Host '== Admin felület'
+# ---------------------------------------------------------------- 4. admin panel
+Write-Host '== Admin panel'
 $proc = Run-Helper @('--admin')
-$win = Find-Window 'Admin jelszó' 30
-Check ($null -ne $win) 'Az admin felület előtt jelszót kér'
+$win = Find-Window $Ui.Pw 30
+Check ($null -ne $win) 'The admin panel asks for the password first'
 if ($win) { Type-Password $win $Password; Click (Find-Named $win 'OK') }
-$form = Find-Window 'Admin beállítások*' 30 'Extra mentése a napra'
-Check ($null -ne $form) 'Megnyílik az admin szerkesztő'
+$form = Find-Window $Ui.Admin 30 $Ui.SaveExtra
+Check ($null -ne $form) 'The admin editor opens'
 if ($form) {
     Start-Sleep -Seconds 1
     Shot 'admin-form'
 
-    $combo = Find-Named $form 'Extra napja'
-    Check ($null -ne $combo) 'Van napválasztó'
+    $combo = Find-Named $form $Ui.ExtraDay
+    Check ($null -ne $combo) 'There is a day chooser'
     if ($combo) {
         try {
             $combo.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
@@ -201,27 +212,27 @@ if ($form) {
             $itemCond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, $CT::ListItem)
             $items = @($combo.FindAll($Scope::Descendants, $itemCond) | ForEach-Object { $_.Current.Name })
             Set-Content -Path (Join-Path $Evidence 'day-options.txt') -Value $items
-            Check ($items.Count -ge 31) "A napválasztóban $($items.Count) nap van"
-            $weekend = @($items | Where-Object { $_ -match 'szombat|vasárnap' })
-            Check (($weekend.Count -gt 0) -and (@($weekend | Where-Object { $_ -notmatch 'nem választható' }).Count -eq 0)) 'A hétvégék „nem választható”-ként szerepelnek'
-            Check ($items[0] -match 'most tartó nap') 'Az első nap a most tartó nap'
+            Check ($items.Count -ge 31) "The day chooser has $($items.Count) days"
+            $weekend = @($items | Where-Object { $_ -match $Ui.Weekend })
+            Check (($weekend.Count -gt 0) -and (@($weekend | Where-Object { $_ -notmatch $Ui.NotSelectable }).Count -eq 0)) 'Weekends are listed as not selectable'
+            Check ($items[0] -match $Ui.Current) 'The first day is the current day'
             $combo.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Collapse()
-        } catch { Write-Host "WARN  napválasztó elemei nem olvashatók: $_" }
+        } catch { Write-Host "WARN  the day chooser items cannot be read: $_" }
     }
 
-    $lol = Find-Named $form 'Extra LoL-meccsek'
+    $lol = Find-Named $form $Ui.ExtraLol
     try {
         $lol.GetCurrentPattern([System.Windows.Automation.RangeValuePattern]::Pattern).SetValue(2)
     } catch {
-        Write-Host "WARN  RangeValue nem érhető el, szerkesztőmező: $_"
+        Write-Host "WARN  RangeValue is not available, using the edit field: $_"
         ($lol.FindAll($Scope::Descendants, [System.Windows.Automation.Condition]::TrueCondition) | Where-Object { $_.Current.ControlType -eq $CT::Edit } | Select-Object -First 1).GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue('2')
     }
-    Click (Find-Named $form 'Extra mentése a napra')
+    Click (Find-Named $form $Ui.SaveExtra)
     Start-Sleep -Seconds 1
     Shot 'admin-form-grant'
-    Click (Find-Named $form 'Mentés')
-    $ok = Find-Window 'Admin beállítások*' 20 'OK'
-    Check ($null -ne $ok) 'Mentés után megjelenik a megerősítés'
+    Click (Find-Named $form $Ui.Save)
+    $ok = Find-Window $Ui.Admin 20 'OK'
+    Check ($null -ne $ok) 'A confirmation appears after saving'
     if ($ok) { Shot 'admin-saved'; Click (Find-Named $ok 'OK') }
 }
 [void]$proc.WaitForExit(20000)
@@ -230,44 +241,44 @@ if (-not $proc.HasExited) { Shot 'admin-stuck'; Stop-Process -Id $proc.Id -Force
 $limitsPath = Join-Path $DataDir 'limits.json'
 Copy-Item $limitsPath (Join-Path $Evidence 'limits.after.json')
 $limits = Get-Content $limitsPath -Raw | ConvertFrom-Json
-Check ($limits.extraGrants.Count -eq 1 -and $limits.extraGrants[0].lolMatches -eq 2) 'A limits.json tartalmazza az extra keretet (LoL +2)'
-Check ($limits.extraGrants.Count -eq 1 -and $limits.extraGrants[0].date -match '^\d{4}-\d{2}-\d{2}$') 'Az extra napja ÉÉÉÉ-HH-NN'
+Check ($limits.extraGrants.Count -eq 1 -and $limits.extraGrants[0].lolMatches -eq 2) 'limits.json contains the extra allowance (LoL +2)'
+Check ($limits.extraGrants.Count -eq 1 -and $limits.extraGrants[0].date -match '^\d{4}-\d{2}-\d{2}$') 'The extra\'s day is yyyy-MM-dd'
 $e2eIdx = 0
 Start-Sleep -Seconds 35
-Write-Host '== Szolgáltatás és az új extra'
+Write-Host '== Service and the new extra'
 $svc = Get-Service LolScrollLimiter
-Check ($svc.Status -eq 'Running') 'A szolgáltatás a mentés után is fut'
+Check ($svc.Status -eq 'Running') 'The service keeps running after saving'
 
-# ---------------------------------------------------------------- 5. eltávolítás
-Write-Host '== Eltávolítás'
+# ---------------------------------------------------------------- 5. uninstall
+Write-Host '== Uninstall'
 $unins = Get-ChildItem (Join-Path $AppDir 'unins*.exe') | Select-Object -First 1
-Check ($null -ne $unins) 'Van eltávolító'
+Check ($null -ne $unins) 'There is an uninstaller'
 
 $proc = Start-Process -FilePath $unins.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -PassThru
-$win = Find-Window 'Admin jelszó' 40
-Check ($null -ne $win) 'Az eltávolító jelszót kér'
+$win = Find-Window $Ui.Pw 40
+Check ($null -ne $win) 'The uninstaller asks for the password'
 if ($win) { Type-Password $win 'nem-jo-jelszo'; Click (Find-Named $win 'OK') }
 Start-Sleep -Seconds 3
-$win = Find-Window 'Admin jelszó' 15
-if ($win) { Click (Find-Named $win 'Mégse') }
-[void](Wait-Process-Bounded $proc 60 'eltávolítás hibás jelszóval')
-Check ($proc.HasExited -and (Test-Path $TrayExe)) 'Hibás jelszó/Mégse: az eltávolítás megszakad, a program megmarad'
-Check ((Get-Service LolScrollLimiter -ErrorAction SilentlyContinue) -ne $null) 'A szolgáltatás megmaradt'
+$win = Find-Window $Ui.Pw 15
+if ($win) { Click (Find-Named $win $Ui.Cancel) }
+[void](Wait-Process-Bounded $proc 60 'uninstall with a wrong password')
+Check ($proc.HasExited -and (Test-Path $TrayExe)) 'Wrong password/Cancel: the uninstall is aborted, the program stays'
+Check ((Get-Service LolScrollLimiter -ErrorAction SilentlyContinue) -ne $null) 'The service stays'
 
 $proc = Start-Process -FilePath $unins.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -PassThru
-$win = Find-Window 'Admin jelszó' 40
+$win = Find-Window $Ui.Pw 40
 if ($win) { Type-Password $win $Password; Click (Find-Named $win 'OK') }
-[void](Wait-Process-Bounded $proc 120 'eltávolítás helyes jelszóval')
+[void](Wait-Process-Bounded $proc 120 'uninstall with the correct password')
 Start-Sleep -Seconds 3
-Check (-not (Test-Path $TrayExe)) 'Helyes jelszóval az eltávolítás lefut'
-Check ($null -eq (Get-Service LolScrollLimiter -ErrorAction SilentlyContinue)) 'A szolgáltatás törlődött'
-Check (-not (Test-Path $AdminJson)) 'Az admin.json törlődött'
+Check (-not (Test-Path $TrayExe)) 'With the correct password the uninstall runs'
+Check ($null -eq (Get-Service LolScrollLimiter -ErrorAction SilentlyContinue)) 'The service was deleted'
+Check (-not (Test-Path $AdminJson)) 'admin.json was deleted'
 
-# ---------------------------------------------------------------- összegzés
+# ---------------------------------------------------------------- summary
 Write-Host ''
 if ($failures.Count -gt 0) {
-    Write-Host "$($failures.Count) hiba:"
+    Write-Host "$($failures.Count) failure(s):"
     $failures | ForEach-Object { Write-Host " - $_" }
     exit 1
 }
-Write-Host 'Minden ellenőrzés rendben.'
+Write-Host 'All checks passed.'

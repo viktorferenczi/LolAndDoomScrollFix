@@ -19,46 +19,46 @@ public static class LcuDiagnostics
         try { processes = LcuDiscovery.Find(); }
         catch (Exception ex)
         {
-            Console.WriteLine($"HIBA: a LoL-kliens felderítése sikertelen: {ex.Message}");
+            Console.WriteLine($"ERROR: discovering the LoL client failed: {ex.Message}");
             return 2;
         }
 
         if (processes.Count == 0)
         {
-            Console.WriteLine("Nem fut LoL-kliens (LeagueClientUx.exe).");
+            Console.WriteLine("No LoL client is running (LeagueClientUx.exe).");
             return 1;
         }
 
         foreach (var p in processes)
         {
-            Console.WriteLine($"=== LoL-kliens: PID {p.ProcessId}, port {p.Port}, felhasználó {p.OwnerSid}");
+            Console.WriteLine($"=== LoL client: PID {p.ProcessId}, port {p.Port}, user {p.OwnerSid}");
             using var api = new LcuApi(p.Port, p.Token);
             try
             {
                 var local = await api.GetLocalPlayerAsync(ct);
-                Console.WriteLine($"Bejelentkezett játékos: puuid={local?.Puuid ?? "?"}");
+                Console.WriteLine($"Signed-in player: puuid={local?.Puuid ?? "?"}");
 
                 var phase = await api.GetPhaseAsync(ct);
-                Console.WriteLine($"Fázis: {phase}");
+                Console.WriteLine($"Phase: {phase}");
 
                 var snapshot = await api.GetSnapshotAsync(local, ct);
                 var queue = phase is "Matchmaking" or "ReadyCheck" or "Lobby" ? await api.ResolveQueueAsync(ct) : snapshot.Queue;
-                Console.WriteLine($"Sor: id={queue.QueueId}, mód={queue.GameMode}, kategória={queue.Category}, típus={queue.Type}, egyéni={queue.IsCustom}");
-                Console.WriteLine($"Besorolás: {LolQueueClassifier.Classify(queue)}");
+                Console.WriteLine($"Queue: id={queue.QueueId}, mode={queue.GameMode}, category={queue.Category}, type={queue.Type}, custom={queue.IsCustom}");
+                Console.WriteLine($"Classification: {LolQueueClassifier.Classify(queue)}");
                 if (snapshot.GameId > 0)
-                    Console.WriteLine($"Meccs: {snapshot.GameId}, résztvevő: {snapshot.LocalPlayerIsParticipant?.ToString() ?? "ismeretlen"}");
+                    Console.WriteLine($"Match: {snapshot.GameId}, participant: {snapshot.LocalPlayerIsParticipant?.ToString() ?? "unknown"}");
 
                 if (testCancel)
                 {
                     if (phase == "Matchmaking")
-                        Console.WriteLine($"Keresés megszakítása: HTTP {(int)await api.CancelSearchAsync(ct)}");
+                        Console.WriteLine($"Cancelling the search: HTTP {(int)await api.CancelSearchAsync(ct)}");
                     else if (phase == "ReadyCheck")
-                        Console.WriteLine($"Meccselfogadás elutasítása: HTTP {(int)await api.DeclineReadyCheckAsync(ct)}");
+                        Console.WriteLine($"Declining the match accept: HTTP {(int)await api.DeclineReadyCheckAsync(ct)}");
                     else
-                        Console.WriteLine("--test-cancel: indíts keresést, és futtasd újra keresés vagy elfogadás közben.");
+                        Console.WriteLine("--test-cancel: start a search and run this again while searching or at the accept prompt.");
                 }
 
-                Console.WriteLine("Utolsó meccsek (remake = gameEndedInEarlySurrender):");
+                Console.WriteLine("Recent matches (remake = gameEndedInEarlySurrender):");
                 if (await api.GetAsync("/lol-match-history/v1/products/lol/current-summoner/matches?begIndex=0&endIndex=10", ct) is { } history &&
                     history.TryGetProperty("games", out var g1) && g1.TryGetProperty("games", out var games) && games.ValueKind == JsonValueKind.Array)
                 {
@@ -73,7 +73,7 @@ public static class LcuDiagnostics
                 }
                 else
                 {
-                    Console.WriteLine("  (a meccstörténet nem érhető el)");
+                    Console.WriteLine("  (match history is not available)");
                 }
             }
             catch (Exception ex)

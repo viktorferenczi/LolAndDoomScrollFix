@@ -269,11 +269,11 @@ public class ExtraGrantTests
     {
         Assert.Empty(SettingsFile.Validate(With(Grant(5, lol: 1)), TimeZoneInfo.Utc));
 
-        Assert.Contains(SettingsFile.Validate(With(Grant(5)), TimeZoneInfo.Utc), e => e.Contains("legalább egy értéket"));
-        Assert.Contains(SettingsFile.Validate(With(Grant(5, lol: 1), Grant(5, video: 5)), TimeZoneInfo.Utc), e => e.Contains("több bejegyzés"));
-        Assert.Contains(SettingsFile.Validate(With(Grant(5, lol: 101)), TimeZoneInfo.Utc), e => e.Contains("0 és 100"));
-        Assert.Contains(SettingsFile.Validate(With(Grant(5, video: 1441)), TimeZoneInfo.Utc), e => e.Contains("0 és 1440"));
-        Assert.Contains(SettingsFile.Validate(With(Grant(3, lol: 1)), TimeZoneInfo.Utc), e => e.Contains("hétvégén nincs korlát"));
+        Assert.Contains(SettingsFile.Validate(With(Grant(5)), TimeZoneInfo.Utc), e => e.Contains("enter at least one value"));
+        Assert.Contains(SettingsFile.Validate(With(Grant(5, lol: 1), Grant(5, video: 5)), TimeZoneInfo.Utc), e => e.Contains("more than one entry"));
+        Assert.Contains(SettingsFile.Validate(With(Grant(5, lol: 101)), TimeZoneInfo.Utc), e => e.Contains("between 0 and 100"));
+        Assert.Contains(SettingsFile.Validate(With(Grant(5, video: 1441)), TimeZoneInfo.Utc), e => e.Contains("between 0 and 1440"));
+        Assert.Contains(SettingsFile.Validate(With(Grant(3, lol: 1)), TimeZoneInfo.Utc), e => e.Contains("no limit on weekends"));
         Assert.Empty(SettingsFile.Validate(With(Grant(3, lol: 1)) with { EnforceOnWeekends = true }, TimeZoneInfo.Utc));
     }
 

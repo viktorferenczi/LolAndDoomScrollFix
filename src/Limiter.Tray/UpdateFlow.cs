@@ -1,3 +1,4 @@
+using Limiter.Core;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
@@ -6,13 +7,13 @@ using Limiter.Updates;
 namespace Limiter.Tray;
 
 /// <summary>
-/// „Frissítések keresése”: megnézi a legújabb kiadást, megerősítés után letölti és ellenőrzi a telepítőt, majd elindítja.
-/// A telepítés rendszergazdai jóváhagyást kér (UAC) — a jelszót a megbízható személy írja be; a program önmagát
-/// jóváhagyás nélkül nem tudja frissíteni, és a korlátozásokat sem tudja ezzel kikapcsolni.
+/// "Check for updates": looks up the latest release, downloads and verifies the installer after confirmation, then starts it.
+/// The installation asks for administrator approval (UAC) — the trusted person types the password; the program cannot
+/// update itself without approval, and this cannot be used to switch the limits off.
 /// </summary>
 public sealed class UpdateFlow
 {
-    private const string Title = "Frissítések keresése";
+    private static string Title => Loc.T("Check for updates", "Frissítések keresése");
     private const int ErrorCancelledByUser = 1223;
 
     private readonly UpdateClient _client = new(UpdateClient.CreateHttpClient());
@@ -39,20 +40,21 @@ public sealed class UpdateFlow
             switch (check.Status)
             {
                 case UpdateStatus.UpToDate:
-                    Info(owner, $"A program naprakész (verzió: {CurrentVersion}).");
+                    Info(owner, Loc.T($"The program is up to date (version: {CurrentVersion}).", $"A program naprakész (verzió: {CurrentVersion})."));
                     return;
                 case UpdateStatus.Failed:
-                    Warn(owner, "A frissítések keresése nem sikerült.\n\n" + check.Error);
+                    Warn(owner, Loc.T("Checking for updates failed.\n\n", "A frissítések keresése nem sikerült.\n\n") + check.Error);
                     return;
             }
 
             var release = check.Release!;
             var notes = release.Notes.Length > 600 ? release.Notes[..600] + "…" : release.Notes;
             var ask = MessageBox.Show(owner,
-                $"Új verzió érhető el: {release.Version} (jelenlegi: {CurrentVersion}).\n\n" +
+                Loc.T($"A new version is available: {release.Version} (current: {CurrentVersion}).\n\n",
+                      $"Új verzió érhető el: {release.Version} (jelenlegi: {CurrentVersion}).\n\n") +
                 (notes.Length > 0 ? notes + "\n\n" : "") +
-                "Letöltöd és telepíted most? A telepítéshez rendszergazdai jóváhagyás (jelszó) kell. " +
-                "A beállításaid és a számlálók megmaradnak.",
+                Loc.T("Download and install it now? Installing needs administrator approval (password). Your settings and counters are kept.",
+                      "Letöltöd és telepíted most? A telepítéshez rendszergazdai jóváhagyás (jelszó) kell. A beállításaid és a számlálók megmaradnak."),
                 Title, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (ask != DialogResult.Yes) return;
 
@@ -65,7 +67,7 @@ public sealed class UpdateFlow
             }
             catch (Exception ex) when (ex is HttpRequestException or InvalidDataException or IOException or TaskCanceledException)
             {
-                Warn(owner, "A letöltés vagy az ellenőrzés nem sikerült, ezért semmi sem települt.\n\n" + ex.Message);
+                Warn(owner, Loc.T("The download or the verification failed, so nothing was installed.\n\n", "A letöltés vagy az ellenőrzés nem sikerült, ezért semmi sem települt.\n\n") + ex.Message);
                 return;
             }
 
@@ -82,18 +84,18 @@ public sealed class UpdateFlow
     {
         try
         {
-            // UseShellExecute: a telepítő rendszergazdai jogot kér, és csak ezzel jelenik meg a jóváhagyó ablak.
-            // /UPDATE: meglévő telepítés frissítése a beállítások megtartásával; /SILENT: csak az előrehaladás látszik.
+            // UseShellExecute: the installer asks for administrator rights, and only this way does the approval prompt appear.
+            // /UPDATE: update the existing installation keeping the settings; /SILENT: only the progress is visible.
             Process.Start(new ProcessStartInfo(installer, "/UPDATE /SILENT /NORESTART") { UseShellExecute = true });
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorCancelledByUser)
         {
-            Warn(owner, "A telepítés nem indult el: a rendszergazdai jóváhagyás elmaradt. " +
-                        "Kérd meg a rendszergazdai jelszót ismerő személyt, és próbáld újra.");
+            Warn(owner, Loc.T("The installation did not start: the administrator approval was not given. Ask the person who knows the administrator password and try again.",
+                              "A telepítés nem indult el: a rendszergazdai jóváhagyás elmaradt. Kérd meg a rendszergazdai jelszót ismerő személyt, és próbáld újra."));
         }
         catch (Win32Exception ex)
         {
-            Warn(owner, "A telepítő nem indítható: " + ex.Message);
+            Warn(owner, Loc.T("The installer cannot be started: ", "A telepítő nem indítható: ") + ex.Message);
         }
     }
 

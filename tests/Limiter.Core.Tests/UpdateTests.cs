@@ -108,7 +108,7 @@ public class UpdateTests
         if (withSums)
             assets.Add($$"""{ "name": "SHA256SUMS.txt", "size": 100, "browser_download_url": "{{SumsUrl(version)}}" }""");
         return $$"""
-            { "tag_name": "v{{version}}", "body": "Újdonságok", "html_url": "https://github.com/{{Repo}}/releases/tag/v{{version}}",
+            { "tag_name": "v{{version}}", "body": "What is new", "html_url": "https://github.com/{{Repo}}/releases/tag/v{{version}}",
               "draft": {{draft.ToString().ToLowerInvariant()}}, "prerelease": {{prerelease.ToString().ToLowerInvariant()}},
               "assets": [ {{string.Join(",", assets)}} ] }
             """;
@@ -140,7 +140,7 @@ public class UpdateTests
         Assert.Equal(new Version(1, 4, 0), result.Release!.Version);
         Assert.Equal(hex, result.Release.Sha256);
         Assert.Equal("LolScrollLimiter-Setup-1.4.0.exe", result.Release.InstallerName);
-        Assert.Equal("Újdonságok", result.Release.Notes);
+        Assert.Equal("What is new", result.Release.Notes);
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class UpdateTests
         var result = await Client(new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.NotFound)))
             .EvaluateAsync(Current, ReleaseJson("1.4.0", withSums: false));
         Assert.Equal(UpdateStatus.Failed, result.Status);
-        Assert.Contains("ellenőrzőösszeg", result.Error);
+        Assert.Contains("checksum", result.Error);
     }
 
     [Fact]
@@ -202,13 +202,13 @@ public class UpdateTests
     {
         var result = await Client(new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.NotFound))).CheckAsync(Current);
         Assert.Equal(UpdateStatus.Failed, result.Status);
-        Assert.Contains("nem nyilvános", result.Error);
+        Assert.Contains("not public", result.Error);
     }
 
     [Fact]
     public async Task Check_handles_rate_limit_server_error_and_network_failure()
     {
-        Assert.Contains("korlátozza", (await Client(new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.Forbidden))).CheckAsync(Current)).Error);
+        Assert.Contains("rate-limiting", (await Client(new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.Forbidden))).CheckAsync(Current)).Error);
         Assert.Contains("500", (await Client(new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError))).CheckAsync(Current)).Error);
         var offline = Client(new FakeHandler(_ => throw new HttpRequestException("dns")));
         var result = await offline.CheckAsync(Current);

@@ -1,7 +1,10 @@
-// Háttér (service worker): időmérés és kapcsolat a korlátozó szolgáltatással Native Messagingen keresztül.
-// A számlálók a szolgáltatásban vannak; a bővítmény csak használatot jelent és tiltási állapotot kap vissza.
-// Hiba esetén (nincs kapcsolat / elavult állapot) enged tovább, és hibát jelez (piros „!” jelvény).
+// Background (service worker): time measurement and the connection to the limiter service over Native Messaging.
+// The counters live in the service; the extension only reports usage and receives the blocking state back.
+// On errors (no connection / stale state) it lets everything through and reports the error (red "!" badge).
 'use strict';
+
+// Texts come from _locales/<language>/messages.json (the browser's UI language decides; English is the default).
+const t = (key, ...subs) => (chrome.i18n && chrome.i18n.getMessage(key, subs.map(String))) || key;
 
 const HOST_NAME = 'hu.kmsoft.lolscrolllimiter';
 const CATEGORIES = ['shortVideo', 'facebookFeed'];
@@ -16,7 +19,7 @@ let reconnectDelay = 1000;
 let reconnectTimer = null;
 let lastStatus = null;
 let lastStatusAt = 0;
-let lastError = 'Kapcsolódás a korlátozó szolgáltatáshoz…';
+let lastError = t('connecting');
 let nextId = 1;
 const inflight = new Map(); // id -> { category, seconds }
 
@@ -42,7 +45,7 @@ function connect() {
   port.onMessage.addListener(onNativeMessage);
   port.onDisconnect.addListener(() => {
     const msg = chrome.runtime.lastError && chrome.runtime.lastError.message;
-    onDisconnected(msg || 'A kapcsolat megszakadt.');
+    onDisconnected(msg || t('connectionLost'));
   });
   send({ type: 'status' });
 }
@@ -51,7 +54,7 @@ function onDisconnected(message) {
   port = null;
   inflight.clear();
   lastStatusAt = 0;
-  lastError = 'A korlátozó szolgáltatás nem érhető el: ' + message;
+  lastError = t('serviceUnreachable', message);
   updateBadge();
   pushStates();
   reconnectTimer = setTimeout(connect, reconnectDelay);
@@ -74,7 +77,7 @@ function send(message) {
 function onNativeMessage(msg) {
   if (msg && msg.id) inflight.delete(msg.id);
   if (!msg || !msg.ok) {
-    lastError = (msg && msg.error) || 'Ismeretlen hiba a szolgáltatásban.';
+    lastError = (msg && msg.error) || t('unknownServiceError');
     lastStatusAt = 0;
   } else {
     lastStatus = msg;
@@ -209,11 +212,11 @@ function pushStates() {
 function updateBadge() {
   if (healthy()) {
     chrome.action.setBadgeText({ text: '' });
-    chrome.action.setTitle({ title: 'LoL- és görgetéskorlátozó — a védelem működik' });
+    chrome.action.setTitle({ title: t('titleWorks') });
   } else {
     chrome.action.setBadgeBackgroundColor({ color: '#cf222e' });
     chrome.action.setBadgeText({ text: '!' });
-    chrome.action.setTitle({ title: 'Hiba: ' + (lastError || 'a korlátozó szolgáltatás nem érhető el') + ' — a korlát most nem érvényesül.' });
+    chrome.action.setTitle({ title: t('titleError', lastError || t('titleErrorFallback')) });
   }
 }
 

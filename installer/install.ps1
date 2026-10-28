@@ -1,75 +1,80 @@
 ﻿#Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-  A LoL- és görgetéskorlátozó rendszerszintű beállítása (a telepítő futtatja, rendszergazdaként).
+  System-level setup of the LoL & Doomscroll Limiter (run by the installer, as administrator).
 
 .DESCRIPTION
-  - Jogosultságok: a telepítési mappa normál felhasználónak csak olvasható, az adatmappa el sem érhető.
-  - Windows-szolgáltatás: automatikus indulás, összeomlás után újraindítás.
-  - Chrome Native Messaging host regisztrálása (HKLM).
-  - Chrome-szabályok: inkognitó és vendégmód tiltása; éles módban a bővítmény kötelező telepítése
-    és a bővítmények fejlesztői módjának tiltása.
-  - A tálcaalkalmazás automatikus indítása minden felhasználónak.
+  - Permissions: the install folder is read-only for normal users, the data folder is not accessible at all.
+  - Windows service: automatic start, restart after a crash.
+  - Registers the Chrome Native Messaging host (HKLM).
+  - Chrome policies: guest mode disabled; in production mode the extension is force-installed
+    and the extensions' developer mode is disabled.
+  - Starts the tray application automatically for every user.
 
 .PARAMETER ExtensionId
-  A bővítmény azonosítója. Alapértelmezés: a Chrome Web Store-ban közzétett bővítmény azonosítója
-  (mkoeoadekdfnbjpmhiabpjlmhdoimcml); -DevMode esetén a fejlesztői (kicsomagolt) verzió azonosítója
-  (a manifest "key" mezőjéből adódik).
+  The extension's ID. Default: the ID of the extension published in the Chrome Web Store
+  (mkoeoadekdfnbjpmhiabpjlmhdoimcml); with -DevMode the ID of the development (unpacked) version
+  (derived from the manifest "key" field).
+
+.PARAMETER Language
+  Language of the program's texts: 'en' or 'hu'. Stored in HKLM\SOFTWARE\LolScrollLimiter\Language. Without it,
+  an existing value is kept; otherwise the Windows display language decides (Hungarian for hu, English otherwise).
 
 .PARAMETER ResetMode
-  'rolling' (alapértelmezett): gördülő 24 óra — minden felhasználás 24 órával később szabadul fel.
-  'daily': naponta egyszer, a DailyResetHour órában minden keret nullázódik.
+  'rolling' (default): rolling 24 hours - every use is released exactly 24 hours later.
+  'daily': once a day, at hour DailyResetHour, every limit resets.
 
 .PARAMETER DailyResetHour
-  Napi nullázás órája (0–23, helyi idő), csak ResetMode = 'daily' esetén. Alapértelmezés: 3 (03:00).
+  Hour of the daily reset (0-23, local time), only with ResetMode = 'daily'. Default: 3 (03:00).
 
 .PARAMETER ShortVideoMinutes
-  Rövidvideós keret percben (Reels, TikTok, Shorts együtt). Alapértelmezés: 60.
+  Short-video limit in minutes (Reels, TikTok, Shorts together). Default: 60.
 
 .PARAMETER FacebookFeedMinutes
-  Facebook-hírfolyam keret percben. Alapértelmezés: 60.
+  Facebook feed limit in minutes. Default: 60.
 
 .PARAMETER EnforceOnWeekends
-  Ha meg van adva, a korlátok szombaton és vasárnap is érvényesek. Alapértelmezés: hétvégén nincs korlát.
+  If given, the limits also apply on Saturday and Sunday. Default: no limit on weekends.
 
 .PARAMETER LolRestDayBonusMatches
-  Pihenőnap-jutalom: ha egy napon egy PvP-meccs sem volt, másnap ennyivel több jár (nem halmozódik). Alapértelmezés: 1.
+  Rest-day bonus: if there was no PvP match on a day, the next day gives this many more (does not stack). Default: 1.
 
 .PARAMETER ShortVideoRestDayBonusMinutes
-  Pihenőnap-jutalom percben a rövid videókra (0 perc használat után másnap). Alapértelmezés: 30.
+  Rest-day bonus in minutes for short videos (after a day with 0 minutes of use). Default: 30.
 
 .PARAMETER FacebookFeedRestDayBonusMinutes
-  Pihenőnap-jutalom percben a Facebook-hírfolyamra. Alapértelmezés: 30.
+  Rest-day bonus in minutes for the Facebook feed. Default: 30.
 
 .PARAMETER LolBanFrom
-  Tiltott órák kezdete a LoL PvP-re (0–23, helyi idő); a LolBanTo órával együtt. -1 = nincs tiltás (alapértelmezés).
-  Pl. -LolBanFrom 1 -LolBanTo 5: 01:00 és 05:00 között nem indítható PvP-meccs. Átnyúlhat éjfélen (22 → 6).
+  Start of the banned hours for LoL PvP (0-23, local time); together with LolBanTo. -1 = no ban (default).
+  E.g. -LolBanFrom 1 -LolBanTo 5: no PvP match can be started between 01:00 and 05:00. May span midnight (22 -> 6).
 
 .PARAMETER LolBanTo
-  Tiltott órák vége (nincs benne), lásd LolBanFrom.
+  End of the banned hours (exclusive), see LolBanFrom.
 
 .PARAMETER ShortVideoBanFrom
-  Tiltott órák a rövid videókra, lásd LolBanFrom. (ShortVideoBanTo a vége.)
+  Banned hours for short videos, see LolBanFrom. (ShortVideoBanTo is the end.)
 
 .PARAMETER FacebookFeedBanFrom
-  Tiltott órák a Facebook-hírfolyamra, lásd LolBanFrom. (FacebookFeedBanTo a vége.)
+  Banned hours for the Facebook feed, see LolBanFrom. (FacebookFeedBanTo is the end.)
 
 .PARAMETER AdminPasswordFile
-  A telepítő által írt ideiglenes fájl az admin jelszóval (UTF-16 kódok hexában). A Limiter.Tray.exe beolvassa, a jelszóból
-  ellenőrzőt (PBKDF2) készít az adatmappába (admin.json), és a fájlt törli. A jelszó sehol sem marad meg olvashatóan.
+  Temporary file written by the installer with the admin password (UTF-16 codes in hex). Limiter.Tray.exe reads it, builds
+  a verifier (PBKDF2) in the data folder (admin.json) and deletes the file. The password is never kept in readable form.
 
 .PARAMETER KeepSettings
-  Frissítéskor: a meglévő limits.json-t nem írja felül (a korlátok, a jutalom és a tiltott órák megmaradnak).
-  Ha még nincs limits.json, az alapértelmezett értékekkel jön létre.
+  On update: does not overwrite the existing limits.json (the limits, the bonus and the banned hours are kept).
+  If there is no limits.json yet, it is created with the default values.
 
 .PARAMETER DevMode
-  Fejlesztői tesztverzió: a bővítményt kézzel, kicsomagolva kell betölteni, ezért nem kötelező telepítésű,
-  és a fejlesztői mód nincs tiltva. Éles használatra NEM alkalmas.
+  Development test version: the extension has to be loaded manually, unpacked, so it is not force-installed,
+  and the developer mode is not disabled. NOT suitable for real use.
 #>
 [CmdletBinding()]
 param(
     [string]$InstallDir = $PSScriptRoot,
     [string]$ExtensionId,
+    [ValidateSet('en', 'hu')][string]$Language,
     [string]$UpdateUrl = 'https://clients2.google.com/service/update2/crx',
     [ValidateSet('rolling', 'daily')][string]$ResetMode = 'rolling',
     [ValidateRange(0, 23)][int]$DailyResetHour = 3,
@@ -91,12 +96,12 @@ param(
     [switch]$DevMode
 )
 
-# Ha a telepítőt PowerShell 7-ből indították, az örökölt PSModulePath a Windows PowerShell 5.1 beépített moduljait
-# összeakasztja (Get-Acl: „The member Path is already present”). A gépszintű alapértékre állítjuk.
+# If the installer was started from PowerShell 7, the inherited PSModulePath breaks the built-in modules of
+# Windows PowerShell 5.1 (Get-Acl: "The member Path is already present"). Reset it to the machine-level default.
 $env:PSModulePath = [Environment]::GetEnvironmentVariable('PSModulePath', 'Machine')
 
 $ErrorActionPreference = 'Stop'
-# Hibakereséshez a teljes kimenet a futtató (rendszergazdai) felhasználó ideiglenes mappájába is kerül.
+# For troubleshooting, the full output also goes to the temporary folder of the (administrator) user running this.
 try { Start-Transcript -Path (Join-Path $env:TEMP 'LolScrollLimiter-install.log') -Force | Out-Null } catch { }
 $ServiceName = 'LolScrollLimiter'
 $HostName = 'hu.kmsoft.lolscrolllimiter'
@@ -108,39 +113,55 @@ $Marker = 'HKLM:\SOFTWARE\LolScrollLimiter'
 if (-not $ExtensionId) {
     $ExtensionId = if ($DevMode) { 'iidlgdeiobckahalgoabbobfdlefkagi' } else { 'mkoeoadekdfnbjpmhiabpjlmhdoimcml' }
 }
-if ($ExtensionId -notmatch '^[a-p]{32}$') { throw "Érvénytelen bővítményazonosító: '$ExtensionId'" }
+if ($ExtensionId -notmatch '^[a-p]{32}$') { throw "Invalid extension ID: '$ExtensionId'" }
+# Language of the program's texts: given by the installer; on update the stored one is kept; otherwise the display language.
+if (-not $Language) {
+    $stored = (Get-ItemProperty -Path $Marker -Name 'Language' -ErrorAction SilentlyContinue).Language
+    $Language = if ($stored -in 'en', 'hu') { $stored } elseif ((Get-UICulture).TwoLetterISOLanguageName -eq 'hu') { 'hu' } else { 'en' }
+}
 $InstallDir = (Resolve-Path $InstallDir).Path.TrimEnd('\')
 $ServiceExe = Join-Path $InstallDir 'Limiter.Service.exe'
 $HostExe = Join-Path $InstallDir 'Limiter.NativeHost.exe'
 $TrayExe = Join-Path $InstallDir 'Limiter.Tray.exe'
-foreach ($f in $ServiceExe, $HostExe, $TrayExe) { if (-not (Test-Path $f)) { throw "Hiányzó fájl: $f" } }
+foreach ($f in $ServiceExe, $HostExe, $TrayExe) { if (-not (Test-Path $f)) { throw "Missing file: $f" } }
 
 function Step($text) { Write-Host "==> $text" }
+
+# Texts shown to the user outside the program (service list, Chrome's host manifest) follow the chosen language.
+if ($Language -eq 'hu') {
+    $ServiceDisplayName = 'LoL- és görgetéskorlátozó'
+    $ServiceDescription = 'Gördülő 24 órás LoL-meccs- és görgetési keret. Leállítása rendszergazdai jogot igényel.'
+    $HostDescription = 'LoL- és görgetéskorlátozó — kapcsolat a helyi szolgáltatással'
+} else {
+    $ServiceDisplayName = 'LoL & Doomscroll Limiter'
+    $ServiceDescription = 'Rolling 24-hour LoL match and scrolling limit. Stopping it requires administrator rights.'
+    $HostDescription = 'LoL & Doomscroll Limiter - connection to the local service'
+}
 
 $SidSystem = 'S-1-5-18'
 $SidAdmins = 'S-1-5-32-544'
 $SidUsers = 'S-1-5-32-545'
 
-# Egy mappa jogosultságainak beállítása: csak a mappán (/T nélkül), a tartalom örököl.
-# A /inheritance:r ... /T egyes Windows-buildeken olvashatatlanná tette a fájlokat (még a
-# rendszergazdának és a SYSTEM-nek is), miközben az icacls sikert jelzett.
+# Sets the permissions of one folder: on the folder only (no /T), the contents inherit.
+# On some Windows builds, /inheritance:r ... /T made the files unreadable (even for the
+# administrator and SYSTEM) while icacls reported success.
 function Set-FolderAcl([string]$Path, [string[]]$Grants) {
     & icacls.exe $Path /inheritance:r /grant:r @Grants /C /Q | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "A jogosultságok nem állíthatók be: $Path" }
-    # A már meglévő tartalom (pl. egy korábbi, hibás telepítésből) explicit jogait töröljük, hogy örököljön.
+    if ($LASTEXITCODE -ne 0) { throw "Cannot set the permissions: $Path" }
+    # Delete the explicit rights of existing contents (e.g. from an earlier faulty install) so that they inherit.
     if (Get-ChildItem -LiteralPath $Path -Force -ErrorAction SilentlyContinue | Select-Object -First 1) {
         & icacls.exe (Join-Path $Path '*') /reset /T /C /Q | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw "A jogosultságok nem állíthatók vissza: $Path" }
+        if ($LASTEXITCODE -ne 0) { throw "Cannot reset the permissions: $Path" }
     }
 }
 
-# Az icacls kilépési kódja nem elég: ténylegesen ellenőrizzük a jogosultságokat és az olvashatóságot.
+# icacls's exit code is not enough: the permissions and readability are actually verified.
 function Assert-Acl([string]$Path, [string[]]$Required, [string[]]$Forbidden = @()) {
     try {
         $acl = Get-Acl -LiteralPath $Path
         if (Test-Path -LiteralPath $Path -PathType Leaf) { [System.IO.File]::OpenRead($Path).Dispose() }
     } catch {
-        throw "A jogosultság-ellenőrzés sikertelen: $Path nem olvasható ($($_.Exception.Message)). Javítás: icacls `"$Path`" /reset"
+        throw "The permission check failed: $Path is not readable ($($_.Exception.Message)). Fix: icacls `"$Path`" /reset"
     }
     $present = foreach ($rule in $acl.Access) {
         if ($rule.AccessControlType -ne 'Allow') { continue }
@@ -148,40 +169,40 @@ function Assert-Acl([string]$Path, [string[]]$Required, [string[]]$Forbidden = @
         catch { $rule.IdentityReference.Value }
     }
     foreach ($sid in $Required) {
-        if ($present -notcontains $sid) { throw "Hiányzó jogosultság ($sid): $Path" }
+        if ($present -notcontains $sid) { throw "Missing permission ($sid): $Path" }
     }
     foreach ($sid in $Forbidden) {
-        if ($present -contains $sid) { throw "Nem kívánt jogosultság ($sid): $Path" }
+        if ($present -contains $sid) { throw "Unwanted permission ($sid): $Path" }
     }
 }
 
-# --- 1. Jogosultságok ---------------------------------------------------------------
-Step 'Telepítési mappa: normál felhasználónak csak olvasható'
-# SYSTEM és Rendszergazdák: teljes; Felhasználók: olvasás és futtatás.
+# --- 1. Permissions -----------------------------------------------------------------
+Step 'Install folder: read-only for normal users'
+# SYSTEM and Administrators: full; Users: read and execute.
 Set-FolderAcl $InstallDir @("*${SidSystem}:(OI)(CI)F", "*${SidAdmins}:(OI)(CI)F", "*${SidUsers}:(OI)(CI)RX")
 foreach ($f in $InstallDir, $ServiceExe, $HostExe, $TrayExe, (Join-Path $InstallDir 'install.ps1')) {
     if (Test-Path -LiteralPath $f) { Assert-Acl $f -Required $SidSystem, $SidAdmins, $SidUsers }
 }
 
-Step 'Adatmappa: csak SYSTEM és Rendszergazdák'
+Step 'Data folder: only SYSTEM and Administrators'
 New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
 Set-FolderAcl $DataDir @("*${SidSystem}:(OI)(CI)F", "*${SidAdmins}:(OI)(CI)F")
 & icacls.exe $DataDir /setowner "*$SidAdmins" /C /Q | Out-Null
 Assert-Acl $DataDir -Required $SidSystem, $SidAdmins -Forbidden $SidUsers
 
 if ($AdminPasswordFile) {
-    Step 'Admin jelszó beállítása'
+    Step 'Setting the admin password'
     try {
         $proc = Start-Process -FilePath $TrayExe -ArgumentList @('--set-password-file', "`"$AdminPasswordFile`"") -Wait -PassThru -WindowStyle Hidden
-        if ($proc.ExitCode -ne 0) { throw "Az admin jelszó beállítása nem sikerült (kilépési kód: $($proc.ExitCode))." }
+        if ($proc.ExitCode -ne 0) { throw "Setting the admin password failed (exit code: $($proc.ExitCode))." }
     } finally {
         Remove-Item -LiteralPath $AdminPasswordFile -Force -ErrorAction SilentlyContinue
     }
     Assert-Acl (Join-Path $DataDir 'admin.json') -Required $SidSystem, $SidAdmins -Forbidden $SidUsers
 }
 
-if (-not $KeepSettings) { Step "Korlátok mentése: $ResetMode$(if ($ResetMode -eq 'daily') { " ($('{0:00}' -f $DailyResetHour):00)" }), rövid videó $ShortVideoMinutes perc, hírfolyam $FacebookFeedMinutes perc, $(if ($EnforceOnWeekends) { 'hétvégén is van korlát' } else { 'hétvégén nincs korlát' })" }
-# Tiltott órák: mindkét óra megadva és különböző → bekapcsolva.
+if (-not $KeepSettings) { Step "Saving the limits: $ResetMode$(if ($ResetMode -eq 'daily') { " ($('{0:00}' -f $DailyResetHour):00)" }), short videos $ShortVideoMinutes min, feed $FacebookFeedMinutes min, $(if ($EnforceOnWeekends) { 'limits also on weekends' } else { 'no limit on weekends' })" }
+# Banned hours: both hours given and different -> enabled.
 function BanSetting([int]$From, [int]$To) {
     $enabled = ($From -ge 0) -and ($To -ge 0) -and ($From -ne $To)
     if ($From -lt 0) { $From = 1 }
@@ -189,7 +210,7 @@ function BanSetting([int]$From, [int]$To) {
     return [ordered]@{ enabled = $enabled; from = $From; to = $To }
 }
 
-# A telepítőben választott értékek mindig felülírják a korábbiakat (a szolgáltatás 30 mp-en belül átveszi).
+# The values chosen in the installer always override the earlier ones (the service picks them up within 30 s).
 $limits = [ordered]@{
     resetMode           = $ResetMode
     dailyResetHour      = $DailyResetHour
@@ -206,35 +227,35 @@ $limits = [ordered]@{
 }
 $limitsPath = Join-Path $DataDir 'limits.json'
 if ($KeepSettings -and (Test-Path -LiteralPath $limitsPath)) {
-    Step 'Frissítés: a meglévő korlátok megmaradnak'
+    Step 'Update: the existing limits are kept'
 } else {
     [System.IO.File]::WriteAllText($limitsPath, ($limits | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
 }
 Assert-Acl $limitsPath -Required $SidSystem, $SidAdmins -Forbidden $SidUsers
 
-# --- 2. Szolgáltatás ----------------------------------------------------------------
-Step 'Windows-szolgáltatás telepítése'
+# --- 2. Service ---------------------------------------------------------------------
+Step 'Installing the Windows service'
 $existing = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
 if ($existing) {
     if ($existing.Status -ne 'Stopped') { Stop-Service -Name $ServiceName -Force; (Get-Service $ServiceName).WaitForStatus('Stopped', '00:00:30') }
     & sc.exe config $ServiceName binPath= "`"$ServiceExe`"" start= auto | Out-Null
 } else {
-    New-Service -Name $ServiceName -BinaryPathName "`"$ServiceExe`"" -DisplayName 'LoL- és görgetéskorlátozó' -StartupType Automatic | Out-Null
+    New-Service -Name $ServiceName -BinaryPathName "`"$ServiceExe`"" -DisplayName $ServiceDisplayName -StartupType Automatic | Out-Null
 }
-& sc.exe description $ServiceName 'Gördülő 24 órás LoL-meccs- és görgetési keret. Leállítása rendszergazdai jogot igényel.' | Out-Null
-# Összeomlás után: újraindítás 5 mp, 5 mp, 30 mp múlva; a hibaszámláló naponta nullázódik.
+& sc.exe description $ServiceName $ServiceDescription | Out-Null
+# After a crash: restart after 5 s, 5 s, 30 s; the failure counter resets daily.
 & sc.exe failure $ServiceName reset= 86400 actions= restart/5000/restart/5000/restart/30000 | Out-Null
 & sc.exe failureflag $ServiceName 1 | Out-Null
-# Szolgáltatás-jogosultság: a Felhasználók (IU, SU, AU) csak lekérdezhetik, nem állíthatják le.
+# Service permissions: Users (IU, SU, AU) can only query it, not stop it.
 & sc.exe sdset $ServiceName 'D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)(A;;CCLCSWLOCRRC;;;AU)' | Out-Null
 Start-Service -Name $ServiceName
 
 # --- 3. Native Messaging host -------------------------------------------------------
-Step 'Chrome Native Messaging host regisztrálása'
+Step 'Registering the Chrome Native Messaging host'
 $hostManifest = Join-Path $InstallDir "$HostName.json"
 $manifest = [ordered]@{
     name            = $HostName
-    description     = 'LoL- és görgetéskorlátozó — kapcsolat a helyi szolgáltatással'
+    description     = $HostDescription
     path            = $HostExe
     type            = 'stdio'
     allowed_origins = @("chrome-extension://$ExtensionId/")
@@ -244,28 +265,29 @@ $nmKey = "HKLM:\SOFTWARE\Google\Chrome\NativeMessagingHosts\$HostName"
 New-Item -Path $nmKey -Force | Out-Null
 Set-ItemProperty -Path $nmKey -Name '(default)' -Value $hostManifest
 
-# --- 4. Chrome-szabályok ------------------------------------------------------------
-Step 'Chrome-szabályok beállítása'
+# --- 4. Chrome policies -------------------------------------------------------------
+Step 'Setting the Chrome policies'
 New-Item -Path $ChromePolicy -Force | Out-Null
 New-Item -Path $Marker -Force | Out-Null
 Set-ItemProperty -Path $Marker -Name 'ExtensionId' -Value $ExtensionId
 Set-ItemProperty -Path $Marker -Name 'InstallDir' -Value $InstallDir
+Set-ItemProperty -Path $Marker -Name 'Language' -Value $Language
 
-# Inkognitómód engedélyezett: a bővítmény ott akkor működik, ha a felhasználó bekapcsolja
-# a chrome://extensions oldalon az „Engedélyezés inkognitó módban” kapcsolót.
-# A korábbi verziók által beállított tiltást eltávolítjuk.
+# Incognito mode is allowed: the extension works there if the user turns on the
+# "Allow in Incognito" switch on the chrome://extensions page.
+# The ban set by earlier versions is removed.
 Remove-ItemProperty -Path $ChromePolicy -Name 'IncognitoModeAvailability' -ErrorAction SilentlyContinue
-# Vendégmód tiltva (0): ott semmilyen bővítmény nem fut.
+# Guest mode disabled (0): no extension runs there.
 New-ItemProperty -Path $ChromePolicy -Name 'BrowserGuestModeEnabled' -PropertyType DWord -Value 0 -Force | Out-Null
 
 if ($DevMode) {
-    Write-Warning 'FEJLESZTŐI MÓD: a bővítmény nincs kötelezően telepítve, és a fejlesztői mód nincs tiltva. Töltsd be kicsomagolva a chrome://extensions oldalon.'
+    Write-Warning 'DEVELOPMENT MODE: the extension is not force-installed and the developer mode is not disabled. Load it unpacked on the chrome://extensions page.'
     Remove-ItemProperty -Path $ChromePolicy -Name 'ExtensionDeveloperModeSettings' -ErrorAction SilentlyContinue
     Set-ItemProperty -Path $Marker -Name 'DevMode' -Value 1
 } else {
-    # Bővítmények fejlesztői módja tiltva (1 = nem engedélyezett).
+    # Developer mode of extensions disabled (1 = not allowed).
     New-ItemProperty -Path $ChromePolicy -Name 'ExtensionDeveloperModeSettings' -PropertyType DWord -Value 1 -Force | Out-Null
-    # Kötelező telepítés: a felhasználó nem kapcsolhatja ki és nem távolíthatja el.
+    # Forced installation: the user cannot turn it off or remove it.
     New-Item -Path $ForceList -Force | Out-Null
     $entry = "$ExtensionId;$UpdateUrl"
     $props = (Get-Item $ForceList).Property
@@ -277,9 +299,9 @@ if ($DevMode) {
     Set-ItemProperty -Path $Marker -Name 'DevMode' -Value 0
 }
 
-# --- 5. Tálcaalkalmazás -------------------------------------------------------------
-Step 'Tálcaalkalmazás automatikus indítása'
+# --- 5. Tray application ------------------------------------------------------------
+Step 'Starting the tray application automatically'
 Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' -Name 'LolScrollLimiterTray' -Value "`"$TrayExe`""
 
-Step 'Kész. A Chrome-szabályok a chrome://policy oldalon ellenőrizhetők (Chrome újraindítása után).'
+Step 'Done. The Chrome policies can be checked on the chrome://policy page (after restarting Chrome).'
 exit 0

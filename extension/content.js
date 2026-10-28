@@ -1,41 +1,45 @@
-// Tartalomszkript: másodpercenként jelenti a háttérnek az oldal kategóriáját és láthatóságát,
-// tiltásnál leállítja a videót és blokkoló felületet tesz az oldalra.
+// Content script: reports the page's category and visibility to the background every second;
+// when blocked, it stops the video and puts a blocking overlay on the page.
 (() => {
   'use strict';
   const D = globalThis.LimiterDetect;
   if (!D || globalThis.__limiterContentLoaded) return;
   globalThis.__limiterContentLoaded = true;
 
+  // Texts come from _locales/<language>/messages.json (the browser's UI language decides; English is the default).
+  const t = (key, ...subs) => chrome.i18n.getMessage(key, subs.map(String)) || key;
+  const LANG = chrome.i18n.getUILanguage();
+
   const TEXTS = {
     shortVideo: {
-      title: 'Elfogyott a rövidvideós keret',
-      body: (limit) => `Az Instagram Reels, a TikTok, a YouTube Shorts és a Facebook Reels együtt legfeljebb ${limit} használható.`,
+      title: () => t('limitShortTitle'),
+      body: (limit) => t('limitShortBody', limit),
     },
     facebookFeed: {
-      title: 'Elfogyott a Facebook-hírfolyam kerete',
-      body: (limit) => `A kezdőlapi hírfolyam legfeljebb ${limit} használható. A Messenger, a profilok és a csoportok továbbra is elérhetők.`,
+      title: () => t('limitFeedTitle'),
+      body: (limit) => t('limitFeedBody', limit),
     },
   };
 
   const BANNED_TEXTS = {
-    shortVideo: 'Az Instagram Reels, a TikTok, a YouTube Shorts és a Facebook Reels',
-    facebookFeed: 'A Facebook kezdőlapi hírfolyama',
+    shortVideo: () => t('bannedWhatShort'),
+    facebookFeed: () => t('bannedWhatFeed'),
   };
 
   function hourRange(ban) {
     if (!ban) return '';
     const two = (h) => String(h).padStart(2, '0') + ':00';
-    return `${two(ban.from)} és ${two(ban.to)} között`;
+    return t('bannedRange', two(ban.from), two(ban.to));
   }
 
-  /** Pl. „60 percet 24 óra alatt” vagy „60 percet naponta (nullázás 03:00-kor)”. */
+  /** E.g. "60 minutes in 24 hours" or "60 minutes per day (reset at 03:00)". */
   function limitText(state) {
     const minutes = Number.isFinite(state.limitMinutes) ? state.limitMinutes : 60;
     if (state.resetMode === 'daily') {
       const hour = String(state.dailyResetHour ?? 0).padStart(2, '0');
-      return `${minutes} percet naponta (nullázás ${hour}:00-kor)`;
+      return t('limitPerDay', minutes, hour);
     }
-    return `${minutes} percet 24 óra alatt`;
+    return t('limitRolling', minutes);
   }
 
   let category = null;
@@ -103,7 +107,7 @@
       try {
         m.muted = true;
         if (!m.paused) m.pause();
-      } catch (_) { /* nem kritikus */ }
+      } catch (_) { /* not critical */ }
     }
   }
 
@@ -123,12 +127,12 @@
     const d = new Date(iso);
     if (isNaN(d)) return null;
     const now = new Date();
-    const time = d.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' });
+    const time = d.toLocaleTimeString(LANG, { hour: '2-digit', minute: '2-digit' });
     const sameDay = d.toDateString() === now.toDateString();
     const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toDateString() === d.toDateString();
-    if (sameDay) return 'ma ' + time;
-    if (tomorrow) return 'holnap ' + time;
-    return d.toLocaleDateString('hu-HU', { month: 'short', day: 'numeric' }) + ' ' + time;
+    if (sameDay) return t('whenToday', time);
+    if (tomorrow) return t('whenTomorrow', time);
+    return d.toLocaleDateString(LANG, { month: 'short', day: 'numeric' }) + ' ' + time;
   }
 
   function buildOverlay() {
@@ -138,14 +142,14 @@
     const texts = TEXTS[blockedState.category] || TEXTS.shortVideo;
     const when = formatTime(blockedState.availableAgainAt);
     const banned = !!blockedState.banned;
-    const title = banned ? 'Tiltott időszak' : texts.title;
+    const title = banned ? t('bannedTitle') : texts.title();
     const body = banned
-      ? `${BANNED_TEXTS[blockedState.category] || BANNED_TEXTS.shortVideo} ${hourRange(blockedState.bannedHours)} nem használható.`
+      ? t('bannedBody', (BANNED_TEXTS[blockedState.category] || BANNED_TEXTS.shortVideo)(), hourRange(blockedState.bannedHours))
       : texts.body(limitText(blockedState));
     const fbLinks = blockedState.category === 'facebookFeed'
-      ? `<p class="links"><a href="https://www.facebook.com/messages/">Messenger</a>
-           <a href="https://www.facebook.com/me/">Profilom</a>
-           <a href="https://www.facebook.com/groups/">Csoportok</a></p>`
+      ? `<p class="links"><a href="https://www.facebook.com/messages/">${t('linkMessenger')}</a>
+           <a href="https://www.facebook.com/me/">${t('linkProfile')}</a>
+           <a href="https://www.facebook.com/groups/">${t('linkGroups')}</a></p>`
       : '';
     shadow.innerHTML = `
       <style>
@@ -164,7 +168,7 @@
         <div class="card">
           <h1 id="t">${title}</h1>
           <p>${body}</p>
-          ${when ? `<p class="when">${banned ? 'Újra elérhető' : 'Legközelebb ekkortól szabadul fel idő'}: ${when}</p>` : ''}
+          ${when ? `<p class="when">${banned ? t('availableAgain') : t('nextRelease')}: ${when}</p>` : ''}
           ${fbLinks}
         </div>
       </div>`;

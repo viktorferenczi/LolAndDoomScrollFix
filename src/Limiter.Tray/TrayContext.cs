@@ -1,11 +1,12 @@
 using System.Diagnostics;
 using System.Drawing;
+using Limiter.Core;
 using System.Drawing.Drawing2D;
 using Limiter.Protocol;
 
 namespace Limiter.Tray;
 
-/// <summary>Tálcaikon: 5 másodpercenként lekérdezi a szolgáltatást, és megmutatja a maradék kereteket és a védelem állapotát.</summary>
+/// <summary>Tray icon: queries the service every 5 seconds and shows the remaining limits and the protection state.</summary>
 public sealed class TrayContext : ApplicationContext
 {
     private static readonly TimeSpan ChromeStartupGrace = TimeSpan.FromSeconds(60);
@@ -40,19 +41,19 @@ public sealed class TrayContext : ApplicationContext
 
         var menu = new ContextMenuStrip();
         menu.Items.AddRange([_protection, new ToolStripSeparator(), _lol, _short, _feed, _next, new ToolStripSeparator()]);
-        menu.Items.Add("Részletek…", null, (_, _) => ShowForm());
-        menu.Items.Add("Frissítés", null, async (_, _) => await RefreshAsync());
-        _updateItem = new ToolStripMenuItem("Frissítések keresése…");
+        menu.Items.Add(Loc.T("Details…", "Részletek…"), null, (_, _) => ShowForm());
+        menu.Items.Add(Loc.T("Refresh", "Frissítés"), null, async (_, _) => await RefreshAsync());
+        _updateItem = new ToolStripMenuItem(Loc.T("Check for updates…", "Frissítések keresése…"));
         _updateItem.Click += async (_, _) => await _update.RunAsync(null);
         menu.Items.Add(_updateItem);
-        menu.Items.Add("Admin beállítások… (jelszó kell)", null, (_, _) => AdminLauncher.Open(null));
-        menu.Items.Add(new ToolStripMenuItem($"Verzió: {UpdateFlow.CurrentVersion}") { Enabled = false });
+        menu.Items.Add(Loc.T("Admin settings… (password needed)", "Admin beállítások… (jelszó kell)"), null, (_, _) => AdminLauncher.Open(null));
+        menu.Items.Add(new ToolStripMenuItem(Loc.T($"Version: {UpdateFlow.CurrentVersion}", $"Verzió: {UpdateFlow.CurrentVersion}")) { Enabled = false });
         _update.StateChanged += () => _updateItem.Enabled = !_update.IsRunning;
 
         _notify = new NotifyIcon
         {
             Icon = _icons[Health.Ok],
-            Text = "LoL- és görgetéskorlátozó",
+            Text = Loc.T("LoL & Doomscroll Limiter", "LoL- és görgetéskorlátozó"),
             ContextMenuStrip = menu,
             Visible = true,
         };
@@ -81,11 +82,11 @@ public sealed class TrayContext : ApplicationContext
                 response = await Task.Run(() => IpcClient.RequestAsync(
                     new IpcRequest { Type = IpcConstants.RequestTypes.Status, Source = IpcConstants.Sources.Tray },
                     TimeSpan.FromSeconds(3)));
-                view = response.Ok ? StatusView.From(response, chrome, now) : StatusView.ServiceUnreachable(response.Error ?? "hiba");
+                view = response.Ok ? StatusView.From(response, chrome, now) : StatusView.ServiceUnreachable(response.Error ?? Loc.T("error", "hiba"));
             }
             catch (Exception ex)
             {
-                view = StatusView.ServiceUnreachable(ex is TimeoutException ? "időtúllépés" : ex.Message);
+                view = StatusView.ServiceUnreachable(ex is TimeoutException ? Loc.T("timeout", "időtúllépés") : ex.Message);
             }
 
             Apply(view);
@@ -112,7 +113,7 @@ public sealed class TrayContext : ApplicationContext
         _notify.Text = tip.Length > 127 ? tip[..127] : tip;
 
         if (view.Health != Health.Ok && view.Health != _lastHealth)
-            _notify.ShowBalloonTip(8000, "Korlátozó: hiba", view.Problems.FirstOrDefault() ?? view.ProtectionText, ToolTipIcon.Warning);
+            _notify.ShowBalloonTip(8000, Loc.T("Limiter: problem", "Korlátozó: hiba"), view.Problems.FirstOrDefault() ?? view.ProtectionText, ToolTipIcon.Warning);
         _lastHealth = view.Health;
 
         _form?.Update(view);
@@ -124,16 +125,16 @@ public sealed class TrayContext : ApplicationContext
         if (p?.LastLolActionAt is { } at && at != _lastActionShown)
         {
             if (_lastActionShown is not null || DateTimeOffset.UtcNow - at < TimeSpan.FromMinutes(1))
-                _notify.ShowBalloonTip(6000, "LoL-korlát", p.LastLolAction ?? "", ToolTipIcon.Info);
+                _notify.ShowBalloonTip(6000, Loc.T("LoL limit", "LoL-korlát"), p.LastLolAction ?? "", ToolTipIcon.Info);
             _lastActionShown = at;
         }
 
         Transition(ref _lastLolBlocked, s.Lol?.Blocked == true,
-            s.Lol?.Banned == true ? "LoL: tiltott időszak" : "Elfogyott a LoL-keret", view.LolText);
+            s.Lol?.Banned == true ? Loc.T("LoL: banned period", "LoL: tiltott időszak") : Loc.T("LoL limit used up", "Elfogyott a LoL-keret"), view.LolText);
         Transition(ref _lastShortBlocked, s.ShortVideo?.Blocked == true,
-            s.ShortVideo?.Banned == true ? "Rövid videók: tiltott időszak" : "Elfogyott a rövidvideós keret", view.ShortVideoText);
+            s.ShortVideo?.Banned == true ? Loc.T("Short videos: banned period", "Rövid videók: tiltott időszak") : Loc.T("Short-video limit used up", "Elfogyott a rövidvideós keret"), view.ShortVideoText);
         Transition(ref _lastFeedBlocked, s.FacebookFeed?.Blocked == true,
-            s.FacebookFeed?.Banned == true ? "Facebook-hírfolyam: tiltott időszak" : "Elfogyott a Facebook-hírfolyam kerete", view.FacebookFeedText);
+            s.FacebookFeed?.Banned == true ? Loc.T("Facebook feed: banned period", "Facebook-hírfolyam: tiltott időszak") : Loc.T("Facebook feed limit used up", "Elfogyott a Facebook-hírfolyam kerete"), view.FacebookFeedText);
 
         void Transition(ref bool last, bool now, string title, string text)
         {
@@ -142,7 +143,7 @@ public sealed class TrayContext : ApplicationContext
         }
     }
 
-    /// <summary>Fut-e a Chrome ebben a Windows-munkamenetben legalább 1 perce (indulási türelmi idő után várjuk a bővítmény jelentkezését).</summary>
+    /// <summary>Whether Chrome has been running in this Windows session for at least a minute (the extension is expected to report after this start-up grace period).</summary>
     private bool ChromeRunningLongEnough(DateTimeOffset now)
     {
         var session = Process.GetCurrentProcess().SessionId;
@@ -187,7 +188,7 @@ public sealed class TrayContext : ApplicationContext
             using var fill = new SolidBrush(color);
             g.FillEllipse(fill, 2, 2, 28, 28);
             using var pen = new Pen(Color.White, 3);
-            g.DrawLine(pen, 16, 8, 16, 17); // óramutatók
+            g.DrawLine(pen, 16, 8, 16, 17); // clock hands
             g.DrawLine(pen, 16, 17, 22, 21);
         }
         return Icon.FromHandle(bmp.GetHicon());

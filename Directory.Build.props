@@ -3,10 +3,10 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- Lehetővé teszi a Windows-célú projektek fordítását macOS/Linux alatt is (CI, ellenőrzés). -->
+    <!-- Allows compiling the Windows-targeting projects on macOS/Linux too (CI, checks). -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Company>LolScrollLimiter</Company>
-    <Product>LoL- és görgetéskorlátozó</Product>
+    <Product>LoL &amp; Doomscroll Limiter</Product>
     <Version>1.6.1</Version>
   </PropertyGroup>
 </Project>

@@ -36,12 +36,12 @@ public sealed class SettingsProvider
             _current = LimitSettings.Parse(File.ReadAllText(_paths.SettingsPath));
             _lastWrite = write;
             Warning = null;
-            _log.LogInformation("Korlátok betöltve: {Settings}", _current);
+            _log.LogInformation("Limits loaded: {Settings}", _current);
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
-            Warning = "A limits.json nem olvasható, az előző korlátok maradnak érvényben.";
-            _log.LogWarning(ex, "A limits.json betöltése sikertelen");
+            Warning = Loc.T("limits.json cannot be read; the previous limits stay in effect.", "A limits.json nem olvasható, az előző korlátok maradnak érvényben.");
+            _log.LogWarning(ex, "Loading limits.json failed");
         }
     }
 }

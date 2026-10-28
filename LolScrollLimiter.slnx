@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Limiter.Common/Limiter.Common.csproj" />
     <Project Path="src/Limiter.Core/Limiter.Core.csproj" />
     <Project Path="src/Limiter.NativeHost/Limiter.NativeHost.csproj" />
     <Project Path="src/Limiter.Protocol/Limiter.Protocol.csproj" />
