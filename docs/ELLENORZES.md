@@ -36,6 +36,34 @@ Normál (nem rendszergazdai) Windows-fiókból.
 | A.8 | Normál felhasználóként közvetlenül `Limiter.Tray.exe --admin` | „csak rendszergazdai jogosultsággal nyitható meg”, nem nyílik szerkesztő |
 | A.9 | Normál felhasználóként a `limits.json` megnyitása / módosítása a Windowsban | Hozzáférés megtagadva (a szerkesztő nélkül sem lehet) |
 | A.10 | Mentés után az eredeti telepítési értékekre visszaállítva, majd frissítés gomb (1.4.x → újabb) | A frissítés megtartja a szerkesztővel mentett beállításokat |
+| A.11 | A UAC jóváhagyása után | Megjelenik az **admin jelszó** kérése; mező nélkül/Mégse → nem nyílik szerkesztő |
+| A.12 | Hibás jelszó | „Hibás jelszó (1/5)”, kb. 1 mp késés; az ötödik hibás próba után bezárul, a szerkesztő nem nyílik meg |
+| A.13 | Helyes jelszó | Megnyílik a szerkesztő |
+| A.14 | Jelszó módosítása… → új jelszó kétszer (eltérő, rövid, csupa szóköz is kipróbálva) | Eltérő/rövid/szóköz: hibaüzenet, nem változik; helyesnél „megváltozott”; a régi jelszó többé nem jó, az új igen |
+| A.15 | Frissítés régebbi (jelszó nélküli) verzióról, majd Admin beállítások | A UAC után új jelszót kell megadni (kétszer); utána normálisan nyílik |
+| A.16 | Rendszergazdaként a `C:\ProgramData\LolScrollLimiter\admin.json` elrontva, majd Admin beállítások | „A jelszófájl nem olvasható vagy sérült…”, a szerkesztő nem nyílik; a fájl törlése után új jelszót lehet beállítani |
+| A.17 | Normál felhasználóként az `admin.json` megnyitása | Hozzáférés megtagadva; a fájlban nincs olvasható jelszó (csak `salt`/`hash`) |
+
+### Extra keret egy napra
+
+Szombati/vasárnapi próbákhoz a rendszeridő átállítható, vagy a naptár alapján a megfelelő napokat kell választani.
+
+| # | Lépés | Elvárt eredmény |
+|---|---|---|
+| X.1 | Admin beállítások → Extra keret: a napválasztó első napja | A „most tartó nap”; előtte nincs múltbeli nap |
+| X.2 | Napi nullázás 03:00-ra állítva, 03:00 előtt megnyitva | A „most tartó nap” az előző naptári nap |
+| X.3 | Hétvégi korlát kikapcsolva: a szombat és a vasárnap a listában | Szürke, „nem választható: hétvége, nincs korlát”; kattintásra figyelmeztetés, a kijelölés az előző napon marad |
+| X.4 | A hétvégi korlát bejelölése | A szombat és a vasárnap azonnal kiválaszthatóvá válik |
+| X.5 | Hétvégére extra, majd a hétvégi korlát kikapcsolása | Piros figyelmeztetés a csoportban; Mentés → hibaüzenet, a fájl nem változik; az extra törlése után a mentés sikerül |
+| X.6 | Mára +2 LoL, +15 perc rövid videó, +10 perc hírfolyam → Mentés; 30 mp után a tálca | „LoL: 5-ből, ebből +2 admin által adott extra”; „… 75 percből, ebből +15 perc …”; a felugró ablakban „(+2 extra)”, „(+15 p extra)” |
+| X.7 | Minden érték 0 → Extra mentése a napra | Hibaüzenet („adj meg legalább egy értéket”) |
+| X.8 | Ugyanarra a napra újabb értékek | Felülírja a meglévőt (a listában egy sor); a nap kiválasztásakor a mezők a meglévő értékeket mutatják |
+| X.9 | Extra törlése a napról | A sor eltűnik, a mezők nullára állnak; Mentés után a tálcán nincs extra |
+| X.10 | Holnapi napra extra, a mai keret kimerítve | A „újra elérhető” idő a holnapi extrát is figyelembe veszi (gördülő módban éjfélkor, ha az már elég) |
+| X.11 | Rövid videó extra +10, a keret elfogyasztása a 60+10 percig | 70 percnél tilt, nem korábban |
+| X.12 | A tiltott órák alatt extra | Nem oldja fel a tiltást |
+| X.13 | Az extra napja lejár (éjfél / a nullázás órája) | A keret visszaáll az alapra |
+| X.14 | Mentés után a `limits.json` | Az `extraGrants` tömb `"date": "ÉÉÉÉ-HH-NN"` bejegyzéseket tartalmaz; a lejárt napok nincsenek benne |
 
 ## Frissítés gomb
 
@@ -146,6 +174,13 @@ Tipp: `"shortVideoMinutes": 2`, `"facebookFeedMinutes": 2`.
 | 3b.12 | Tiltott órák: LoL bejelölve, a jelenlegi órától a következőig (pl. 14:00–15:00) | PvP-keresés azonnal leáll, értesítés: „…tiltott időszak van”; tálca: „LoL PvP: tiltott időszak (14:00–15:00) — újra: ma 15:00”; TFT és gyakorlás elérhető; 15:00 után a keresés újra működik |
 | 3b.13 | Tiltott órák: rövid videók bejelölve a jelenlegi órára | YouTube Shorts / TikTok azonnal „Tiltott időszak” blokkoló felületet mutat, a Facebook-hírfolyam nem (ha az nincs bejelölve) |
 | 3b.14 | Tiltott időszak: kezdete = vége (pl. 03:00–03:00) | A telepítő hibaüzenettel nem lép tovább |
+| 3b.15 | Admin jelszó oldal: üres, 5 karakteres, két eltérő jelszó | Hibaüzenet, a telepítő nem lép tovább |
+| 3b.16 | Telepítés ékezetes jelszóval (pl. `árvíztűrő1`) | Az Admin beállításoknál az ékezetes jelszó működik |
+| 3b.17 | Az ideiglenes jelszófájl a telepítés után | A `%TEMP%\is-*.tmp\lsl-admin.dat` nem marad meg; az `admin.json` csak `salt`/`hash` mezőket tartalmaz |
+| 3b.18 | Újratelepítés (nem frissítés gombbal) már jelszavas telepítés fölé | Először a jelenlegi jelszót kéri; hibás jelszóval nem folytatódik |
+| 3b.19 | Eltávolítás (Gépház) hibás jelszóval / Mégse | Az eltávolítás megszakad, a program és a szolgáltatás megmarad |
+| 3b.20 | Eltávolítás helyes jelszóval | Eltávolítja a programot; az `admin.json` törlődik |
+| 3b.21 | Csendes telepítés (`/SILENT`), jelszó-oldal nélkül | A telepítés sikerül; az Admin beállítások első megnyitásakor jelszót kell megadni |
 
 ## 4. Védelempróbák (normál felhasználóként)
 

@@ -22,6 +22,7 @@ public sealed class StatusBuilder(LimitEngine engine, ProtectionState protection
                 AvailableAgainAt = lol.AvailableAgainAt,
                 Exempt = lol.Exempt,
                 Bonus = lol.Bonus,
+                Extra = lol.Extra,
                 Banned = lol.Banned,
             },
             ShortVideo = Web(engine.GetWebStatus(sid, WebCategory.ShortVideo)),
@@ -53,6 +54,7 @@ public sealed class StatusBuilder(LimitEngine engine, ProtectionState protection
         AvailableAgainAt = s.AvailableAgainAt,
         Exempt = s.Exempt,
         BonusSeconds = s.Bonus.TotalSeconds,
+        ExtraSeconds = s.Extra.TotalSeconds,
         Banned = s.Banned,
     };
 

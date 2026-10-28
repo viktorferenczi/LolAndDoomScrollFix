@@ -27,6 +27,12 @@ public sealed class LimitSchedule
         return local.TimeOfDay < TimeSpan.FromHours(DayStartHour) ? local.Date.AddDays(-1) : local.Date;
     }
 
+    /// <summary>A <paramref name="now"/>-t tartalmazó nap kezdő dátuma (az extra keretek ehhez kötődnek).</summary>
+    public DateOnly LogicalDay(DateTimeOffset now) => DateOnly.FromDateTime(LogicalDate(now));
+
+    /// <summary>Mentes-e a megadott nap (hétvége, ha a hétvégi korlát nincs bekapcsolva).</summary>
+    public bool IsExemptDay(DateOnly day) => !_settings.EnforceOnWeekends && IsWeekend(day.ToDateTime(TimeOnly.MinValue));
+
     /// <summary>Az aktuális nap kezdete (napi módban: az utolsó visszaállítás).</summary>
     public DateTimeOffset DayStart(DateTimeOffset now) => ToUtc(LogicalDate(now).AddHours(DayStartHour));
 

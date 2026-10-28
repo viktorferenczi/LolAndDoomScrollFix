@@ -19,7 +19,7 @@ Kimenet az `out\` mappában:
 
 | Fájl | Mire való |
 |---|---|
-| `LolScrollLimiter-Setup-1.5.2.exe` | Windows-telepítő |
+| `LolScrollLimiter-Setup-1.6.0.exe` | Windows-telepítő |
 | `extension-store.zip` | Feltöltés a Chrome Web Store-ba |
 | `extension-dev.zip` | Fejlesztői tesztverzió (kicsomagolt betöltés, fix azonosító: `iidlgdeiobckahalgoabbobfdlefkagi`) |
 | `app\` | A telepítendő programfájlok |
@@ -42,7 +42,7 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
 
 ## 4. Telepítés (éles)
 
-1. Futtasd a `LolScrollLimiter-Setup-1.5.2.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
+1. Futtasd a `LolScrollLimiter-Setup-1.6.0.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
 2. Telepítési mód: **Éles**.
 3. Bővítményazonosító: az alapértelmezett érték a közzétett áruházi azonosító (`mkoeoadekdfnbjpmhiabpjlmhdoimcml`); hagyd így. Fejlesztői módban a fejlesztői azonosító kerül a mezőbe.
 4. **Korlátok** oldal:
@@ -74,6 +74,9 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
    | Facebook-hírfolyam | nincs bejelölve (01:00–05:00) |
 
    A kezdete és a vége nem lehet ugyanaz az óra; ilyenkor a telepítő nem lép tovább.
+
+   **Admin jelszó** oldal (az utolsó): add meg kétszer az admin jelszót (6–128 karakter). Ez kell az admin beállítások megnyitásához és a program eltávolításához, a Windows rendszergazdai jóváhagyása mellett. A jelszót ne a felhasználó ismerje. Ha már van telepített változat jelszóval, az újratelepítéshez előbb annak jelszavát kell megadni (a frissítés gombos frissítéshez nem).
+   A jelszó nem tárolódik: csak egy ellenőrző (PBKDF2-SHA256, véletlen sóval) kerül a `C:\ProgramData\LolScrollLimiter\admin.json` fájlba, amelyhez csak a rendszergazdák és a SYSTEM férnek hozzá. Csendes telepítésnél (`/SILENT`) nincs jelszó-oldal; ilyenkor az Admin beállítások első megnyitásakor kell jelszót megadni.
 
    Napi nullázásnál a „hétvége” a választott órától számít: 03:00-s nullázásnál szombat 03:00-tól hétfő 03:00-ig tart.
    Gördülő módban szombat 00:00-tól hétfő 00:00-ig. Ha pénteken elfogy egy keret, a hétvége kezdetén feloldódik.
@@ -119,8 +122,20 @@ ezért kikapcsolt állapotban az inkognitó ablak a webes korlát megkerülésé
 A legegyszerűbb: a tálcaikon menüjében vagy a „Részletek” ablakban (a „Frissítések keresése” gomb alatt) az **Admin beállítások…** gombbal.
 
 1. A gomb újraindítja a programot rendszergazdai jogosultsággal, ezért a Windows **bekéri a rendszergazdai jelszót** (UAC-ablak). A jelszót a megbízható személy ismeri; jóváhagyás nélkül az ablak meg sem nyílik.
-2. Megjelenik a szerkesztő minden, a telepítéskor megadható beállítással: visszaállítás (gördülő 24 óra / napi nullázás és az óra), a LoL-meccsek száma, a rövid videók és a Facebook-hírfolyam percei, hétvégi korlát, pihenőnap-jutalom, tiltott órák.
-3. **Mentés**: az értékeket ellenőrzi (hibás érték esetén kiírja, mit javíts, és nem ment), majd egy lépésben cseréli a `limits.json`-t. A szolgáltatás legkésőbb 30 másodpercen belül átveszi; újraindítás nem kell. A már rögzített használat az új szabály szerint számít.
+2. Ezután a program **az admin jelszót** kéri (amit a telepítéskor adtak meg). Öt hibás próbálkozás után bezárul; minden hibás próba után egy másodperc várakozás van. Ha még nincs jelszó (régebbi verzióról frissítettek, vagy csendesen telepítettek), itt kell újat megadni.
+3. Megjelenik a szerkesztő minden, a telepítéskor megadható beállítással: visszaállítás (gördülő 24 óra / napi nullázás és az óra), a LoL-meccsek száma, a rövid videók és a Facebook-hírfolyam percei, hétvégi korlát, pihenőnap-jutalom, tiltott órák; alattuk az **Extra keret egy kiválasztott napra**. A **Jelszó módosítása…** gomb új admin jelszót állít be.
+4. **Mentés**: az értékeket ellenőrzi (hibás érték esetén kiírja, mit javíts, és nem ment), majd egy lépésben cseréli a `limits.json`-t. A szolgáltatás legkésőbb 30 másodpercen belül átveszi; újraindítás nem kell. A már rögzített használat az új szabály szerint számít.
+
+#### Extra keret egy napra
+
+Az **Extra keret egy kiválasztott napra** csoportban válassz napot, add meg az extra LoL-meccseket és a rövid videós, illetve hírfolyam-perceket, majd **Extra mentése a napra**; a **Mentés** gomb után lép érvénybe. Egy napra egy bejegyzés van (a mentés felülírja a meglévőt). Az extra a nap alapkeretéhez és a pihenőnap-jutalomhoz adódik, csak azon az egy napon. A tiltott órákat nem írja felül.
+
+- A „nap” napi nullázásnál a nullázás órájától a következőig tart (03:00-s nullázásnál a „péntek” péntek 03:00-tól szombat 03:00-ig tart). Ezért a lista első napja nullázás előtt még az előző naptári nap: például szerdán 01:00-kor a „most tartó nap” kedd.
+- Gördülő 24 óránál a nap éjféltől éjfélig tart; éjfél után az extra megszűnik, de a már rögzített használat még 24 óráig számít.
+- **Nem választható napok** (szürkén, szöveges indoklással): ha a hétvégi korlát ki van kapcsolva, a szombat és a vasárnap, mert hétvégén úgysincs korlát. A lista a hétvégi jelölőnégyzet és a visszaállítási mód módosításakor azonnal frissül. A múltbeli napok nem szerepelnek, és legfeljebb 30 nappal előre lehet extrát adni.
+- Ha később kikapcsolod a hétvégi korlátot, a már megadott hétvégi extra hibát okoz mentéskor: előbb töröld.
+- Legalább egy értéket meg kell adni (LoL: 0–100 meccs, perc: 0–1440). A lejárt napok extrái mentéskor törlődnek.
+- A tálcán és a bővítmény felugró ablakában az extra külön látszik („ebből +30 perc admin által adott extra”, „+30 p extra”).
 
 Biztonság: a felület nem új „kapu” a szolgáltatáshoz — ugyanazt a fájlt írja, amelyhez amúgy csak a rendszergazdák férnek hozzá, és a szolgáltatás nem kapott új, korlátozást lazító parancsot. Ha a program emelés nélkül kapja az `--admin` kapcsolót, nem nyílik meg.
 Ha a Windows-fiókod nem normál, hanem rendszergazdai fiók, az UAC alapértelmezésben csak jóváhagyást kér jelszó nélkül — a jelszóvédelemhez normál felhasználói fiók kell (lásd 1. pont).
@@ -217,10 +232,10 @@ A frissítés keresése nem érinti a korlátozások működését; ha a keresé
 **Kiadás készítése (fejlesztő):** emeld a verziót a `Directory.Build.props`, az `extension/manifest.json` és az `installer/LolScrollLimiter.iss` fájlban, commit és push, majd:
 
 ```bash
-git tag v1.5.2 && git push origin v1.5.2
+git tag v1.6.0 && git push origin v1.6.0
 ```
 
-A `.github/workflows/release.yml` Windows alatt lefordítja a telepítőt, elkészíti a `SHA256SUMS.txt`-t, és közzéteszi a kiadást (`LolScrollLimiter-Setup-1.5.2.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
+A `.github/workflows/release.yml` Windows alatt lefordítja a telepítőt, elkészíti a `SHA256SUMS.txt`-t, és közzéteszi a kiadást (`LolScrollLimiter-Setup-1.6.0.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
 A fájlnév és a címke formátuma kötött (`LolScrollLimiter-Setup-X.Y.Z.exe` / `vX.Y.Z`), különben a gomb nem találja a telepítőt.
 
 A Chrome-bővítmény éles módban a Chrome Web Store-ból magától frissül; a fejlesztői tesztverziónál a frissítés után a `chrome://extensions` oldalon újra be kell tölteni a kicsomagolt bővítményt.
@@ -228,7 +243,9 @@ Kódaláírás nélkül a telepítő a Windows-ablakban „Ismeretlen közzétev
 
 ## 8. Eltávolítás (rendszergazda)
 
-Gépház → Alkalmazások → Telepített alkalmazások → LoL- és görgetéskorlátozó → Eltávolítás.
+Gépház → Alkalmazások → Telepített alkalmazások → LoL- és görgetéskorlátozó → Eltávolítás. A Windows rendszergazdai jóváhagyása után a program **az admin jelszót kéri**; hibás jelszóval vagy a Mégse gombbal az eltávolítás megszakad. Sikeres eltávolításkor a jelszó-ellenőrző is törlődik (újratelepítéskor újat kell megadni).
+
+**Elfelejtett jelszó:** a jelszó nem állítható vissza, mert csak ellenőrző tárolódik. A Windows rendszergazdája a `C:\ProgramData\LolScrollLimiter\admin.json` fájl törlésével megkerülheti, és az Admin beállítások első megnyitásakor újat állíthat be. (A jelszó tehát a Windows rendszergazdai jogosultsága *mellett* ad védelmet; aki a rendszergazdai fiókot is birtokolja, az mindent megtehet.) Ha a fájl sérült, az admin felület és az eltávolító nem nyílik meg, és ezt a fájltörlést kéri.
 A számlálók megmaradnak (újratelepítés után folytatódnak). Teljes törlés rendszergazdai PowerShellből:
 
 ```powershell

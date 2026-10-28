@@ -54,6 +54,10 @@
 .PARAMETER FacebookFeedBanFrom
   Tiltott órák a Facebook-hírfolyamra, lásd LolBanFrom. (FacebookFeedBanTo a vége.)
 
+.PARAMETER AdminPasswordFile
+  A telepítő által írt ideiglenes fájl az admin jelszóval (UTF-16 kódok hexában). A Limiter.Tray.exe beolvassa, a jelszóból
+  ellenőrzőt (PBKDF2) készít az adatmappába (admin.json), és a fájlt törli. A jelszó sehol sem marad meg olvashatóan.
+
 .PARAMETER KeepSettings
   Frissítéskor: a meglévő limits.json-t nem írja felül (a korlátok, a jutalom és a tiltott órák megmaradnak).
   Ha még nincs limits.json, az alapértelmezett értékekkel jön létre.
@@ -82,6 +86,7 @@ param(
     [ValidateRange(-1, 23)][int]$FacebookFeedBanFrom = -1,
     [ValidateRange(-1, 23)][int]$FacebookFeedBanTo = -1,
     [switch]$EnforceOnWeekends,
+    [string]$AdminPasswordFile,
     [switch]$KeepSettings,
     [switch]$DevMode
 )
@@ -157,6 +162,17 @@ New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
 Set-FolderAcl $DataDir @("*${SidSystem}:(OI)(CI)F", "*${SidAdmins}:(OI)(CI)F")
 & icacls.exe $DataDir /setowner "*$SidAdmins" /C /Q | Out-Null
 Assert-Acl $DataDir -Required $SidSystem, $SidAdmins -Forbidden $SidUsers
+
+if ($AdminPasswordFile) {
+    Step 'Admin jelszó beállítása'
+    try {
+        $proc = Start-Process -FilePath $TrayExe -ArgumentList @('--set-password-file', "`"$AdminPasswordFile`"") -Wait -PassThru -WindowStyle Hidden
+        if ($proc.ExitCode -ne 0) { throw "Az admin jelszó beállítása nem sikerült (kilépési kód: $($proc.ExitCode))." }
+    } finally {
+        Remove-Item -LiteralPath $AdminPasswordFile -Force -ErrorAction SilentlyContinue
+    }
+    Assert-Acl (Join-Path $DataDir 'admin.json') -Required $SidSystem, $SidAdmins -Forbidden $SidUsers
+}
 
 if (-not $KeepSettings) { Step "Korlátok mentése: $ResetMode$(if ($ResetMode -eq 'daily') { " ($('{0:00}' -f $DailyResetHour):00)" }), rövid videó $ShortVideoMinutes perc, hírfolyam $FacebookFeedMinutes perc, $(if ($EnforceOnWeekends) { 'hétvégén is van korlát' } else { 'hétvégén nincs korlát' })" }
 # Tiltott órák: mindkét óra megadva és különböző → bekapcsolva.

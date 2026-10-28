@@ -2,7 +2,7 @@
 ; Fordítás: installer\build.ps1 (előtte a programfájlok az out\app mappába kerülnek).
 
 #define AppName "LoL- és görgetéskorlátozó"
-#define AppVersion "1.5.2"
+#define AppVersion "1.6.0"
 #define DevExtensionId "iidlgdeiobckahalgoabbobfdlefkagi"
 #define StoreExtensionId "mkoeoadekdfnbjpmhiabpjlmhdoimcml"
 
@@ -43,6 +43,8 @@ Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Fil
 [Code]
 var
   ExtensionPage: TInputQueryWizardPage;
+  PasswordPage: TInputQueryWizardPage;
+  ExistingPasswordChecked: Boolean;
   ModePage: TInputOptionWizardPage;
   LimitsPage: TWizardPage;
   RollingRadio, DailyRadio: TNewRadioButton;
@@ -221,7 +223,7 @@ begin
   Result := False;
   if IsUpdate then
     Result := (PageID = ModePage.ID) or (PageID = ExtensionPage.ID) or (PageID = LimitsPage.ID) or
-              (PageID = BonusPage.ID) or (PageID = BanPage.ID);
+              (PageID = BonusPage.ID) or (PageID = BanPage.ID) or (PageID = PasswordPage.ID);
 end;
 
 procedure BanCheckChanged(Sender: TObject);
@@ -334,6 +336,13 @@ begin
   CreateLimitsPage(ExtensionPage.ID);
   CreateBonusPage(LimitsPage.ID);
   CreateBanPage(BonusPage.ID);
+
+  PasswordPage := CreateInputQueryPage(BanPage.ID,
+    'Admin jelszó', 'Jelszó a beállításokhoz és az eltávolításhoz',
+    'Ez a jelszó kell az admin beállítások megnyitásához és a program eltávolításához (a Windows rendszergazdai jóváhagyása mellett). ' +
+    'Legalább 6 karakter. Jegyezd meg, vagy add át a megbízható személynek.');
+  PasswordPage.Add('Jelszó:', True);
+  PasswordPage.Add('Jelszó újra:', True);
 end;
 
 function IsValidExtensionId(const Id: String): Boolean;
@@ -368,9 +377,68 @@ begin
   end;
 end;
 
+// Ha már van telepített változat jelszóval, újratelepítéshez (nem frissítéshez) annak jelszava kell.
+function ExistingPasswordOk: Boolean;
+var
+  Code: Integer;
+  Helper: String;
+begin
+  Result := True;
+  if ExistingPasswordChecked then Exit;
+  if not FileExists(ExpandConstant('{commonappdata}\LolScrollLimiter\admin.json')) then Exit;
+  Helper := ExpandConstant('{app}\Limiter.Tray.exe');
+  if not FileExists(Helper) then Exit;
+  MsgBox('A számítógépen már van telepített változat admin jelszóval. Az újratelepítéshez add meg a jelenlegi jelszót.',
+    mbInformation, MB_OK);
+  if Exec(Helper, '--verify-password', '', SW_SHOWNORMAL, ewWaitUntilTerminated, Code) and (Code = 0) then
+    ExistingPasswordChecked := True
+  else
+  begin
+    MsgBox('A jelenlegi jelszó nem ellenőrizhető, ezért a telepítés nem folytatható.', mbError, MB_OK);
+    Result := False;
+  end;
+end;
+
+// Az ideiglenes fájlba minden karakter négy hexa számjegyként kerül (UTF-16 kód), így az ékezetek sem romlanak el.
+function HexDigit(N: Integer): String;
+begin
+  Result := Copy('0123456789abcdef', N + 1, 1);
+end;
+
+function EncodePassword(const S: String): String;
+var
+  I, C: Integer;
+begin
+  Result := '';
+  for I := 1 to Length(S) do
+  begin
+    C := Ord(S[I]);
+    Result := Result + HexDigit((C shr 12) and 15) + HexDigit((C shr 8) and 15) +
+      HexDigit((C shr 4) and 15) + HexDigit(C and 15);
+  end;
+end;
+
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
+  if CurPageID = PasswordPage.ID then
+  begin
+    if Trim(PasswordPage.Values[0]) = '' then
+      MsgBox('Add meg a jelszót.', mbError, MB_OK)
+    else if Length(PasswordPage.Values[0]) < 6 then
+      MsgBox('A jelszó legalább 6 karakter legyen.', mbError, MB_OK)
+    else if Length(PasswordPage.Values[0]) > 128 then
+      MsgBox('A jelszó legfeljebb 128 karakter lehet.', mbError, MB_OK)
+    else if PasswordPage.Values[0] <> PasswordPage.Values[1] then
+      MsgBox('A két jelszó nem egyezik.', mbError, MB_OK)
+    else
+    begin
+      Result := ExistingPasswordOk;
+      Exit;
+    end;
+    Result := False;
+    Exit;
+  end;
   if CurPageID = LimitsPage.ID then
   begin
     if not MinutesValid(ShortVideoEdit) or not MinutesValid(FeedEdit) then
@@ -434,7 +502,7 @@ procedure CurStepChanged(CurStep: TSetupStep);
 var
   Code: Integer;
   DevModeValue: Cardinal;
-  Params, ExtId: String;
+  Params, ExtId, PwFile: String;
 begin
   if CurStep = ssPostInstall then
   begin
@@ -452,6 +520,13 @@ begin
     else
     begin
       Params := Params + ' -ExtensionId ' + ExtensionPage.Values[0];
+      // Csendes telepítésnél nincs jelszó-oldal: ilyenkor az első admin-megnyitáskor kell jelszót beállítani.
+      if PasswordPage.Values[0] <> '' then
+      begin
+        PwFile := ExpandConstant('{tmp}\lsl-admin.dat');
+        SaveStringToFile(PwFile, EncodePassword(PasswordPage.Values[0]), False);
+        Params := Params + ' -AdminPasswordFile "' + PwFile + '"';
+      end;
       if ModePage.Values[1] then
         Params := Params + ' -DevMode';
       if DailyRadio.Checked then
@@ -474,5 +549,22 @@ begin
     if not Exec('powershell.exe', Params, '', SW_HIDE, ewWaitUntilTerminated, Code) or (Code <> 0) then
       MsgBox('A rendszerbeállítás sikertelen (kód: ' + IntToStr(Code) + '). ' +
         'Futtasd rendszergazdaként kézzel: ' + ExpandConstant('{app}\install.ps1'), mbError, MB_OK);
+    if PwFile <> '' then DeleteFile(PwFile);
+  end;
+end;
+
+// Eltávolítás előtt az admin jelszó kell (ha van beállítva); a Limiter.Tray.exe ellenőrzi.
+function InitializeUninstall(): Boolean;
+var
+  Code: Integer;
+  Helper: String;
+begin
+  Result := True;
+  Helper := ExpandConstant('{app}\Limiter.Tray.exe');
+  if not FileExists(Helper) then Exit;
+  if not Exec(Helper, '--verify-password', '', SW_SHOWNORMAL, ewWaitUntilTerminated, Code) or (Code <> 0) then
+  begin
+    MsgBox('Az eltávolításhoz az admin jelszó szükséges. A program nem lett eltávolítva.', mbInformation, MB_OK);
+    Result := False;
   end;
 end;

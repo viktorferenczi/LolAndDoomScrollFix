@@ -22,7 +22,7 @@ function web(el, w) {
     ? 'tiltott időszak — újra: ' + when(w.availableAgainAt)
     : w.blocked
     ? 'elfogyott — újra: ' + when(w.availableAgainAt)
-    : minutes(w.remainingSeconds) + ' maradt' + (w.bonusSeconds > 0 ? ' (+' + Math.round(w.bonusSeconds / 60) + ' p jutalom)' : '');
+    : minutes(w.remainingSeconds) + ' maradt' + (w.bonusSeconds > 0 ? ' (+' + Math.round(w.bonusSeconds / 60) + ' p jutalom)' : '') + (w.extraSeconds > 0 ? ' (+' + Math.round(w.extraSeconds / 60) + ' p extra)' : '');
 }
 
 function describeSchedule(schedule) {
@@ -48,7 +48,7 @@ async function render() {
       ? 'tiltott időszak — újra: ' + when(lol.availableAgainAt)
       : lol.blocked
       ? 'elfogyott — újra: ' + when(lol.availableAgainAt)
-      : lol.remaining + ' / ' + lol.limit + ' meccs maradt' + (lol.bonus > 0 ? ' (+' + lol.bonus + ' jutalom)' : '');
+      : lol.remaining + ' / ' + lol.limit + ' meccs maradt' + (lol.bonus > 0 ? ' (+' + lol.bonus + ' jutalom)' : '') + (lol.extra > 0 ? ' (+' + lol.extra + ' extra)' : '');
     web(document.getElementById('short'), s.shortVideo);
     web(document.getElementById('feed'), s.facebookFeed);
     document.getElementById('schedule').textContent = describeSchedule(s.schedule);

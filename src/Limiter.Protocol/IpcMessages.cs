@@ -90,6 +90,8 @@ public sealed class LolLimitDto
     public bool Exempt { get; set; }
     /// <summary>Pihenőnap-jutalom (már benne van a <see cref="Limit"/>-ben).</summary>
     public int Bonus { get; set; }
+    /// <summary>Az admin által a mai napra adott extra meccs (már benne van a <see cref="Limit"/>-ben).</summary>
+    public int Extra { get; set; }
     /// <summary>Tiltott időszak van (ilyenkor <see cref="Blocked"/> is igaz).</summary>
     public bool Banned { get; set; }
 }
@@ -106,6 +108,8 @@ public sealed class WebLimitDto
     public bool Exempt { get; set; }
     /// <summary>Pihenőnap-jutalom másodpercben (már benne van a <see cref="LimitSeconds"/>-ben).</summary>
     public double BonusSeconds { get; set; }
+    /// <summary>Az admin által a mai napra adott extra másodpercben (már benne van a <see cref="LimitSeconds"/>-ben).</summary>
+    public double ExtraSeconds { get; set; }
     /// <summary>Tiltott időszak van (ilyenkor <see cref="Blocked"/> is igaz).</summary>
     public bool Banned { get; set; }
 }

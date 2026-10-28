@@ -18,7 +18,11 @@ Telepítéskor választható:
 
 **Pihenőnap-jutalom:** ha egy napon egy PvP-meccset sem játszol, másnap +1 meccs jár; ha egy napon 0 percet nézel rövid videót, másnap +30 perc; ugyanígy a Facebook-hírfolyamnál +30 perc. A három jutalom független egymástól, és nem halmozódik: több üres nap után is csak egyszer jár. A jutalmak mértéke telepítéskor állítható (0 = kikapcsolva).
 
-**Admin beállítások:** a tálcaikon menüjében és a Részletek ablakban („Frissítések keresése” alatt) az „Admin beállítások…” gomb a Windows rendszergazdai jelszavát kéri (UAC), és utána megnyit egy szerkesztőt, ahol a telepítéskor megadott beállítások (visszaállítás, keretek, hétvége, pihenőnap-jutalom, tiltott órák) módosíthatók; újratelepítés nem kell.
+**Admin jelszó:** a telepítéskor meg kell adni egy admin jelszót (legalább 6 karakter). Ez kell az admin beállítások megnyitásához és a program eltávolításához, a Windows rendszergazdai jóváhagyása (UAC) mellett. A jelszóból csak egy ellenőrző (PBKDF2-SHA256) tárolódik az adatmappában, amelyhez normál felhasználó nem fér hozzá.
+
+**Admin beállítások:** a tálcaikon menüjében és a Részletek ablakban („Frissítések keresése” alatt) az „Admin beállítások…” gomb a Windows rendszergazdai jelszavát (UAC), majd az admin jelszót kéri, és utána megnyit egy szerkesztőt, ahol a telepítéskor megadott beállítások (visszaállítás, keretek, hétvége, pihenőnap-jutalom, tiltott órák) módosíthatók; újratelepítés nem kell.
+
+**Extra keret egy napra:** az admin szerkesztőben egy kiválasztott napra extra LoL-meccs, rövid videós és Facebook-hírfolyam-idő adható (a nap alapkeretéhez és a pihenőnap-jutalomhoz adódik). A napválasztóban a múltbeli napok nem szerepelnek, a hétvégék pedig szürkék és nem választhatók, ha a hétvégi korlát ki van kapcsolva (hétvégén úgysincs korlát). A tiltott órákat az extra nem írja felül.
 
 **Frissítés:** a tálcaikon menüjében és a Részletek ablakban a „Frissítések keresése” gomb megkeresi a legújabb kiadást, letölti és ellenőrzi (SHA-256), majd elindítja a telepítőt; a telepítéshez rendszergazdai jóváhagyás kell, a beállítások és a számlálók megmaradnak.
 

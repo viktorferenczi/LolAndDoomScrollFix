@@ -69,7 +69,7 @@ public sealed record StatusView(
                 ? $"LoL PvP: tiltott időszak ({Range(s.Schedule?.LolBannedHours)}) — újra: {When(lol.AvailableAgainAt, now)}"
             : lol.Blocked
                 ? $"LoL PvP: elfogyott ({lol.Used}/{lol.Limit}) — újra: {When(lol.AvailableAgainAt, now)}"
-                : $"LoL PvP: {lol.Remaining} meccs maradt ({lol.Limit}-ból{(lol.Bonus > 0 ? $", ebből +{lol.Bonus} pihenőnap-jutalom" : "")})";
+                : $"LoL PvP: {lol.Remaining} meccs maradt ({lol.Limit}-ból{(lol.Bonus > 0 ? $", ebből +{lol.Bonus} pihenőnap-jutalom" : "")}{(lol.Extra > 0 ? $", ebből +{lol.Extra} admin által adott extra" : "")})";
 
         var next = new List<string>();
         if (!exempt)
@@ -100,6 +100,8 @@ public sealed record StatusView(
         if (w.Blocked) return $"{label}: elfogyott — újra: {When(w.AvailableAgainAt, now)}";
         var bonusMin = (int)Math.Round(w.BonusSeconds / 60);
         var bonus = bonusMin > 0 ? $", ebből +{bonusMin} perc pihenőnap-jutalom" : "";
+        var extraMin = (int)Math.Round(w.ExtraSeconds / 60);
+        if (extraMin > 0) bonus += $", ebből +{extraMin} perc admin által adott extra";
         return $"{label}: {Minutes(w.RemainingSeconds)} maradt ({limitMin} percből{bonus})";
     }
 

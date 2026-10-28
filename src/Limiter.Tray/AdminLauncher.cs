@@ -7,7 +7,8 @@ namespace Limiter.Tray;
 /// <summary>
 /// Az admin-felület indítása és védelme. A felületet a program saját magát újraindítva, rendszergazdai jogosultsággal
 /// nyitja meg (<c>--admin</c>): a Windows ilyenkor bekéri a rendszergazdai jelszót (UAC), és csak jóváhagyás után jelenik
-/// meg az ablak. A jelszót a megbízható személy ismeri; a felhasználó a limits.json-hoz amúgy sem fér hozzá.
+/// meg az ablak. Ezután az admin jelszót is be kell írni (<see cref="AdminGate"/>); a felhasználó a limits.json-hoz
+/// amúgy sem fér hozzá.
 /// </summary>
 public static class AdminLauncher
 {
@@ -60,6 +61,9 @@ public static class AdminLauncher
 
         using var mutex = new Mutex(initiallyOwned: true, @"Local\LolScrollLimiterAdmin", out var created);
         if (!created) return;
+
+        // Második kapu: az admin jelszó (a Windows rendszergazdai jóváhagyás mellett).
+        if (!AdminGate.Unlock(null)) return;
 
         Application.Run(new AdminForm(SettingsPath));
     }

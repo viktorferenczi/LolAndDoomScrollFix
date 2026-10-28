@@ -10,7 +10,8 @@ public sealed record WebLimitStatus(
     DateTimeOffset? AvailableAgainAt,
     bool Exempt = false,
     TimeSpan Bonus = default,
-    bool Banned = false);
+    bool Banned = false,
+    TimeSpan Extra = default);
 
 public sealed record LolLimitStatus(
     int Limit,
@@ -21,14 +22,16 @@ public sealed record LolLimitStatus(
     DateTimeOffset? AvailableAgainAt,
     bool Exempt = false,
     int Bonus = 0,
-    bool Banned = false);
+    bool Banned = false,
+    int Extra = 0);
 
 /// <summary>
 /// A keretek számítása. Gördülő módban nincs éjféli nullázás: minden felhasználás pontosan
 /// 24 órával később szabadul fel (a webes idő percenként, fokozatosan). Napi módban a megadott órában
 /// minden keret egyszerre nullázódik. Mentes időszakban (hétvége) semmi sem tilt és semmi sem fogy.
 /// Pihenőnap-jutalom: ha az előző korlátozott napon egy keretből semmi sem fogyott, ma ennyivel nagyobb
-/// (nem halmozódik; 0-s alapkeretnél nem jár). Tiltott órákban a keret nem fogy és nem nullázódik, csak tilt.
+/// (nem halmozódik; 0-s alapkeretnél nem jár). Az admin által egy napra adott extra keret (<see cref="DayGrant"/>) ehhez adódik, a nap
+/// kezdő dátuma szerint; mentes napon nincs hatása. Tiltott órákban a keret nem fogy és nem nullázódik, csak tilt.
 /// </summary>
 public sealed class LimitEngine
 {
@@ -102,12 +105,13 @@ public sealed class LimitEngine
         var schedule = new LimitSchedule(settings, _zone);
         var baseLimit = settings.WebLimit(category);
         var bonus = WebBonusAfter(userSid, category, settings, schedule.PreviousEnforcedDay(now));
-        var limit = baseLimit + bonus;
+        var extra = ExtraWeb(settings, schedule, category, schedule.LogicalDay(now));
+        var limit = baseLimit + bonus + extra;
         var buckets = _store.GetWebBuckets(userSid, category, schedule.WindowStart(now));
         var used = TimeSpan.FromMilliseconds(buckets.Sum(b => b.Milliseconds));
 
         if (schedule.IsExempt(now))
-            return new WebLimitStatus(category, limit, used, limit, false, null, null, Exempt: true, Bonus: bonus);
+            return new WebLimitStatus(category, limit, used, limit, false, null, null, Exempt: true, Bonus: bonus, Extra: extra);
 
         var remaining = used >= limit ? TimeSpan.Zero : limit - used;
         var blocked = used >= limit;
@@ -126,7 +130,8 @@ public sealed class LimitEngine
             {
                 // Holnaptól a keret változhat: a mai jutalom megszűnik, illetve ha ma semmi sem fogyott, holnap jár.
                 var today = schedule.Today(now);
-                var tomorrowLimit = baseLimit + WebBonusAfter(userSid, category, settings, today);
+                var tomorrowLimit = baseLimit + WebBonusAfter(userSid, category, settings, today)
+                                    + ExtraWeb(settings, schedule, category, schedule.LogicalDay(now).AddDays(1));
                 availableAgain = FirstMomentBelowLimit(now, today.End,
                     buckets.Select(b => (b.ReleasedAt, (double)b.Milliseconds)).ToList(),
                     limit.TotalMilliseconds, tomorrowLimit.TotalMilliseconds);
@@ -135,7 +140,7 @@ public sealed class LimitEngine
 
         var banned = ApplyBan(schedule.Ban(settings.WebBannedHours(category), now), ref blocked, ref availableAgain);
         if (blocked) availableAgain = EarlierOfExempt(schedule, now, availableAgain);
-        return new WebLimitStatus(category, limit, used, remaining, blocked, next, availableAgain, Bonus: bonus, Banned: banned);
+        return new WebLimitStatus(category, limit, used, remaining, blocked, next, availableAgain, Bonus: bonus, Banned: banned, Extra: extra);
     }
 
     public LolLimitStatus GetLolStatus(string userSid)
@@ -145,7 +150,8 @@ public sealed class LimitEngine
         var schedule = new LimitSchedule(settings, _zone);
         var baseLimit = settings.LolPvpMatches;
         var bonus = LolBonusAfter(userSid, settings, schedule.PreviousEnforcedDay(now));
-        var limit = baseLimit + bonus;
+        var extra = ExtraLol(settings, schedule, schedule.LogicalDay(now));
+        var limit = baseLimit + bonus + extra;
         // Gördülő módban a pontosan 24 órája indult meccs már felszabadult; napi módban a nullázáskor indult már számít.
         var windowStart = schedule.WindowStart(now);
         var since = schedule.Mode == ResetMode.Daily ? windowStart - TimeSpan.FromMilliseconds(1) : windowStart;
@@ -155,7 +161,7 @@ public sealed class LimitEngine
         var used = counted.Count;
 
         if (schedule.IsExempt(now))
-            return new LolLimitStatus(limit, used, limit, false, null, null, Exempt: true, Bonus: bonus);
+            return new LolLimitStatus(limit, used, limit, false, null, null, Exempt: true, Bonus: bonus, Extra: extra);
 
         var blocked = used >= limit;
         DateTimeOffset? next, availableAgain = null;
@@ -172,7 +178,8 @@ public sealed class LimitEngine
             if (blocked)
             {
                 var today = schedule.Today(now);
-                var tomorrowLimit = baseLimit + LolBonusAfter(userSid, settings, today);
+                var tomorrowLimit = baseLimit + LolBonusAfter(userSid, settings, today)
+                                    + ExtraLol(settings, schedule, schedule.LogicalDay(now).AddDays(1));
                 availableAgain = FirstMomentBelowLimit(now, today.End,
                     counted.Select(m => (m.StartedAt + Window, 1.0)).ToList(),
                     limit, tomorrowLimit);
@@ -181,8 +188,15 @@ public sealed class LimitEngine
 
         var banned = ApplyBan(schedule.Ban(settings.LolBannedHours, now), ref blocked, ref availableAgain);
         if (blocked) availableAgain = EarlierOfExempt(schedule, now, availableAgain);
-        return new LolLimitStatus(limit, used, Math.Max(0, limit - used), blocked, next, availableAgain, Bonus: bonus, Banned: banned);
+        return new LolLimitStatus(limit, used, Math.Max(0, limit - used), blocked, next, availableAgain, Bonus: bonus, Banned: banned, Extra: extra);
     }
+
+    /// <summary>Az admin által a napra adott extra (mentes napon nincs hatása).</summary>
+    private static TimeSpan ExtraWeb(LimitSettings settings, LimitSchedule schedule, WebCategory category, DateOnly day) =>
+        schedule.IsExemptDay(day) ? TimeSpan.Zero : settings.ExtraWebTime(category, day);
+
+    private static int ExtraLol(LimitSettings settings, LimitSchedule schedule, DateOnly day) =>
+        schedule.IsExemptDay(day) ? 0 : settings.ExtraMatches(day);
 
     /// <summary>Jár-e jutalom a <paramref name="day"/> utáni napra (semmi sem fogyott azon a napon).</summary>
     private TimeSpan WebBonusAfter(string sid, WebCategory category, LimitSettings settings, (DateTimeOffset Start, DateTimeOffset End)? day)

@@ -10,7 +10,7 @@ public static class SettingsFile
     /// Érték-ellenőrzés mentés előtt: a hibákat magyarul adja vissza (üres lista = rendben).
     /// A szolgáltatás betöltéskor szintén határok közé szorít, de a felület ne némán módosítson.
     /// </summary>
-    public static IReadOnlyList<string> Validate(LimitSettings s)
+    public static IReadOnlyList<string> Validate(LimitSettings s, TimeZoneInfo? zone = null)
     {
         var errors = new List<string>();
         if (!Enum.IsDefined(s.ResetMode)) errors.Add("Ismeretlen visszaállítási mód.");
@@ -24,7 +24,29 @@ public static class SettingsFile
         CheckBan("LoL", s.LolBannedHours);
         CheckBan("Rövid videók", s.ShortVideoBannedHours);
         CheckBan("Facebook-hírfolyam", s.FacebookFeedBannedHours);
+        CheckGrants();
         return errors;
+
+        void CheckGrants()
+        {
+            var seen = new HashSet<DateOnly>();
+            var schedule = new LimitSchedule(s, zone ?? TimeZoneInfo.Local);
+            foreach (var g in s.ExtraGrants ?? [])
+            {
+                var day = g.Date.ToString("yyyy-MM-dd");
+                if (g.Date == default) errors.Add("Az extra keretnél hiányzik a nap.");
+                else if (!seen.Add(g.Date)) errors.Add($"Extra keret: {day} napra több bejegyzés van.");
+                if (g.IsEmpty) errors.Add($"Extra keret ({day}): adj meg legalább egy értéket.");
+                if (g.LolMatches is < 0 or > DayGrant.MaxMatches)
+                    errors.Add($"Extra keret ({day}): a LoL-meccsek száma 0 és {DayGrant.MaxMatches} között lehet.");
+                if (g.ShortVideoMinutes is < 0 or > DayGrant.MaxMinutes || g.FacebookFeedMinutes is < 0 or > DayGrant.MaxMinutes)
+                    errors.Add($"Extra keret ({day}): a perc 0 és {DayGrant.MaxMinutes} között lehet.");
+                if (g.Date != default && schedule.IsExemptDay(g.Date))
+                    errors.Add($"Extra keret ({day}): hétvégén nincs korlát, ezért nem adható rá extra. Töröld a bejegyzést, vagy kapcsold be a hétvégi korlátot.");
+            }
+            if ((s.ExtraGrants?.Count ?? 0) > LimitSettings.MaxGrants)
+                errors.Add($"Legfeljebb {LimitSettings.MaxGrants} extra keret adható meg.");
+        }
 
         void CheckMinutes(string what, int minutes)
         {

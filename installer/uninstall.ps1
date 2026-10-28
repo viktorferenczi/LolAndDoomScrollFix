@@ -38,6 +38,8 @@ foreach ($p in 'IncognitoModeAvailability', 'BrowserGuestModeEnabled', 'Extensio
     Remove-ItemProperty -Path $ChromePolicy -Name $p -ErrorAction SilentlyContinue
 }
 Remove-Item -Path $Marker -Recurse -ErrorAction SilentlyContinue
+# Az eltávolító már ellenőrizte az admin jelszót; újratelepítéskor újat kell megadni.
+Remove-Item -LiteralPath (Join-Path $env:ProgramData 'LolScrollLimiter\admin.json') -Force -ErrorAction SilentlyContinue
 
 if ($RemoveData) {
     Write-Host '==> Adatmappa törlése'

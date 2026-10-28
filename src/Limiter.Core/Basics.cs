@@ -73,6 +73,31 @@ public sealed record BannedHours
         Enabled && (From < To ? localHour >= From && localHour < To : localHour >= From || localHour < To);
 }
 
+/// <summary>
+/// Az adminisztrátor által egy kiválasztott napra adott extra keret (a nap „kezdő dátuma” szerint: napi módban a
+/// visszaállítás órájától a következőig, gördülő módban éjféltől éjfélig). Az alapkerethez és a pihenőnap-jutalomhoz adódik.
+/// </summary>
+public sealed record DayGrant
+{
+    public const int MaxMatches = 100;
+    public const int MaxMinutes = 24 * 60;
+
+    public DateOnly Date { get; init; }
+    public int LolMatches { get; init; }
+    public int ShortVideoMinutes { get; init; }
+    public int FacebookFeedMinutes { get; init; }
+
+    /// <summary>Nincs benne semmi (az ilyen bejegyzés nem tárolódik).</summary>
+    public bool IsEmpty => LolMatches <= 0 && ShortVideoMinutes <= 0 && FacebookFeedMinutes <= 0;
+
+    public DayGrant Sanitized() => this with
+    {
+        LolMatches = Math.Clamp(LolMatches, 0, MaxMatches),
+        ShortVideoMinutes = Math.Clamp(ShortVideoMinutes, 0, MaxMinutes),
+        FacebookFeedMinutes = Math.Clamp(FacebookFeedMinutes, 0, MaxMinutes),
+    };
+}
+
 /// <summary>Az adminisztrátor által módosítható korlátok (limits.json; a telepítő tölti ki).</summary>
 public sealed record LimitSettings
 {
@@ -98,6 +123,77 @@ public sealed record LimitSettings
     public BannedHours LolBannedHours { get; init; } = BannedHours.Disabled;
     public BannedHours ShortVideoBannedHours { get; init; } = BannedHours.Disabled;
     public BannedHours FacebookFeedBannedHours { get; init; } = BannedHours.Disabled;
+
+    /// <summary>Egy-egy napra adott extra keretek (naponta legfeljebb egy bejegyzés, dátum szerint rendezve).</summary>
+    public IReadOnlyList<DayGrant> ExtraGrants { get; init; } = [];
+
+    public const int MaxGrants = 400;
+
+    // A rekord alapértelmezett egyenlősége a listát hivatkozás szerint hasonlítaná össze, ezért kézzel írjuk.
+    // Új mező felvételekor ide is fel kell venni (a LimitSettingsEqualityTests ellenőrzi).
+    public bool Equals(LimitSettings? other) =>
+        other is not null &&
+        ResetMode == other.ResetMode &&
+        DailyResetHour == other.DailyResetHour &&
+        LolPvpMatches == other.LolPvpMatches &&
+        ShortVideoMinutes == other.ShortVideoMinutes &&
+        FacebookFeedMinutes == other.FacebookFeedMinutes &&
+        EnforceOnWeekends == other.EnforceOnWeekends &&
+        LolRestDayBonusMatches == other.LolRestDayBonusMatches &&
+        ShortVideoRestDayBonusMinutes == other.ShortVideoRestDayBonusMinutes &&
+        FacebookFeedRestDayBonusMinutes == other.FacebookFeedRestDayBonusMinutes &&
+        Equals(LolBannedHours, other.LolBannedHours) &&
+        Equals(ShortVideoBannedHours, other.ShortVideoBannedHours) &&
+        Equals(FacebookFeedBannedHours, other.FacebookFeedBannedHours) &&
+        (ExtraGrants ?? []).SequenceEqual(other.ExtraGrants ?? []);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(ResetMode);
+        hash.Add(DailyResetHour);
+        hash.Add(LolPvpMatches);
+        hash.Add(ShortVideoMinutes);
+        hash.Add(FacebookFeedMinutes);
+        hash.Add(EnforceOnWeekends);
+        hash.Add(LolRestDayBonusMatches);
+        hash.Add(ShortVideoRestDayBonusMinutes);
+        hash.Add(FacebookFeedRestDayBonusMinutes);
+        hash.Add(LolBannedHours);
+        hash.Add(ShortVideoBannedHours);
+        hash.Add(FacebookFeedBannedHours);
+        foreach (var g in ExtraGrants ?? []) hash.Add(g);
+        return hash.ToHashCode();
+    }
+
+    public DayGrant? GrantFor(DateOnly day) => ExtraGrants?.FirstOrDefault(g => g.Date == day);
+
+    public int ExtraMatches(DateOnly day) => GrantFor(day)?.LolMatches ?? 0;
+
+    public TimeSpan ExtraWebTime(WebCategory category, DateOnly day) => TimeSpan.FromMinutes(category switch
+    {
+        WebCategory.ShortVideo => GrantFor(day)?.ShortVideoMinutes ?? 0,
+        WebCategory.FacebookFeed => GrantFor(day)?.FacebookFeedMinutes ?? 0,
+        _ => throw new ArgumentOutOfRangeException(nameof(category)),
+    });
+
+    /// <summary>Beállítja (vagy felülírja) a nap extra keretét; üres bejegyzés törli.</summary>
+    public LimitSettings WithGrant(DayGrant grant) => this with
+    {
+        ExtraGrants = (ExtraGrants ?? []).Where(g => g.Date != grant.Date)
+            .Concat(grant.IsEmpty ? [] : [grant]).OrderBy(g => g.Date).ToList(),
+    };
+
+    public LimitSettings WithoutGrant(DateOnly day) => this with
+    {
+        ExtraGrants = (ExtraGrants ?? []).Where(g => g.Date != day).ToList(),
+    };
+
+    /// <summary>Törli a megadott napnál korábbi extrákat (már lejárt, nincs hatásuk).</summary>
+    public LimitSettings WithoutGrantsBefore(DateOnly day) => this with
+    {
+        ExtraGrants = (ExtraGrants ?? []).Where(g => g.Date >= day).ToList(),
+    };
 
     public BannedHours WebBannedHours(WebCategory category) => category switch
     {
@@ -155,5 +251,14 @@ public sealed record LimitSettings
         LolBannedHours = (LolBannedHours ?? BannedHours.Disabled).Sanitized(),
         ShortVideoBannedHours = (ShortVideoBannedHours ?? BannedHours.Disabled).Sanitized(),
         FacebookFeedBannedHours = (FacebookFeedBannedHours ?? BannedHours.Disabled).Sanitized(),
+        ExtraGrants = (ExtraGrants ?? [])
+            .Where(g => g is not null && g.Date != default)
+            .Select(g => g.Sanitized())
+            .Where(g => !g.IsEmpty)
+            .GroupBy(g => g.Date)
+            .Select(group => group.Last())
+            .OrderBy(g => g.Date)
+            .Take(MaxGrants)
+            .ToList(),
     };
 }
