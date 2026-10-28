@@ -610,7 +610,7 @@ procedure CurStepChanged(CurStep: TSetupStep);
 var
   Code: Integer;
   DevModeValue: Cardinal;
-  Params, ExtId, PwFile: String;
+  Params, ExtId, PwFile, Msg: String;
 begin
   if CurStep = ssPostInstall then
   begin
@@ -657,8 +657,11 @@ begin
     Log('install.ps1 parameters: ' + Params);
     WizardForm.StatusLabel.Caption := CustomMessage('StatusConfiguring');
     if not Exec('powershell.exe', Params, '', SW_HIDE, ewWaitUntilTerminated, Code) or (Code <> 0) then
-      SuppressibleMsgBox(FmtMessage(CustomMessage('ErrSetupFailed'),
-        [IntToStr(Code), ExpandConstant('{app}\install.ps1')]), mbError, MB_OK, IDOK);
+    begin
+      // (A line must not start with "[": the Inno preprocessor would take it for a section tag.)
+      Msg := FmtMessage(CustomMessage('ErrSetupFailed'), [IntToStr(Code), ExpandConstant('{app}\install.ps1')]);
+      SuppressibleMsgBox(Msg, mbError, MB_OK, IDOK);
+    end;
     if PwFile <> '' then DeleteFile(PwFile);
   end;
 end;
