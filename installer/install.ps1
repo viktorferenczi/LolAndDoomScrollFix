@@ -12,8 +12,9 @@
   - A tálcaalkalmazás automatikus indítása minden felhasználónak.
 
 .PARAMETER ExtensionId
-  A bővítmény azonosítója. Fejlesztői (kicsomagolt) verziónál a manifest "key" mezőjéből adódó azonosító;
-  áruházi kiadásnál a Chrome Web Store által adott azonosító.
+  A bővítmény azonosítója. Alapértelmezés: a Chrome Web Store-ban közzétett bővítmény azonosítója
+  (mkoeoadekdfnbjpmhiabpjlmhdoimcml); -DevMode esetén a fejlesztői (kicsomagolt) verzió azonosítója
+  (a manifest "key" mezőjéből adódik).
 
 .PARAMETER ResetMode
   'rolling' (alapértelmezett): gördülő 24 óra — minden felhasználás 24 órával később szabadul fel.
@@ -64,7 +65,7 @@
 [CmdletBinding()]
 param(
     [string]$InstallDir = $PSScriptRoot,
-    [string]$ExtensionId = 'iidlgdeiobckahalgoabbobfdlefkagi',
+    [string]$ExtensionId,
     [string]$UpdateUrl = 'https://clients2.google.com/service/update2/crx',
     [ValidateSet('rolling', 'daily')][string]$ResetMode = 'rolling',
     [ValidateRange(0, 23)][int]$DailyResetHour = 3,
@@ -93,6 +94,9 @@ $ChromePolicy = 'HKLM:\SOFTWARE\Policies\Google\Chrome'
 $ForceList = Join-Path $ChromePolicy 'ExtensionInstallForcelist'
 $Marker = 'HKLM:\SOFTWARE\LolScrollLimiter'
 
+if (-not $ExtensionId) {
+    $ExtensionId = if ($DevMode) { 'iidlgdeiobckahalgoabbobfdlefkagi' } else { 'mkoeoadekdfnbjpmhiabpjlmhdoimcml' }
+}
 if ($ExtensionId -notmatch '^[a-p]{32}$') { throw "Érvénytelen bővítményazonosító: '$ExtensionId'" }
 $InstallDir = (Resolve-Path $InstallDir).Path.TrimEnd('\')
 $ServiceExe = Join-Path $InstallDir 'Limiter.Service.exe'

@@ -2,8 +2,9 @@
 ; Fordítás: installer\build.ps1 (előtte a programfájlok az out\app mappába kerülnek).
 
 #define AppName "LoL- és görgetéskorlátozó"
-#define AppVersion "1.5.1"
+#define AppVersion "1.5.2"
 #define DevExtensionId "iidlgdeiobckahalgoabbobfdlefkagi"
+#define StoreExtensionId "mkoeoadekdfnbjpmhiabpjlmhdoimcml"
 
 [Setup]
 AppId={{6E0C3D52-8B7A-4F1E-9C55-2A4B7D1E9F30}
@@ -326,9 +327,9 @@ begin
 
   ExtensionPage := CreateInputQueryPage(ModePage.ID,
     'Chrome-bővítmény', 'A bővítmény azonosítója',
-    'Éles módban a Chrome Web Store által adott 32 betűs azonosító. Fejlesztői módban hagyd az alapértelmezettet.');
+    'Alapértelmezés: a Chrome Web Store-ban közzétett bővítmény azonosítója (éles mód) vagy a fejlesztői azonosító (fejlesztői mód). Csak akkor módosítsd, ha tudod, mit csinálsz.');
   ExtensionPage.Add('Bővítményazonosító:', False);
-  ExtensionPage.Values[0] := '{#DevExtensionId}';
+  ExtensionPage.Values[0] := '{#StoreExtensionId}';
 
   CreateLimitsPage(ExtensionPage.ID);
   CreateBonusPage(LimitsPage.ID);
@@ -347,6 +348,24 @@ begin
         Result := False;
         Exit;
       end;
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+var
+  Current: String;
+begin
+  // Az alapértelmezett azonosítót a választott módhoz igazítjuk; a kézzel beírt értéket nem bántjuk.
+  if CurPageID = ExtensionPage.ID then
+  begin
+    Current := Lowercase(Trim(ExtensionPage.Values[0]));
+    if (Current = '{#DevExtensionId}') or (Current = '{#StoreExtensionId}') then
+    begin
+      if ModePage.Values[1] then
+        ExtensionPage.Values[0] := '{#DevExtensionId}'
+      else
+        ExtensionPage.Values[0] := '{#StoreExtensionId}';
+    end;
+  end;
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;

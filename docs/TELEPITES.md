@@ -19,7 +19,7 @@ Kimenet az `out\` mappában:
 
 | Fájl | Mire való |
 |---|---|
-| `LolScrollLimiter-Setup-1.5.1.exe` | Windows-telepítő |
+| `LolScrollLimiter-Setup-1.5.2.exe` | Windows-telepítő |
 | `extension-store.zip` | Feltöltés a Chrome Web Store-ba |
 | `extension-dev.zip` | Fejlesztői tesztverzió (kicsomagolt betöltés, fix azonosító: `iidlgdeiobckahalgoabbobfdlefkagi`) |
 | `app\` | A telepítendő programfájlok |
@@ -42,9 +42,9 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
 
 ## 4. Telepítés (éles)
 
-1. Futtasd a `LolScrollLimiter-Setup-1.5.1.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
+1. Futtasd a `LolScrollLimiter-Setup-1.5.2.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
 2. Telepítési mód: **Éles**.
-3. Bővítményazonosító: az áruházi azonosító (3. pont): `mkoeoadekdfnbjpmhiabpjlmhdoimcml`.
+3. Bővítményazonosító: az alapértelmezett érték a közzétett áruházi azonosító (`mkoeoadekdfnbjpmhiabpjlmhdoimcml`); hagyd így. Fejlesztői módban a fejlesztői azonosító kerül a mezőbe.
 4. **Korlátok** oldal:
 
    | Beállítás | Lehetőségek | Alapértelmezés |
@@ -217,10 +217,10 @@ A frissítés keresése nem érinti a korlátozások működését; ha a keresé
 **Kiadás készítése (fejlesztő):** emeld a verziót a `Directory.Build.props`, az `extension/manifest.json` és az `installer/LolScrollLimiter.iss` fájlban, commit és push, majd:
 
 ```bash
-git tag v1.5.1 && git push origin v1.5.1
+git tag v1.5.2 && git push origin v1.5.2
 ```
 
-A `.github/workflows/release.yml` Windows alatt lefordítja a telepítőt, elkészíti a `SHA256SUMS.txt`-t, és közzéteszi a kiadást (`LolScrollLimiter-Setup-1.5.1.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
+A `.github/workflows/release.yml` Windows alatt lefordítja a telepítőt, elkészíti a `SHA256SUMS.txt`-t, és közzéteszi a kiadást (`LolScrollLimiter-Setup-1.5.2.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
 A fájlnév és a címke formátuma kötött (`LolScrollLimiter-Setup-X.Y.Z.exe` / `vX.Y.Z`), különben a gomb nem találja a telepítőt.
 
 A Chrome-bővítmény éles módban a Chrome Web Store-ból magától frissül; a fejlesztői tesztverziónál a frissítés után a `chrome://extensions` oldalon újra be kell tölteni a kicsomagolt bővítményt.

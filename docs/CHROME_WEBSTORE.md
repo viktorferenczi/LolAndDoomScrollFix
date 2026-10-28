@@ -91,7 +91,7 @@ Forráskód: https://github.com/viktorferenczi/LolAndDoomScrollFix
 
 **A közzétett elem:** [https://chromewebstore.google.com/detail/lol-%C3%A9s-g%C3%B6rget%C3%A9skorl%C3%A1toz%C3%B3/mkoeoadekdfnbjpmhiabpjlmhdoimcml](https://chromewebstore.google.com/detail/lol-%C3%A9s-g%C3%B6rget%C3%A9skorl%C3%A1toz%C3%B3/mkoeoadekdfnbjpmhiabpjlmhdoimcml) — azonosítója: `mkoeoadekdfnbjpmhiabpjlmhdoimcml`.
 
-1. A közzétett elem **azonosítóját** (32 betű, a–p) add meg a telepítőnek: éles módban a „Chrome-bővítmény” oldalon (vagy `install.ps1 -ExtensionId …`).
+1. A közzétett elem azonosítója (`mkoeoadekdfnbjpmhiabpjlmhdoimcml`) a telepítő alapértelmezése éles módban; csak akkor kell átírni, ha új elemet tesznek közzé (a telepítő „Chrome-bővítmény” oldalán vagy `install.ps1 -ExtensionId …`).
    Ez eltér a fejlesztői azonosítótól (`iidlgdeiobckahalgoabbobfdlefkagi`).
 2. A telepítő beállítja a kötelező telepítést és a Native Messaging host engedélyezett eredetét ehhez az azonosítóhoz. Ellenőrzés: `chrome://policy`, `chrome://extensions` („A rendszergazda telepítette”) és a [telepítési útmutató](TELEPITES.md) 4. pontja.
 3. Meglévő fejlesztői teszttelepítésen: futtasd újra a telepítőt „Éles” módban az áruházi azonosítóval, és töröld a kicsomagolt példányt.
