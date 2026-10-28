@@ -8,8 +8,8 @@ using Limiter.Protocol;
 namespace Limiter.Service;
 
 /// <summary>
-/// Named pipe szerver a bővítmény (native host) és a tálcaalkalmazás felé.
-/// A hívó Windows-felhasználóját az operációs rendszer azonosítja (impersonation), nem a kliens állítása.
+/// Named pipe server for the extension (native host) and the tray application.
+/// The caller's Windows user is identified by the operating system (impersonation), not by the client's claim.
 /// </summary>
 public sealed class PipeServerService(RequestHandler handler, ILogger<PipeServerService> log) : BackgroundService
 {
@@ -28,8 +28,8 @@ public sealed class PipeServerService(RequestHandler handler, ILogger<PipeServer
             }
             catch (UnauthorizedAccessException ex)
             {
-                // Más folyamat már létrehozta ezt a pipe-nevet (pl. megpróbálták „elfoglalni”).
-                // A kliensek ilyenkor a szerver-ellenőrzés miatt hibát jeleznek; mi újrapróbáljuk.
+                // Another process already created this pipe name (e.g. someone tried to "take" it).
+                // The clients then report an error because of the server check; we retry.
                 log.LogCritical(ex, "The pipe cannot be created — another process holds the name.");
                 await Task.Delay(TimeSpan.FromSeconds(5), ct).ConfigureAwait(false);
                 continue;
@@ -92,7 +92,7 @@ public sealed class PipeServerService(RequestHandler handler, ILogger<PipeServer
                 var line = await reader.ReadLineAsync(ct).ConfigureAwait(false);
                 if (line is null) break;
 
-                // Az impersonation csak azután működik, hogy a kliens már írt a pipe-ba.
+                // Impersonation only works after the client has already written to the pipe.
                 sid ??= IdentifyClient(pipe);
 
                 IpcResponse response;

@@ -62,8 +62,8 @@ public sealed class StatusBuilder(LimitEngine engine, ProtectionState protection
 }
 
 /// <summary>
-/// A kérések feldolgozása. Szándékosan nincs olyan parancs, amely számlálót csökkentene vagy nullázna:
-/// a kliensek (bővítmény, tálcaalkalmazás) csak lekérdezni és használatot jelenteni tudnak.
+/// Processing the requests. There is intentionally no command that would decrease or reset a counter:
+/// the clients (extension, tray application) can only query and report usage.
 /// </summary>
 public sealed class RequestHandler(LimitEngine engine, StatusBuilder status, ProtectionState protection)
 {

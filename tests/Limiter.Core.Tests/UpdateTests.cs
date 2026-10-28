@@ -10,7 +10,7 @@ public class UpdateTests
     private const string Repo = UpdateRules.DefaultRepository;
     private static readonly Version Current = new(1, 3, 2);
 
-    // ---------- verziók ----------
+    // ---------- versions ----------
 
     [Theory]
     [InlineData("v1.3.2", "1.3.2")]
@@ -48,7 +48,7 @@ public class UpdateTests
     public void Only_strictly_newer_versions_are_offered(string current, string candidate, bool expected) =>
         Assert.Equal(expected, UpdateRules.IsNewer(Version.Parse(current), Version.Parse(candidate)));
 
-    // ---------- címek és ellenőrzőösszeg ----------
+    // ---------- addresses and checksum ----------
 
     [Theory]
     [InlineData("https://github.com/viktorferenczi/LolAndDoomScrollFix/releases/download/v1.4.0/LolScrollLimiter-Setup-1.4.0.exe", true)]
@@ -94,7 +94,7 @@ public class UpdateTests
         Assert.Null(UpdateRules.ParseDigest(null));
     }
 
-    // ---------- kiadás kiértékelése ----------
+    // ---------- evaluating a release ----------
 
     private static string InstallerUrl(string v) => $"https://github.com/{Repo}/releases/download/v{v}/LolScrollLimiter-Setup-{v}.exe";
     private static string SumsUrl(string v) => $"https://github.com/{Repo}/releases/download/v{v}/SHA256SUMS.txt";
@@ -195,7 +195,7 @@ public class UpdateTests
         Assert.Equal(UpdateStatus.Failed, result.Status);
     }
 
-    // ---------- teljes lekérdezés ----------
+    // ---------- the whole query ----------
 
     [Fact]
     public async Task Check_reports_private_or_missing_repository_clearly()
@@ -224,7 +224,7 @@ public class UpdateTests
         Assert.Equal([$"https://api.github.com/repos/{Repo}/releases/latest"], handler.Requests);
     }
 
-    // ---------- letöltés ----------
+    // ---------- download ----------
 
     private static ReleaseInfo Release(byte[] data, string? sha = null, long? size = null) => new(
         new Version(1, 4, 0), "v1.4.0", "", "", "LolScrollLimiter-Setup-1.4.0.exe", InstallerUrl("1.4.0"),
@@ -288,7 +288,7 @@ public class UpdateTests
         await Assert.ThrowsAsync<InvalidDataException>(() => client.DownloadAsync(Release(data) with { InstallerName = "..\\..\\evil.exe" }, dir));
         Assert.Empty(handler.Requests);
 
-        // Átirányítás idegen hosztra: a válasz végső címe nem GitHub.
+        // Redirect to a foreign host: the response's final address is not GitHub.
         var evil = new HttpClient(new RedirectingHandler(data));
         await Assert.ThrowsAsync<InvalidDataException>(() => new UpdateClient(evil).DownloadAsync(Release(data), dir));
         Assert.False(Directory.Exists(dir) && Directory.GetFiles(dir).Length > 0);

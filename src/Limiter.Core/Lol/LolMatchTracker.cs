@@ -9,7 +9,7 @@ public enum MatchRecordOutcome
     Spectator,
     Unknown,
 
-    /// <summary>Korlátmentes időszakban (hétvégén) indult: rögzítve, de nem számít a keretbe.</summary>
+    /// <summary>Started in an exempt period (weekend): recorded but does not count toward the limit.</summary>
     Exempt,
 }
 
@@ -20,12 +20,12 @@ public enum MatchmakingAction
     DeclineReadyCheck,
 }
 
-/// <param name="Banned">A tiltást a tiltott időszak okozza (nem az elfogyott keret).</param>
+/// <param name="Banned">The block is caused by the banned period (not by a used-up limit).</param>
 public sealed record MatchmakingDecision(MatchmakingAction Action, GameKind Kind, bool Banned = false);
 
 /// <summary>
-/// A LoL-meccsek számlálása és a keresés tiltásának döntése. Állapotot csak a tárban tart,
-/// így újraindítás után is helyesen működik.
+/// Counting LoL matches and deciding whether to block searching. It keeps state only in the store,
+/// so it also works correctly after a restart.
 /// </summary>
 public sealed class LolMatchTracker
 {
@@ -33,7 +33,7 @@ public sealed class LolMatchTracker
     public static readonly IReadOnlySet<string> PreGamePhases = new HashSet<string> { "Matchmaking", "ReadyCheck", "ChampSelect" };
     public static readonly IReadOnlySet<string> PostGamePhases = new HashSet<string> { "PreEndOfGame", "WaitingForStats", "EndOfGame" };
 
-    /// <summary>Ha a kliens nem mondja meg, résztvevő-e a játékos, ennyi időn belüli hősválasztás igazolja.</summary>
+    /// <summary>If the client does not say whether the player is a participant, a champion select within this time confirms it.</summary>
     private static readonly TimeSpan PreGameEvidenceWindow = TimeSpan.FromHours(2);
 
     private readonly UsageStore _store;
@@ -55,8 +55,8 @@ public sealed class LolMatchTracker
     }
 
     /// <summary>
-    /// Futó meccs észlelése. Ugyanaz a meccsazonosító (újracsatlakozás, ismételt esemény) nem számít új alkalomnak.
-    /// Néző mód, TFT, botmeccs, gyakorlás és egyéni játék nem kerül rögzítésre.
+    /// Detecting a running match. The same match ID (reconnect, repeated event) is not a new attempt.
+    /// Spectating, TFT, bot games, practice and custom games are not recorded.
     /// </summary>
     public MatchRecordOutcome OnGameflow(string userSid, GameflowSnapshot snapshot)
     {
@@ -77,7 +77,7 @@ public sealed class LolMatchTracker
         if (snapshot.LocalPlayerIsParticipant == false) return MatchRecordOutcome.Spectator;
         if (snapshot.LocalPlayerIsParticipant is null && !HasRecentPreGame(userSid)) return MatchRecordOutcome.Unknown;
 
-        // Hétvégén indult meccs mentesként kerül be, így ha átnyúlik hétfőre, akkor sem számít.
+        // A match started on a weekend is recorded as exempt, so it does not count even if it runs into Monday.
         var exempt = _engine.IsExemptNow;
         var inserted = _store.TryRecordMatch(userSid, snapshot.GameId, _clock.UtcNow, snapshot.Queue.QueueId,
             exempt ? RemakeStatus.Exempt : RemakeStatus.Unchecked);
@@ -86,8 +86,8 @@ public sealed class LolMatchTracker
     }
 
     /// <summary>
-    /// Keresés / meccselfogadás közben: elfogyott keretnél PvP-sorban megszakítás vagy elutasítás.
-    /// Ismeretlen sor esetén enged (a hívó jelzi a hibát).
+    /// While searching / at a match accept: with a used-up limit, cancelling or declining in a PvP queue.
+    /// For an unknown queue it lets everything through (the caller reports the problem).
     /// </summary>
     public MatchmakingDecision DecideMatchmaking(string userSid, string phase, QueueInfo queue)
     {
@@ -102,9 +102,9 @@ public sealed class LolMatchTracker
     }
 
     /// <summary>
-    /// A döntés közvetlenül a végrehajtás előtt is érvényes-e: a keresés megszakítása csak keresés közben,
-    /// az elfogadás elutasítása csak meccselfogadás közben küldhető. Ha közben a fázis változott
-    /// (pl. hősválasztás, meccs), a hívás elmarad — a játék közben soha nem nyúlunk a klienshez.
+    /// Whether the decision is still valid right before it is executed: cancelling the search can only be sent while searching,
+    /// declining the accept only at a match accept. If the phase changed in the meantime
+    /// (e.g. champion select, match), the call is skipped — we never touch the client during a game.
     /// </summary>
     public static bool ActionStillApplies(MatchmakingAction action, string currentPhase) => action switch
     {
@@ -113,11 +113,11 @@ public sealed class LolMatchTracker
         _ => false,
     };
 
-    /// <summary>Remake-ellenőrzés eredményének rögzítése. Csak igazolt remake adja vissza az alkalmat.</summary>
+    /// <summary>Recording the result of a remake check. Only a confirmed remake gives the attempt back.</summary>
     public void OnRemakeResult(string userSid, long gameId, bool remade) =>
         _store.SetRemakeStatus(userSid, gameId, remade ? RemakeStatus.Remake : RemakeStatus.NotRemake);
 
-    /// <summary>Azok a meccsek, amelyeknek remake-állapota még nincs eldöntve.</summary>
+    /// <summary>The matches whose remake state is not decided yet.</summary>
     public IReadOnlyList<LolMatch> PendingRemakeChecks(string userSid) =>
         _store.GetMatchesSince(userSid, _clock.UtcNow - LimitEngine.Window)
             .Where(m => m.RemakeStatus == RemakeStatus.Unchecked)

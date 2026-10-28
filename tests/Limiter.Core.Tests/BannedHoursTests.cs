@@ -2,7 +2,7 @@ using Limiter.Core.Lol;
 
 namespace Limiter.Core.Tests;
 
-/// <summary>Tiltott órák. Naptár: 2026. október 1. csütörtök, 3. szombat; UTC időzóna.</summary>
+/// <summary>Banned hours. Calendar: Thursday 1 October 2026, Saturday the 3rd; UTC time zone.</summary>
 public class BannedHoursTests
 {
     private const string A = TestEnv.UserA;
@@ -47,7 +47,7 @@ public class BannedHoursTests
         var status = env.Engine.GetLolStatus(A);
         Assert.True(status.Blocked);
         Assert.True(status.Banned);
-        Assert.Equal(3, status.Remaining); // a keret nem fogy
+        Assert.Equal(3, status.Remaining); // the limit is not used up
         Assert.Equal(At(1, 5), status.AvailableAgainAt);
 
         var decision = env.Tracker.DecideMatchmaking(A, "Matchmaking", TestEnv.RankedSolo);
@@ -55,7 +55,7 @@ public class BannedHoursTests
         Assert.True(decision.Banned);
         Assert.Equal(MatchmakingAction.DeclineReadyCheck, env.Tracker.DecideMatchmaking(A, "ReadyCheck", TestEnv.RankedSolo).Action);
 
-        // TFT, gyakorlás stb. tiltott időben is mehet.
+        // TFT, practice etc. are allowed in a banned period too.
         Assert.Equal(MatchmakingAction.Allow, env.Tracker.DecideMatchmaking(A, "Matchmaking", TestEnv.TftNormal).Action);
 
         env.Clock.UtcNow = At(1, 5);
@@ -83,7 +83,7 @@ public class BannedHoursTests
         Assert.True(shortVideo.Blocked);
         Assert.True(shortVideo.Banned);
         Assert.Equal(TimeSpan.FromMinutes(60), shortVideo.Remaining);
-        Assert.Equal(At(2, 6), shortVideo.AvailableAgainAt); // éjfélen át
+        Assert.Equal(At(2, 6), shortVideo.AvailableAgainAt); // across midnight
 
         Assert.False(env.Engine.GetWebStatus(A, WebCategory.FacebookFeed).Blocked);
         Assert.False(env.Engine.GetLolStatus(A).Blocked);
@@ -101,7 +101,7 @@ public class BannedHoursTests
         Assert.True(before.Banned);
         Assert.Equal(TimeSpan.FromMinutes(10), before.Used);
 
-        // 03:00-kor a nullázás a tiltás alatt is megtörténik; 05:00-kor tiszta kerettel nyílik.
+        // At 03:00 the reset also happens during the ban; at 05:00 it opens with a clean limit.
         env.Clock.UtcNow = At(2, 3, 30);
         Assert.Equal(TimeSpan.Zero, env.Engine.GetWebStatus(A, WebCategory.ShortVideo).Used);
         env.Clock.UtcNow = At(2, 5);
@@ -113,7 +113,7 @@ public class BannedHoursTests
     [Fact]
     public void When_the_budget_is_also_used_up_the_later_release_wins()
     {
-        // Gördülő mód: 00:30–01:31 között elfogy a keret, 24 óra múlva szabadul; a tiltás (01–05) ennél hamarabb ér véget.
+        // Rolling mode: the limit is used up between 00:30 and 01:31 and released 24 hours later; the ban (01-05) ends sooner than that.
         using var env = new TestEnv(AllBanned(1, 5), start: At(1, 2));
         for (var i = 0; i < 61; i++) env.Store.AddWebUsage(A, WebCategory.ShortVideo, At(1, 0, 30) + TimeSpan.FromMinutes(i), 60_000);
 
@@ -138,7 +138,7 @@ public class BannedHoursTests
     public void Ban_follows_local_time()
     {
         var budapest = TimeZoneInfo.FindSystemTimeZoneById("Europe/Budapest");
-        // 2026. október 1. 23:30 UTC = 01:30 helyi idő (nyári idő, UTC+2).
+        // 1 October 2026 23:30 UTC = 01:30 local time (summer time, UTC+2).
         using var env = new TestEnv(AllBanned(1, 5), budapest, start: At(1, 23, 30));
         var status = env.Engine.GetLolStatus(A);
         Assert.True(status.Banned);
@@ -159,7 +159,7 @@ public class BannedHoursTests
         Assert.Equal(Ban(22, 6), s.ShortVideoBannedHours);
         Assert.False(s.FacebookFeedBannedHours.Enabled);
 
-        // Régi fájl a mezők nélkül: nincs tiltás.
+        // An old file without the fields: no ban.
         Assert.False(LimitSettings.Parse("""{ "shortVideoMinutes": 60 }""").LolBannedHours.Enabled);
         Assert.Equal(s, LimitSettings.Parse(s.ToJson()));
     }

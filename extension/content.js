@@ -44,7 +44,7 @@
 
   let category = null;
   let blockedState = null; // { category, availableAgainAt, limitMinutes }
-  let host = null;         // az overlay gyökéreleme
+  let host = null;         // the overlay's root element
   let lastHref = location.href;
   let alive = true;
 
@@ -75,7 +75,7 @@
         playing: category ? playing() : false,
       });
     } catch (e) {
-      // A bővítmény frissült/újratöltődött: ez a példány már nem kap választ.
+      // The extension was updated/reloaded: this instance no longer gets a response.
       if (String(e && e.message).includes('Extension context invalidated')) {
         alive = false;
         release();
@@ -85,7 +85,7 @@
     apply(response);
   }
 
-  let overlayKey = null; // a megjelenített szöveg kulcsa; ha változik (pl. tiltás → elfogyott keret), újrarajzoljuk
+  let overlayKey = null; // the key of the displayed text; if it changes (e.g. ban → used-up limit), we redraw
 
   function apply(state) {
     if (state && state.blocked && category && state.category === category) {
@@ -100,7 +100,7 @@
     }
   }
 
-  // ---- Tiltás ----
+  // ---- Blocking ----
 
   function pauseAll() {
     for (const m of document.querySelectorAll('video, audio')) {
@@ -192,12 +192,12 @@
     }
   }
 
-  // Ha az oldal eltávolítja az overlayt, azonnal visszatesszük.
+  // If the page removes the overlay, we put it back at once.
   new MutationObserver(() => {
     if (blockedState && (!host || !host.isConnected)) enforce();
   }).observe(document, { childList: true, subtree: true });
 
-  // ---- Események ----
+  // ---- Events ----
 
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg && msg.type === 'state') {
@@ -206,7 +206,7 @@
     }
   });
 
-  // Oldalújratöltés nélküli navigáció (SPA): az URL változását gyorsan észleljük.
+  // Navigation without a page reload (SPA): we detect the URL change quickly.
   setInterval(() => {
     if (location.href !== lastHref) {
       lastHref = location.href;

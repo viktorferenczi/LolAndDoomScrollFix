@@ -2,7 +2,7 @@ using Limiter.Core.Lol;
 
 namespace Limiter.Core.Tests;
 
-/// <summary>Napi visszaállítás és hétvégi mentesség. A naptár: 2026. október 1. csütörtök, 3. szombat, 5. hétfő.</summary>
+/// <summary>Daily reset and weekend exemption. Calendar: Thursday 1 October 2026, Saturday the 3rd, Monday the 5th.</summary>
 public class ScheduleTests
 {
     private static readonly TimeSpan Second = TimeSpan.FromSeconds(1);
@@ -36,7 +36,7 @@ public class ScheduleTests
         env.Clock.UtcNow = Utc(2, 2, 59);
         Assert.True(env.Engine.GetWebStatus(TestEnv.UserA, WebCategory.ShortVideo).Blocked);
 
-        // 03:00-kor minden egyszerre felszabadul (nem fokozatosan, mint gördülő módban).
+        // At 03:00 everything is released at once (not gradually as in rolling mode).
         env.Clock.UtcNow = Utc(2, 3);
         status = env.Engine.GetWebStatus(TestEnv.UserA, WebCategory.ShortVideo);
         Assert.False(status.Blocked);
@@ -47,10 +47,10 @@ public class ScheduleTests
     public void Daily_reset_only_counts_usage_since_the_last_reset()
     {
         using var env = new TestEnv(Daily(3), start: Utc(2, 2, 30));
-        Watch(env, WebCategory.FacebookFeed, TimeSpan.FromMinutes(20)); // 02:30–02:50: az előző napé
+        Watch(env, WebCategory.FacebookFeed, TimeSpan.FromMinutes(20)); // 02:30–02:50: the previous day's
 
         env.Clock.UtcNow = Utc(2, 3, 10);
-        Watch(env, WebCategory.FacebookFeed, TimeSpan.FromMinutes(5)); // 03:10–03:15: a mai napé
+        Watch(env, WebCategory.FacebookFeed, TimeSpan.FromMinutes(5)); // 03:10–03:15: today's
 
         Assert.InRange(env.Engine.GetWebStatus(TestEnv.UserA, WebCategory.FacebookFeed).Used.TotalMinutes, 4.9, 5.1);
     }
@@ -99,7 +99,7 @@ public class ScheduleTests
             Assert.Equal(MatchRecordOutcome.Exempt, env.Tracker.OnGameflow(TestEnv.UserA, TestEnv.Running(i)));
         Assert.Equal(MatchmakingAction.Allow, env.Tracker.DecideMatchmaking(TestEnv.UserA, "Matchmaking", TestEnv.RankedSolo).Action);
 
-        // Hétfőn tiszta lappal indul.
+        // On Monday it starts with a clean slate.
         env.Clock.UtcNow = Utc(5, 9);
         Assert.Equal(0, env.Engine.GetLolStatus(TestEnv.UserA).Used);
         Assert.Equal(TimeSpan.Zero, env.Engine.GetWebStatus(TestEnv.UserA, WebCategory.ShortVideo).Used);
@@ -108,9 +108,9 @@ public class ScheduleTests
     [Fact]
     public void A_game_started_on_sunday_night_does_not_count_when_it_runs_into_monday()
     {
-        using var env = new TestEnv(start: Utc(4, 23, 50)); // vasárnap
+        using var env = new TestEnv(start: Utc(4, 23, 50)); // Sunday
         Assert.Equal(MatchRecordOutcome.Exempt, env.Tracker.OnGameflow(TestEnv.UserA, TestEnv.Running(42)));
-        env.Clock.UtcNow = Utc(5, 0, 20); // hétfő
+        env.Clock.UtcNow = Utc(5, 0, 20); // Monday
         Assert.Equal(MatchRecordOutcome.AlreadyRecorded, env.Tracker.OnGameflow(TestEnv.UserA, TestEnv.Running(42)));
         Assert.Equal(0, env.Engine.GetLolStatus(TestEnv.UserA).Used);
         Assert.Empty(env.Tracker.PendingRemakeChecks(TestEnv.UserA));
@@ -119,11 +119,11 @@ public class ScheduleTests
     [Fact]
     public void Weekend_follows_the_daily_reset_hour()
     {
-        using var env = new TestEnv(Daily(3), start: Utc(3, 2)); // szombat 02:00 = még a péntek 03:00-kor kezdődött nap
+        using var env = new TestEnv(Daily(3), start: Utc(3, 2)); // Saturday 02:00 = still the day that started on Friday at 03:00
         Assert.False(env.Engine.IsExemptNow);
         env.Clock.UtcNow = Utc(3, 3);
         Assert.True(env.Engine.IsExemptNow);
-        env.Clock.UtcNow = Utc(5, 2, 59); // hétfő hajnal = még a vasárnapi nap
+        env.Clock.UtcNow = Utc(5, 2, 59); // early Monday = still the Sunday day
         Assert.True(env.Engine.IsExemptNow);
         env.Clock.UtcNow = Utc(5, 3);
         Assert.False(env.Engine.IsExemptNow);
@@ -143,11 +143,11 @@ public class ScheduleTests
     [Fact]
     public void Block_on_friday_evening_lifts_when_the_free_weekend_starts()
     {
-        using var env = new TestEnv(start: Utc(2, 20)); // péntek, gördülő mód
+        using var env = new TestEnv(start: Utc(2, 20)); // Friday, rolling mode
         Watch(env, WebCategory.ShortVideo, TimeSpan.FromMinutes(61));
         var status = env.Engine.GetWebStatus(TestEnv.UserA, WebCategory.ShortVideo);
         Assert.True(status.Blocked);
-        Assert.Equal(Utc(3, 0), status.AvailableAgainAt); // nem szombat 20:00, hanem a hétvége kezdete
+        Assert.Equal(Utc(3, 0), status.AvailableAgainAt); // not Saturday 20:00 but the start of the weekend
 
         env.Clock.UtcNow = Utc(3, 0);
         Assert.False(env.Engine.GetWebStatus(TestEnv.UserA, WebCategory.ShortVideo).Blocked);
@@ -157,13 +157,13 @@ public class ScheduleTests
     public void Daily_reset_in_local_time_handles_daylight_saving_change()
     {
         var budapest = TimeZoneInfo.FindSystemTimeZoneById("Europe/Budapest");
-        // 2027. március 28. (vasárnap) 02:00 helyi idő nem létezik (02:00 → 03:00).
+        // 28 March 2027 (Sunday) 02:00 local time does not exist (02:00 → 03:00).
         var settings = Daily(2, weekends: true);
         using var env = new TestEnv(settings, budapest, start: new DateTimeOffset(2027, 3, 27, 12, 0, 0, TimeSpan.FromHours(1)));
         var reset = env.Engine.Schedule.NextDayStart(env.Clock.UtcNow);
         Assert.Equal(new DateTimeOffset(2027, 3, 28, 3, 0, 0, TimeSpan.FromHours(2)), reset);
 
-        // Nyári időben a 02:00 helyi idő = 00:00 UTC.
+        // In summer time 02:00 local time = 00:00 UTC.
         env.Clock.UtcNow = new DateTimeOffset(2027, 6, 1, 12, 0, 0, TimeSpan.Zero);
         Assert.Equal(new DateTimeOffset(2027, 6, 2, 0, 0, 0, TimeSpan.Zero), env.Engine.Schedule.NextDayStart(env.Clock.UtcNow));
     }
@@ -183,7 +183,7 @@ public class ScheduleTests
     [Fact]
     public void Parses_the_limits_json_written_by_the_installer()
     {
-        // Pontosan az install.ps1 által írt formátum (ConvertTo-Json).
+        // Exactly the format written by install.ps1 (ConvertTo-Json).
         var s = LimitSettings.Parse("""
             {
                 "resetMode":  "daily",
@@ -200,7 +200,7 @@ public class ScheduleTests
         Assert.Equal(30, s.FacebookFeedMinutes);
         Assert.True(s.EnforceOnWeekends);
 
-        // Régi (1.0-s) fájl új mezők nélkül: alapértelmezések.
+        // An old (1.0) file without the new fields: the defaults.
         var old = LimitSettings.Parse("""{ "lolPvpMatches": 3, "shortVideoMinutes": 60, "facebookFeedMinutes": 60 }""");
         Assert.Equal(ResetMode.Rolling, old.ResetMode);
         Assert.False(old.EnforceOnWeekends);

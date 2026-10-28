@@ -7,12 +7,12 @@ using Limiter.Core;
 namespace Limiter.Protocol;
 
 /// <summary>
-/// Ellenőrzi, hogy a pipe túloldalán a valódi szolgáltatás fut-e:
-/// a pipe-szerver a 0-s (szolgáltatás-) munkamenetben van, és a folyamatazonosítója megegyezik azzal,
-/// amit a Szolgáltatásvezérlő (SCM) a LolScrollLimiter szolgáltatásról jelent.
-/// Egyik lekérdezés sem igényel hozzáférést a szolgáltatás folyamatához (azt normál felhasználó nem kap meg);
-/// a szolgáltatás állapotát a szolgáltatás ACL-je szerint bárki lekérdezheti, a bináris útvonalát viszont csak
-/// rendszergazda módosíthatja, így ugyanolyan erős, mint az elérési út ellenőrzése.
+/// Verifies that the real service runs on the other side of the pipe:
+/// the pipe server is in session 0 (the services' session), and its process ID equals the one
+/// the Service Control Manager (SCM) reports for the LolScrollLimiter service.
+/// Neither query needs access to the service's process (a normal user does not get that);
+/// anyone can query the service's state according to its ACL, while its binary path can only be
+/// changed by an administrator, so it is as strong as checking the path.
 /// </summary>
 public static class ServerVerifier
 {
@@ -20,7 +20,7 @@ public static class ServerVerifier
     {
         if (!OperatingSystem.IsWindows()) return;
 #if DEBUG
-        // Fejlesztői build: a szolgáltatás konzolból is futhat.
+        // Development build: the service can also run from a console.
         return;
 #else
         if (!GetNamedPipeServerSessionId(pipe.SafePipeHandle, out var sessionId))
@@ -40,7 +40,7 @@ public static class ServerVerifier
 #endif
     }
 
-    /// <summary>A szolgáltatás folyamatazonosítója az SCM szerint (0, ha nem fut).</summary>
+    /// <summary>The service's process ID according to the SCM (0 if it is not running).</summary>
     private static uint QueryServiceProcessId(string serviceName)
     {
         const uint ScManagerConnect = 0x0001;

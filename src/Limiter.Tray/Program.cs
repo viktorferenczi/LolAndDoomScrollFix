@@ -7,7 +7,7 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
 
-        // Az eltávolító és a telepítő segédparancsai: nem indítanak tálcaikont.
+        // Helper commands of the uninstaller and the installer: they do not start a tray icon.
         if (args.Length > 0 && args[0].Equals(AdminGate.VerifyArgument, StringComparison.OrdinalIgnoreCase))
         {
             Environment.Exit(AdminGate.VerifyForUninstall());
@@ -19,14 +19,14 @@ internal static class Program
             return;
         }
 
-        // Admin-felület: emelt jogosultsággal indított külön példány (a tálcaalkalmazás nem fut benne).
+        // Admin panel: a separate instance started with elevated rights (the tray application does not run in it).
         if (args.Contains(AdminLauncher.Argument, StringComparer.OrdinalIgnoreCase))
         {
             AdminLauncher.RunElevated();
             return;
         }
 
-        // Munkamenetenként egy példány.
+        // One instance per session.
         using var mutex = new Mutex(initiallyOwned: true, @"Local\LolScrollLimiterTray", out var created);
         if (!created) return;
 

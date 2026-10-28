@@ -4,9 +4,9 @@ using System.Text.Json.Nodes;
 using Limiter.Protocol;
 using Limiter.Core;
 
-// Chrome Native Messaging host: a bővítmény üzeneteit (4 bájtos hossz + UTF-8 JSON) továbbítja a
-// szolgáltatás named pipe-jára, és visszaküldi a választ. Saját logikája nincs; a szolgáltatás nem
-// érhetősége esetén hibaválaszt ad, amelyre a bővítmény enged (fail-open) és hibát jelez.
+// Chrome Native Messaging host: forwards the extension's messages (4-byte length + UTF-8 JSON) to the
+// service's named pipe, and sends the response back. It has no logic of its own; if the service is not
+// reachable it gives an error response, on which the extension lets everything through (fail-open) and reports an error.
 
 const int MaxMessageBytes = 64 * 1024;
 var timeout = TimeSpan.FromSeconds(3);
@@ -25,7 +25,7 @@ try
         {
             var node = JsonNode.Parse(message)?.AsObject() ?? throw new FormatException("Nem JSON-objektum.");
             id = node["id"]?.GetValue<string>();
-            // A forrást a host állítja be, nem a weboldal/bővítmény.
+            // The source is set by the host, not by the web page/extension.
             node["source"] = IpcConstants.Sources.Extension;
             var line = node.ToJsonString();
 

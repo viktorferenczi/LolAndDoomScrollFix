@@ -25,9 +25,9 @@ public enum UpdateStatus
 public sealed record UpdateCheckResult(UpdateStatus Status, Version Current, ReleaseInfo? Release = null, string? Error = null);
 
 /// <summary>
-/// Frissítések keresése a GitHub-kiadások között, és a telepítő letöltése ellenőrzőösszeggel.
-/// A kliens soha nem telepít semmit: a letöltött telepítőt a hívó indítja el, és az rendszergazdai jóváhagyást kér.
-/// Az ellenőrzés hibája nem érinti a korlátozások működését.
+/// Checking for updates among the GitHub releases, and downloading the installer with a checksum.
+/// The client never installs anything: the caller starts the downloaded installer, and it asks for administrator approval.
+/// A failure of the check does not affect how the limits work.
 /// </summary>
 public sealed class UpdateClient
 {
@@ -40,7 +40,7 @@ public sealed class UpdateClient
         _repository = repository;
     }
 
-    /// <summary>Alapértelmezett HTTP-kliens a szükséges fejlécekkel és időkorláttal.</summary>
+    /// <summary>The default HTTP client with the required headers and a timeout.</summary>
     public static HttpClient CreateHttpClient()
     {
         var http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
@@ -71,7 +71,7 @@ public sealed class UpdateClient
         }
     }
 
-    /// <summary>Kiértékeli a „latest release” választ. Itt dől el, hogy van-e telepíthető, ellenőrizhető újabb verzió.</summary>
+    /// <summary>Evaluates the "latest release" response. This decides whether there is a newer version that can be installed and verified.</summary>
     public async Task<UpdateCheckResult> EvaluateAsync(Version current, string releaseJson, CancellationToken ct = default)
     {
         using var doc = JsonDocument.Parse(releaseJson);
@@ -83,7 +83,7 @@ public sealed class UpdateClient
         if (!UpdateRules.TryParseVersion(tag, out var version)) return Failed(current, Loc.T($"Unknown version tag: \"{tag}\".", $"Ismeretlen verziócímke: „{tag}”."));
         if (!UpdateRules.IsNewer(current, version)) return new UpdateCheckResult(UpdateStatus.UpToDate, current);
 
-        // Telepítő és ellenőrzőösszeg keresése a kiadás fájljai között.
+        // Looking for the installer and the checksum among the release's files.
         string? installerName = null, installerUrl = null, digest = null, checksumUrl = null;
         long size = 0;
         if (root.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
@@ -130,8 +130,8 @@ public sealed class UpdateClient
     }
 
     /// <summary>
-    /// Letölti a telepítőt a megadott mappába, közben számolja az SHA-256-ot. Csak egyező ellenőrzőösszeg esetén
-    /// adja vissza a végleges fájl útvonalát; különben törli a fájlt, és kivételt dob.
+    /// Downloads the installer into the given folder, computing the SHA-256 meanwhile. Only with a matching checksum
+    /// does it return the final file's path; otherwise it deletes the file and throws.
     /// </summary>
     public async Task<string> DownloadAsync(ReleaseInfo release, string directory, IProgress<double>? progress = null, CancellationToken ct = default)
     {

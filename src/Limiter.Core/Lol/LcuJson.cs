@@ -3,12 +3,12 @@ using System.Text.RegularExpressions;
 
 namespace Limiter.Core.Lol;
 
-/// <summary>A helyi kliensből (/lol-gameflow/v1/session) kiolvasott pillanatkép.</summary>
+/// <summary>A snapshot read from the local client (/lol-gameflow/v1/session).</summary>
 public sealed record GameflowSnapshot(string Phase, long GameId, QueueInfo Queue, bool? LocalPlayerIsParticipant);
 
 public sealed record LocalPlayer(string? Puuid, long? SummonerId);
 
-/// <summary>A League Client (LCU) JSON-válaszainak tűrő feldolgozása. Hiányzó mezőnél „ismeretlen” értéket ad, nem kivételt.</summary>
+/// <summary>Tolerant parsing of the League Client (LCU) JSON responses. A missing field gives an "unknown" value, not an exception.</summary>
 public static partial class LcuJson
 {
     public static string ParsePhase(JsonElement phaseJson) =>
@@ -40,7 +40,7 @@ public static partial class LcuJson
         return new GameflowSnapshot(phase, gameId, queue, IsParticipant(gameData, local));
     }
 
-    /// <summary>A lobby (/lol-lobby/v2/lobby) sorbeállítása.</summary>
+    /// <summary>The queue setting of the lobby (/lol-lobby/v2/lobby).</summary>
     public static QueueInfo ParseLobbyQueue(JsonElement lobby)
     {
         if (!lobby.TryGetProperty("gameConfig", out var config) || config.ValueKind != JsonValueKind.Object)
@@ -56,10 +56,10 @@ public static partial class LcuJson
     public static long? ParseGameId(JsonElement json) => GetInt64(json, "gameId");
 
     /// <summary>
-    /// Igazolt remake keresése: a meccs adataiban bárhol szereplő <c>gameEndedInEarlySurrender</c> mező.
-    /// Pusztán a rövid játékidő nem számít remake-nek.
+    /// Looking for a confirmed remake: the <c>gameEndedInEarlySurrender</c> field anywhere in the match data.
+    /// A short game time alone does not count as a remake.
     /// </summary>
-    /// <returns>true: remake; false: a mező létezik, de egyik sem igaz; null: nincs ilyen mező.</returns>
+    /// <returns>true: remake; false: the field exists but none is true; null: there is no such field.</returns>
     public static bool? ParseEarlySurrender(JsonElement game)
     {
         bool found = false, any = false;
@@ -92,7 +92,7 @@ public static partial class LcuJson
         }
     }
 
-    /// <summary>Port és jelszó kiolvasása a LeagueClientUx.exe parancssorából.</summary>
+    /// <summary>Reading the port and the password from the command line of LeagueClientUx.exe.</summary>
     public static bool TryParseCommandLine(string? commandLine, out int port, out string token)
     {
         port = 0;

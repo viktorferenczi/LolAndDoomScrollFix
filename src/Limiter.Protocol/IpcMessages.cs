@@ -6,10 +6,10 @@ namespace Limiter.Protocol;
 
 public static class IpcConstants
 {
-    /// <summary>A szolgáltatás named pipe neve. A verziószám a protokoll megváltozásakor nő.</summary>
+    /// <summary>The name of the service's named pipe. The version number grows when the protocol changes.</summary>
     public const string PipeName = "LolScrollLimiter.v1";
 
-    /// <summary>A Chrome Native Messaging host neve (a registryben és a bővítményben ugyanez).</summary>
+    /// <summary>The name of the Chrome Native Messaging host (the same in the registry and in the extension).</summary>
     public const string NativeHostName = "hu.kmsoft.lolscrolllimiter";
 
     public const string ServiceName = "LolScrollLimiter";
@@ -49,7 +49,7 @@ public static class IpcConstants
     }
 }
 
-/// <summary>Egy sorban (newline-delimited JSON) küldött kérés a szolgáltatás felé.</summary>
+/// <summary>A request to the service sent on one line (newline-delimited JSON).</summary>
 public sealed class IpcRequest
 {
     public string? Id { get; set; }
@@ -82,17 +82,17 @@ public sealed class LolLimitDto
     public int Used { get; set; }
     public int Remaining { get; set; }
     public bool Blocked { get; set; }
-    /// <summary>A legrégebbi még számított meccs ekkor esik ki a 24 órás ablakból.</summary>
+    /// <summary>The oldest match still counted drops out of the 24-hour window at this time.</summary>
     public DateTimeOffset? NextReleaseAt { get; set; }
-    /// <summary>Tiltott állapotban: ekkor lesz újra legalább egy szabad meccs.</summary>
+    /// <summary>When blocked: at this time at least one match is free again.</summary>
     public DateTimeOffset? AvailableAgainAt { get; set; }
-    /// <summary>Korlátmentes időszak (hétvége): nem tilt, nem fogy.</summary>
+    /// <summary>Exempt period (weekend): does not block, does not use up.</summary>
     public bool Exempt { get; set; }
-    /// <summary>Pihenőnap-jutalom (már benne van a <see cref="Limit"/>-ben).</summary>
+    /// <summary>Rest-day bonus (already included in <see cref="Limit"/>).</summary>
     public int Bonus { get; set; }
-    /// <summary>Az admin által a mai napra adott extra meccs (már benne van a <see cref="Limit"/>-ben).</summary>
+    /// <summary>Extra matches given by the admin for today (already included in <see cref="Limit"/>).</summary>
     public int Extra { get; set; }
-    /// <summary>Tiltott időszak van (ilyenkor <see cref="Blocked"/> is igaz).</summary>
+    /// <summary>A banned period is active (then <see cref="Blocked"/> is true too).</summary>
     public bool Banned { get; set; }
 }
 
@@ -104,36 +104,36 @@ public sealed class WebLimitDto
     public bool Blocked { get; set; }
     public DateTimeOffset? NextReleaseAt { get; set; }
     public DateTimeOffset? AvailableAgainAt { get; set; }
-    /// <summary>Korlátmentes időszak (hétvége): nem tilt, nem fogy.</summary>
+    /// <summary>Exempt period (weekend): does not block, does not use up.</summary>
     public bool Exempt { get; set; }
-    /// <summary>Pihenőnap-jutalom másodpercben (már benne van a <see cref="LimitSeconds"/>-ben).</summary>
+    /// <summary>Rest-day bonus in seconds (already included in <see cref="LimitSeconds"/>).</summary>
     public double BonusSeconds { get; set; }
-    /// <summary>Az admin által a mai napra adott extra másodpercben (már benne van a <see cref="LimitSeconds"/>-ben).</summary>
+    /// <summary>Extra given by the admin for today, in seconds (already included in <see cref="LimitSeconds"/>).</summary>
     public double ExtraSeconds { get; set; }
-    /// <summary>Tiltott időszak van (ilyenkor <see cref="Blocked"/> is igaz).</summary>
+    /// <summary>A banned period is active (then <see cref="Blocked"/> is true too).</summary>
     public bool Banned { get; set; }
 }
 
-/// <summary>A telepítéskor választott időbeosztás.</summary>
+/// <summary>The schedule chosen at install time.</summary>
 public sealed class ScheduleDto
 {
-    /// <summary>„rolling” (gördülő 24 óra) vagy „daily” (napi visszaállítás).</summary>
+    /// <summary>"rolling" (rolling 24 hours) or "daily" (daily reset).</summary>
     public string ResetMode { get; set; } = IpcConstants.ResetModes.Rolling;
     public int DailyResetHour { get; set; }
     public bool EnforceOnWeekends { get; set; }
-    /// <summary>Most épp korlátmentes időszak van-e.</summary>
+    /// <summary>Whether an exempt period is active right now.</summary>
     public bool ExemptNow { get; set; }
-    /// <summary>Pihenőnap-jutalom: ennyi jár másnapra, ha egy napon semmi sem fogyott.</summary>
+    /// <summary>Rest-day bonus: this much is given for the next day if nothing was used on a day.</summary>
     public int LolRestDayBonusMatches { get; set; }
     public int ShortVideoRestDayBonusMinutes { get; set; }
     public int FacebookFeedRestDayBonusMinutes { get; set; }
-    /// <summary>Tiltott órák keretenként.</summary>
+    /// <summary>Banned hours per limit.</summary>
     public BannedHoursDto? LolBannedHours { get; set; }
     public BannedHoursDto? ShortVideoBannedHours { get; set; }
     public BannedHoursDto? FacebookFeedBannedHours { get; set; }
 }
 
-/// <summary>Tiltott időszak: From órától (benne) To óráig (nincs benne), helyi idő.</summary>
+/// <summary>A banned period: from hour From (inclusive) to hour To (exclusive), local time.</summary>
 public sealed class BannedHoursDto
 {
     public bool Enabled { get; set; }

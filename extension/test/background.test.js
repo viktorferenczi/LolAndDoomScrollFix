@@ -1,5 +1,5 @@
 'use strict';
-// A háttér-service worker viselkedése hamis chrome API-val és hamis idővel.
+// The behaviour of the background service worker with a fake chrome API and fake time.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -14,13 +14,13 @@ function listeners() {
   return { addListener: (f) => fns.push(f), fire: (...a) => fns.map((f) => f(...a)), fns };
 }
 
-/** Hamis szolgáltatás: kategóriánként keret, a jelentéseket levonja. */
+/** A fake service: a limit per category, it deducts the reports. */
 function fakeService(limits, schedule = { resetMode: 'rolling', dailyResetHour: 3, enforceOnWeekends: false, exemptNow: false }) {
   const used = { shortVideo: 0, facebookFeed: 0 };
   const service = {
     used,
     schedule,
-    banned: false, // igaz: a rövid videókra tiltott időszak van
+    banned: false, // true: a banned period is active for short videos
     respond(msg) {
       if (msg.type === 'usage') used[msg.category] += msg.seconds;
       const banned = (c) => service.banned && c === 'shortVideo';
@@ -87,7 +87,7 @@ function setup({ limits = { shortVideo: 3600, facebookFeed: 3600 }, nativeFails 
 
   const env = {
     service, badge, pushed, chrome,
-    /** Szolgáltatói válaszok kézbesítése (késleltetés modellezése). */
+    /** Delivering the service's responses (modelling the delay). */
     flush() {
       while (queue.length) port.onMessage.fire(service.respond(queue.shift()));
     },
@@ -113,7 +113,7 @@ function setup({ limits = { shortVideo: 3600, facebookFeed: 3600 }, nativeFails 
   return env;
 }
 
-/** n másodperc nézés: minden másodpercben szívverés + tick + válasz. */
+/** n seconds of watching: every second a heartbeat + tick + response. */
 function watch(env, seconds, hbOpts, tabId = 10) {
   for (let i = 0; i < seconds; i++) {
     env.hb(tabId, hbOpts);
@@ -122,14 +122,14 @@ function watch(env, seconds, hbOpts, tabId = 10) {
   }
 }
 
-test('A fókuszban lévő ablak aktív, látható lapja másodpercenként fogyaszt', () => {
+test('The active, visible tab of the focused window uses time every second', () => {
   const env = setup();
   watch(env, 10);
   assert.ok(Math.abs(env.service.used.shortVideo - 10) < 0.01, String(env.service.used.shortVideo));
   assert.equal(env.service.used.facebookFeed, 0);
 });
 
-test('Videónézés egérmozgatás nélkül is számít (csak a zárolás állítja meg)', () => {
+test('Watching a video counts without mouse movement (only locking stops it)', () => {
   const env = setup();
   env.lock('idle');
   watch(env, 5);
@@ -139,27 +139,27 @@ test('Videónézés egérmozgatás nélkül is számít (csak a zárolás állí
   assert.ok(env.service.used.shortVideo < 5.01);
 });
 
-test('Háttérlap és nem aktív lap nem fogyaszt', () => {
+test('A background tab and an inactive tab do not use time', () => {
   const env = setup();
   watch(env, 5, { visible: false });
   watch(env, 5, { active: false });
   assert.equal(env.service.used.shortVideo, 0);
 });
 
-test('Másik alkalmazás fókuszban: csak a lejátszó, utoljára fókuszált ablak számít', () => {
+test('Another application focused: only the playing, last focused window counts', () => {
   const env = setup();
   env.focus(NONE);
   watch(env, 3, { playing: false });
   assert.equal(env.service.used.shortVideo, 0);
   watch(env, 3, { playing: true });
   assert.ok(env.service.used.shortVideo >= 2.99);
-  // Nem fókuszált, másik ablak lapja nem számít.
+  // A tab of another, unfocused window does not count.
   env.focus(2);
   watch(env, 3, { windowId: 1 });
   assert.ok(env.service.used.shortVideo < 3.01);
 });
 
-test('Alvás után egy lépés legfeljebb 1,5 másodpercet számol', () => {
+test('After sleep a step counts at most 1.5 seconds', () => {
   const env = setup();
   env.hb(10);
   env.tick(8 * 3600 * 1000);
@@ -167,18 +167,18 @@ test('Alvás után egy lépés legfeljebb 1,5 másodpercet számol', () => {
   assert.ok(env.service.used.shortVideo <= 1.5);
 });
 
-test('Facebook-hírfolyam külön keretet fogyaszt', () => {
+test('The Facebook feed uses a separate limit', () => {
   const env = setup();
   watch(env, 4, { category: 'facebookFeed' });
   assert.equal(env.service.used.shortVideo, 0);
   assert.ok(env.service.used.facebookFeed >= 3.99);
 });
 
-test('A keret elérésekor egy másodpercen belül tilt, és szól a lapnak', () => {
+test('When the limit is reached it blocks within a second and tells the tab', () => {
   const env = setup({ limits: { shortVideo: 5, facebookFeed: 3600 } });
   watch(env, 4);
   assert.equal(env.hb(10).blocked, false);
-  // Az ötödik másodperc: a válasz még úton van, de a függő jelentést levonva már tilt.
+  // The fifth second: the response is still on its way, but subtracting the pending report it already blocks.
   env.tick();
   assert.equal(env.hb(10).blocked, true);
   env.flush();
@@ -186,15 +186,15 @@ test('A keret elérésekor egy másodpercen belül tilt, és szól a lapnak', ()
   assert.equal(r.blocked, true);
   assert.equal(r.availableAgainAt, '2026-10-09T10:00:00Z');
   assert.ok(env.pushed.some((m) => m.id === 10 && m.blocked));
-  // Tiltás alatt nem jelent több időt.
+  // While blocked it reports no more time.
   const before = env.service.used.shortVideo;
   watch(env, 3);
   assert.equal(env.service.used.shortVideo, before);
-  // A Facebook-hírfolyam ettől még szabad.
+  // The Facebook feed is still free.
   assert.equal(env.hb(11, { category: 'facebookFeed' }).blocked, false);
 });
 
-test('Szolgáltatáshiba esetén enged (fail-open) és piros jelvényt mutat', () => {
+test('On a service error it lets everything through (fail-open) and shows a red badge', () => {
   const env = setup({ limits: { shortVideo: 1, facebookFeed: 3600 } });
   watch(env, 2);
   assert.equal(env.hb(10).blocked, true);
@@ -204,13 +204,13 @@ test('Szolgáltatáshiba esetén enged (fail-open) és piros jelvényt mutat', (
   assert.equal(env.badge.text, '!');
 });
 
-test('Hiányzó native host: enged és hibát jelez', () => {
+test('A missing native host: lets everything through and reports an error', () => {
   const env = setup({ nativeFails: true });
   assert.equal(env.hb(10).blocked, false);
   assert.equal(env.badge.text, '!');
 });
 
-test('A tiltási állapot a beállított keretet és visszaállítási módot is átadja a lapnak', () => {
+test('The blocking state also passes the configured limit and reset mode to the tab', () => {
   const env = setup({
     limits: { shortVideo: 1200, facebookFeed: 3600 },
     schedule: { resetMode: 'daily', dailyResetHour: 3, enforceOnWeekends: false, exemptNow: false },
@@ -221,7 +221,7 @@ test('A tiltási állapot a beállított keretet és visszaállítási módot is
   assert.equal(r.dailyResetHour, 3);
 });
 
-test('Hétvégén (mentes időszakban) nem tilt, akkor sem, ha a keret elfogyott volna', () => {
+test('On a weekend (exempt period) it does not block, even if the limit would be used up', () => {
   const env = setup({
     limits: { shortVideo: 2, facebookFeed: 3600 },
     schedule: { resetMode: 'rolling', dailyResetHour: 0, enforceOnWeekends: false, exemptNow: true },
@@ -230,14 +230,14 @@ test('Hétvégén (mentes időszakban) nem tilt, akkor sem, ha a keret elfogyott
   assert.equal(env.hb(10).blocked, false);
 });
 
-test('Tiltott időszakban tilt, és a tiltás óráit is átadja a lapnak', () => {
+test('In a banned period it blocks and also passes the banned hours to the tab', () => {
   const env = setup({
     schedule: {
       resetMode: 'rolling', dailyResetHour: 0, enforceOnWeekends: false, exemptNow: false,
       shortVideoBannedHours: { enabled: true, from: 1, to: 5 },
     },
   });
-  // A hamis szolgáltatás tiltott állapotot jelez, miközben a keretből még van.
+  // The fake service reports a blocked state while there is still limit left.
   env.service.banned = true;
   env.hb(10);
   env.tick();
@@ -246,6 +246,6 @@ test('Tiltott időszakban tilt, és a tiltás óráit is átadja a lapnak', () =
   assert.equal(r.blocked, true);
   assert.equal(r.banned, true);
   assert.deepEqual({ ...r.bannedHours }, { enabled: true, from: 1, to: 5 });
-  // A másik kategória nincs tiltva.
+  // The other category is not blocked.
   assert.equal(env.hb(11, { category: 'facebookFeed' }).blocked, false);
 });

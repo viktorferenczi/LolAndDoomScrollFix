@@ -70,7 +70,7 @@ public class SettingsFileTests
             var (loaded, warning) = SettingsFile.Load(path);
             Assert.Null(warning);
             Assert.Equal(Everything().Sanitized(), loaded);
-            // Pontosan ugyanazt a függvényt használja a szolgáltatás is.
+            // The service uses exactly the same function.
             Assert.Equal(loaded, LimitSettings.Parse(File.ReadAllText(path)));
         }
         finally { Cleanup(path); }
@@ -83,7 +83,7 @@ public class SettingsFileTests
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, "régi tartalom");
+            File.WriteAllText(path, "old content");
             SettingsFile.Save(path, LimitSettings.Default with { ShortVideoMinutes = 12 });
             Assert.Equal(12, SettingsFile.Load(path).Settings.ShortVideoMinutes);
             Assert.Equal([path], Directory.GetFiles(Path.GetDirectoryName(path)!));

@@ -3,20 +3,20 @@ using Limiter.Core.Lol;
 
 namespace Limiter.Service.Lcu;
 
-/// <summary>Egy futó LoL-kliens: a folyamat, a tulajdonos Windows-felhasználó és a helyi API elérése.</summary>
+/// <summary>A running LoL client: the process, the owner Windows user and access to the local API.</summary>
 public sealed record LcuProcess(uint ProcessId, string OwnerSid, int Port, string Token);
 
 public static class LcuDiscovery
 {
     /// <summary>
-    /// A futó LeagueClientUx.exe folyamatok felderítése WMI-n keresztül. A port és a jelszó a parancssorban van;
-    /// a tulajdonos SID határozza meg, melyik Windows-felhasználó keretét kell használni.
+    /// Discovering the running LeagueClientUx.exe processes through WMI. The port and the password are in the command line;
+    /// the owner SID decides which Windows user's limit has to be used.
     /// </summary>
     public static IReadOnlyList<LcuProcess> Find()
     {
         var result = new List<LcuProcess>();
-        // SELECT *: oszlopszűkítéses lekérdezés eredményének nincs objektumútvonala, és azon a
-        // GetOwnerSid metódushívás InvalidOperationException-t dob.
+        // SELECT *: the result of a column-restricted query has no object path, and on it a
+        // GetOwnerSid method call throws an InvalidOperationException.
         using var searcher = new ManagementObjectSearcher(
             "SELECT * FROM Win32_Process WHERE Name = 'LeagueClientUx.exe'");
         using var processes = searcher.Get();
@@ -34,7 +34,7 @@ public static class LcuDiscovery
             }
             catch (Exception ex) when (ex is ManagementException or InvalidOperationException or UnauthorizedAccessException)
             {
-                // Egy hibás folyamat nem akaszthatja meg a többi felderítését.
+                // One faulty process must not block the discovery of the others.
             }
 
             if (!string.IsNullOrEmpty(sid)) result.Add(new LcuProcess(pid, sid, port, token));

@@ -4,8 +4,8 @@ using Limiter.Core;
 namespace Limiter.Service;
 
 /// <summary>
-/// A limits.json beolvasása. A fájl az adatmappában van, így csak rendszergazda módosíthatja.
-/// Hibás fájlnál az utolsó érvényes (vagy alapértelmezett) korlát marad érvényben, és figyelmeztetés jelenik meg.
+/// Reading limits.json. The file is in the data folder, so only an administrator can change it.
+/// For a faulty file the last valid (or default) limit stays in effect, and a warning is shown.
 /// </summary>
 public sealed class SettingsProvider
 {

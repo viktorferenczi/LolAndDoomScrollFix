@@ -5,7 +5,7 @@ const D = require('../detect.js');
 
 const S = D.SHORT, F = D.FEED;
 
-test('URL-alapú felismerés', () => {
+test('URL-based detection', () => {
   const cases = [
     ['www.youtube.com', '/shorts/abc123', S],
     ['m.youtube.com', '/shorts/abc123', S],
@@ -55,20 +55,20 @@ function fakeDialog({ video = true, label = '', reelLink = false }) {
   };
 }
 
-test('Felugró Reels-nézet a hírfolyamon: rövid videónak számít, nem hírfolyamnak', () => {
+test('A pop-up Reels view on the feed: counts as a short video, not as the feed', () => {
   const doc = fakeDoc([fakeDialog({ reelLink: true })]);
   assert.equal(D.classify('www.facebook.com', '/', doc), S);
 });
 
-test('Felugró ablak videó nélkül vagy nem Reels: marad a hírfolyam', () => {
+test('A pop-up without a video, or not Reels: stays the feed', () => {
   assert.equal(D.classify('www.facebook.com', '/', fakeDoc([fakeDialog({ video: false, reelLink: true })])), F);
   assert.equal(D.classify('www.facebook.com', '/', fakeDoc([fakeDialog({ label: 'Bejegyzés' })])), F);
 });
 
-test('Instagram felugró Reels a kezdőlapon', () => {
+test('Instagram pop-up Reels on the home page', () => {
   assert.equal(D.classify('www.instagram.com', '/', fakeDoc([fakeDialog({ label: 'Reel' })])), S);
 });
 
-test('Messenger felugró ablak nem számít', () => {
+test('A Messenger pop-up does not count', () => {
   assert.equal(D.classify('www.facebook.com', '/messages/t/1', fakeDoc([fakeDialog({ label: 'Hívás' })])), null);
 });

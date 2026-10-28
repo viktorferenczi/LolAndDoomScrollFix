@@ -13,7 +13,7 @@ public class LimitSettingsEqualityTests
         Assert.Equal(a.GetHashCode(), b.GetHashCode());
     }
 
-    /// <summary>Védelem: ha valaki új mezőt vesz fel a LimitSettings-be, de az egyenlőségvizsgálatból kifelejti, ez elbukik.</summary>
+    /// <summary>Safeguard: if someone adds a new field to LimitSettings but forgets it in the equality check, this fails.</summary>
     [Fact]
     public void Every_property_takes_part_in_equality()
     {
@@ -23,7 +23,7 @@ public class LimitSettingsEqualityTests
         {
             var changed = baseline with { };
             p.SetValue(changed, Alter(p.GetValue(baseline), p.PropertyType));
-            Assert.False(baseline.Equals(changed), $"A(z) {p.Name} mező nem szerepel az egyenlőségvizsgálatban.");
+            Assert.False(baseline.Equals(changed), $"The field {p.Name} is not part of the equality check.");
         }
     }
 
@@ -36,6 +36,6 @@ public class LimitSettingsEqualityTests
         IReadOnlyList<DayGrant> list => list.Count == 0
             ? new List<DayGrant> { new() { Date = new DateOnly(2026, 1, 1), LolMatches = 1 } }
             : new List<DayGrant> { list[0] with { LolMatches = list[0].LolMatches + 1 } },
-        _ => throw new NotSupportedException($"Ismeretlen mezőtípus: {type}"),
+        _ => throw new NotSupportedException($"Unknown field type: {type}"),
     };
 }

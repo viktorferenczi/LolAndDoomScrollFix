@@ -6,7 +6,7 @@ using Limiter.Service.Lcu;
 
 if (args.Contains("--diagnose", StringComparer.OrdinalIgnoreCase))
 {
-    // Kézi ellenőrzés az aktuális LoL-kliensen (normál felhasználóként is futtatható).
+    // Manual check on the current LoL client (can also be run as a normal user).
     return await LcuDiagnostics.RunAsync(args.Contains("--test-cancel", StringComparer.OrdinalIgnoreCase));
 }
 

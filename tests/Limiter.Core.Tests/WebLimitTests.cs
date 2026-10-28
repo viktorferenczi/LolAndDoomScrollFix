@@ -4,7 +4,7 @@ public class WebLimitTests
 {
     private static readonly TimeSpan Second = TimeSpan.FromSeconds(1);
 
-    /// <summary>Folyamatos nézés szimulálása: másodpercenként egy jelentés, ahogy a bővítmény küldi.</summary>
+    /// <summary>Simulates continuous watching: one report per second, as the extension sends it.</summary>
     private static void Watch(TestEnv env, WebCategory category, TimeSpan duration, string sid = TestEnv.UserA)
     {
         for (var t = TimeSpan.Zero; t < duration; t += Second)
@@ -19,7 +19,7 @@ public class WebLimitTests
     {
         using var env = new TestEnv();
         var start = env.Clock.UtcNow;
-        env.Engine.ReportWebUsage(TestEnv.UserA, WebCategory.ShortVideo, Second); // első jelentés: nincs előzmény
+        env.Engine.ReportWebUsage(TestEnv.UserA, WebCategory.ShortVideo, Second); // first report: no history
         Watch(env, WebCategory.ShortVideo, TimeSpan.FromMinutes(60));
 
         var status = env.Engine.GetWebStatus(TestEnv.UserA, WebCategory.ShortVideo);
@@ -27,21 +27,21 @@ public class WebLimitTests
         Assert.Equal(TimeSpan.Zero, status.Remaining);
         Assert.NotNull(status.AvailableAgainAt);
 
-        // 23 óra 59 perc múlva még mindig tiltott.
+        // After 23 hours 59 minutes it is still blocked.
         env.Clock.UtcNow = start + TimeSpan.FromHours(23) + TimeSpan.FromMinutes(59);
         Assert.True(env.Engine.GetWebStatus(TestEnv.UserA, WebCategory.ShortVideo).Blocked);
 
-        // A nézés kezdete után 24 óra + 2 perccel kb. 1-2 perc szabadult fel — fokozatosan, nem egyszerre.
+        // 24 hours + 2 minutes after the start of watching, about 1-2 minutes have been released — gradually, not at once.
         env.Clock.UtcNow = start + LimitEngine.Window + TimeSpan.FromMinutes(2);
         status = env.Engine.GetWebStatus(TestEnv.UserA, WebCategory.ShortVideo);
         Assert.False(status.Blocked);
         Assert.InRange(status.Remaining.TotalMinutes, 0.5, 2.5);
 
-        // 30 perccel később kb. 30 perc szabad.
+        // 30 minutes later about 30 minutes are free.
         env.Clock.UtcNow = start + LimitEngine.Window + TimeSpan.FromMinutes(31);
         Assert.InRange(env.Engine.GetWebStatus(TestEnv.UserA, WebCategory.ShortVideo).Remaining.TotalMinutes, 29, 32);
 
-        // Az egész keret felszabadul 24 óra + 61 perc után.
+        // The whole limit is released after 24 hours + 61 minutes.
         env.Clock.UtcNow = start + LimitEngine.Window + TimeSpan.FromMinutes(62);
         status = env.Engine.GetWebStatus(TestEnv.UserA, WebCategory.ShortVideo);
         Assert.Equal(TimeSpan.FromMinutes(60), status.Remaining);
@@ -82,7 +82,7 @@ public class WebLimitTests
         var half = TimeSpan.FromMilliseconds(500);
         env.Engine.ReportWebUsage(TestEnv.UserA, WebCategory.ShortVideo, Second);
 
-        // A és B profil fél másodperces eltolással, mindkettő 1-1 másodpercet jelent másodpercenként.
+        // Profiles A and B with a half-second offset, each reporting 1 second per second.
         for (var i = 0; i < 600; i++)
         {
             env.Clock.Advance(half);
@@ -92,7 +92,7 @@ public class WebLimitTests
         }
 
         var used = env.Engine.GetWebStatus(TestEnv.UserA, WebCategory.ShortVideo).Used;
-        Assert.InRange(used.TotalSeconds, 599, 602); // 10 perc valós idő, nem 20
+        Assert.InRange(used.TotalSeconds, 599, 602); // 10 minutes of real time, not 20
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class WebLimitTests
         using var env = new TestEnv();
         Assert.Equal(TimeSpan.Zero, env.Engine.ReportWebUsage(TestEnv.UserA, WebCategory.ShortVideo, TimeSpan.FromSeconds(-30)));
         Assert.Equal(LimitEngine.MaxClaim, env.Engine.ReportWebUsage(TestEnv.UserA, WebCategory.ShortVideo, TimeSpan.FromHours(5)));
-        // Közvetlenül utána egy újabb nagy jelentés: az eltelt idő 0, így semmit sem fogad el.
+        // Right after, another big report: the elapsed time is 0, so nothing is accepted.
         Assert.Equal(TimeSpan.Zero, env.Engine.ReportWebUsage(TestEnv.UserA, WebCategory.ShortVideo, TimeSpan.FromMinutes(1)));
     }
 

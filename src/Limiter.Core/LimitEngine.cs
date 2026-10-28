@@ -26,18 +26,18 @@ public sealed record LolLimitStatus(
     int Extra = 0);
 
 /// <summary>
-/// A keretek számítása. Gördülő módban nincs éjféli nullázás: minden felhasználás pontosan
-/// 24 órával később szabadul fel (a webes idő percenként, fokozatosan). Napi módban a megadott órában
-/// minden keret egyszerre nullázódik. Mentes időszakban (hétvége) semmi sem tilt és semmi sem fogy.
-/// Pihenőnap-jutalom: ha az előző korlátozott napon egy keretből semmi sem fogyott, ma ennyivel nagyobb
-/// (nem halmozódik; 0-s alapkeretnél nem jár). Az admin által egy napra adott extra keret (<see cref="DayGrant"/>) ehhez adódik, a nap
-/// kezdő dátuma szerint; mentes napon nincs hatása. Tiltott órákban a keret nem fogy és nem nullázódik, csak tilt.
+/// Calculation of the limits. In rolling mode there is no midnight reset: every use is released exactly
+/// 24 hours later (web time minute by minute, gradually). In daily mode, at the given hour
+/// every limit resets at once. In an exempt period (weekend) nothing blocks and nothing is used up.
+/// Rest-day bonus: if nothing was used from a limit on the previous limited day, it is larger by this much today
+/// (does not stack; not given for a base limit of 0). The extra allowance the admin gave for a day (<see cref="DayGrant"/>) is added to it, by the day's
+/// start date; it has no effect on an exempt day. In banned hours the limit is not used up and not reset, it only blocks.
 /// </summary>
 public sealed class LimitEngine
 {
     public static readonly TimeSpan Window = TimeSpan.FromHours(24);
 
-    /// <summary>Egy jelentés legfeljebb ennyi időt számolhat el (védelem a hibás/túlzó jelentések ellen).</summary>
+    /// <summary>A report can account for at most this much time (protection against faulty/excessive reports).</summary>
     public static readonly TimeSpan MaxClaim = TimeSpan.FromMinutes(5);
 
     private readonly UsageStore _store;
@@ -58,20 +58,20 @@ public sealed class LimitEngine
 
     public LimitSettings Settings => _settings();
 
-    /// <summary>Mióta méri a program a használatot. Pihenőnap-jutalom csak egy ennél későbbi kezdetű, teljes napra jár.</summary>
+    /// <summary>Since when the program measures usage. A rest-day bonus is only given for a full day that started after this.</summary>
     public DateTimeOffset TrackingStart { get; }
 
     public LimitSchedule Schedule => new(_settings(), _zone);
 
-    /// <summary>Most mentes-e a korlátozás alól (hétvége, ha nincs hétvégi korlát).</summary>
+    /// <summary>Whether we are exempt from the restriction now (weekend, if there is no weekend limit).</summary>
     public bool IsExemptNow => Schedule.IsExempt(_clock.UtcNow);
 
     /// <summary>
-    /// Webes használat elszámolása. Ha több Chrome-profil egyszerre jelent ugyanarra a keretre, az átfedő
-    /// időt csak egyszer számolja: egy jelentés legfeljebb az előző jelentés óta eltelt időt fogadja el.
-    /// Mentes időszakban semmit sem számol.
+    /// Accounting of web usage. If several Chrome profiles report on the same limit at once, the overlapping
+    /// time is counted only once: a report is accepted for at most the time elapsed since the previous report.
+    /// In an exempt period nothing is counted.
     /// </summary>
-    /// <returns>Az elfogadott időtartam.</returns>
+    /// <returns>The accepted duration.</returns>
     public TimeSpan ReportWebUsage(string userSid, WebCategory category, TimeSpan claimed)
     {
         if (claimed <= TimeSpan.Zero) return TimeSpan.Zero;
@@ -128,7 +128,7 @@ public sealed class LimitEngine
             next = buckets.Count > 0 ? buckets[0].ReleasedAt : null;
             if (blocked)
             {
-                // Holnaptól a keret változhat: a mai jutalom megszűnik, illetve ha ma semmi sem fogyott, holnap jár.
+                // From tomorrow the limit may change: today's bonus ends, and if nothing was used today, tomorrow gets one.
                 var today = schedule.Today(now);
                 var tomorrowLimit = baseLimit + WebBonusAfter(userSid, category, settings, today)
                                     + ExtraWeb(settings, schedule, category, schedule.LogicalDay(now).AddDays(1));
@@ -152,7 +152,7 @@ public sealed class LimitEngine
         var bonus = LolBonusAfter(userSid, settings, schedule.PreviousEnforcedDay(now));
         var extra = ExtraLol(settings, schedule, schedule.LogicalDay(now));
         var limit = baseLimit + bonus + extra;
-        // Gördülő módban a pontosan 24 órája indult meccs már felszabadult; napi módban a nullázáskor indult már számít.
+        // In rolling mode a match started exactly 24 hours ago is already released; in daily mode a match started at the reset already counts.
         var windowStart = schedule.WindowStart(now);
         var since = schedule.Mode == ResetMode.Daily ? windowStart - TimeSpan.FromMilliseconds(1) : windowStart;
         var counted = _store.GetMatchesSince(userSid, since)
@@ -191,18 +191,18 @@ public sealed class LimitEngine
         return new LolLimitStatus(limit, used, Math.Max(0, limit - used), blocked, next, availableAgain, Bonus: bonus, Banned: banned, Extra: extra);
     }
 
-    /// <summary>Az admin által a napra adott extra (mentes napon nincs hatása).</summary>
+    /// <summary>The extra given by the admin for the day (no effect on an exempt day).</summary>
     private static TimeSpan ExtraWeb(LimitSettings settings, LimitSchedule schedule, WebCategory category, DateOnly day) =>
         schedule.IsExemptDay(day) ? TimeSpan.Zero : settings.ExtraWebTime(category, day);
 
     private static int ExtraLol(LimitSettings settings, LimitSchedule schedule, DateOnly day) =>
         schedule.IsExemptDay(day) ? 0 : settings.ExtraMatches(day);
 
-    /// <summary>Jár-e jutalom a <paramref name="day"/> utáni napra (semmi sem fogyott azon a napon).</summary>
+    /// <summary>Whether a bonus is given for the day after <paramref name="day"/> (nothing was used on that day).</summary>
     private TimeSpan WebBonusAfter(string sid, WebCategory category, LimitSettings settings, (DateTimeOffset Start, DateTimeOffset End)? day)
     {
         var bonus = settings.WebRestDayBonus(category);
-        if (day is not { } d || d.Start < TrackingStart) return TimeSpan.Zero; // nem teljesen mért nap
+        if (day is not { } d || d.Start < TrackingStart) return TimeSpan.Zero; // not a fully measured day
         if (bonus <= TimeSpan.Zero || settings.WebLimit(category) <= TimeSpan.Zero) return TimeSpan.Zero;
         return _store.SumWebUsage(sid, category, d.Start, d.End) == 0 ? bonus : TimeSpan.Zero;
     }
@@ -210,14 +210,14 @@ public sealed class LimitEngine
     private int LolBonusAfter(string sid, LimitSettings settings, (DateTimeOffset Start, DateTimeOffset End)? day)
     {
         var bonus = settings.LolRestDayBonusMatches;
-        if (day is not { } d || d.Start < TrackingStart) return 0; // nem teljesen mért nap
+        if (day is not { } d || d.Start < TrackingStart) return 0; // not a fully measured day
         if (bonus <= 0 || settings.LolPvpMatches <= 0) return 0;
         return _store.CountCountedMatches(sid, d.Start, d.End) == 0 ? bonus : 0;
     }
 
     /// <summary>
-    /// Gördülő mód: az első időpont, amikor a még ablakban lévő felhasználás a keret alá esik.
-    /// Jelöltek: a tételek felszabadulása és a holnapi nap kezdete (ahol a keret megváltozhat).
+    /// Rolling mode: the first moment when the usage still in the window falls below the limit.
+    /// Candidates: the release of the items and the start of tomorrow (where the limit may change).
     /// </summary>
     private static DateTimeOffset? FirstMomentBelowLimit(DateTimeOffset now, DateTimeOffset tomorrowStart,
         IReadOnlyList<(DateTimeOffset ReleasedAt, double Amount)> items, double todayLimit, double tomorrowLimit)
@@ -232,7 +232,7 @@ public sealed class LimitEngine
     }
 
     /// <summary>
-    /// Tiltott időszakban tilt; a feloldás a tiltás vége, vagy ha a keret addig sem szabadul fel, a keret feloldása.
+    /// Blocks during a banned period; the release is the end of the ban, or if the limit is not released by then, the limit's release.
     /// </summary>
     private static bool ApplyBan((bool Active, DateTimeOffset? Until) ban, ref bool blocked, ref DateTimeOffset? availableAgain)
     {
@@ -244,7 +244,7 @@ public sealed class LimitEngine
         return true;
     }
 
-    /// <summary>Ha a hétvége hamarabb kezdődik, mint ahogy a keret felszabadul, akkor az a feloldás ideje.</summary>
+    /// <summary>If the weekend starts earlier than the limit is released, that is the release time.</summary>
     private static DateTimeOffset? EarlierOfExempt(LimitSchedule schedule, DateTimeOffset now, DateTimeOffset? availableAgain)
     {
         var exempt = schedule.NextExemptStart(now);

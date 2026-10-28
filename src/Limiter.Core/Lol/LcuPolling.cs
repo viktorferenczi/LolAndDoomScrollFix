@@ -1,8 +1,8 @@
 namespace Limiter.Core.Lol;
 
 /// <summary>
-/// A LoL-kliens lekérdezési üteme. Játék közben ritkább, hogy a szolgáltatás a lehető legkevesebb terhet
-/// tegye a gépre (és a kliensre), amíg a meccs fut; a fázisváltásokra az események azonnal kiértékelést indítanak.
+/// The polling rhythm of the LoL client. Slower during a game so that the service puts the least possible load
+/// on the machine (and the client) while the match runs; events trigger an evaluation immediately on phase changes.
 /// </summary>
 public static class LcuPolling
 {

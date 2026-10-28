@@ -2,30 +2,30 @@ namespace Limiter.Core;
 
 public enum GrantDayStatus
 {
-    /// <summary>Kiválasztható.</summary>
+    /// <summary>Selectable.</summary>
     Ok = 0,
 
-    /// <summary>Hétvége, és a hétvégi korlát ki van kapcsolva: ilyenkor úgysincs korlát, az extra felesleges.</summary>
+    /// <summary>Weekend with the weekend limit off: there is no limit then anyway, an extra would be pointless.</summary>
     ExemptWeekend = 1,
 }
 
-/// <param name="Date">A nap kezdő dátuma.</param>
-/// <param name="IsToday">A most tartó nap (napi módban a visszaállítás órája előtt még az előző naptári napé).</param>
-/// <param name="HasGrant">Van már rá extra keret.</param>
+/// <param name="Date">The day's start date.</param>
+/// <param name="IsToday">The current day (in daily mode before the reset hour it is still the previous calendar day's).</param>
+/// <param name="HasGrant">It already has an extra allowance.</param>
 public sealed record GrantDayOption(DateOnly Date, GrantDayStatus Status, bool IsToday, bool HasGrant)
 {
     public bool Selectable => Status == GrantDayStatus.Ok;
 }
 
 /// <summary>
-/// Az extra keret napválasztójának szabályai: mely napok választhatók, és melyek nem (és miért).
-/// A múltbeli napok nem szerepelnek (nincs mit adni nekik); a lista a mostani naptól <see cref="HorizonDays"/> napra előre tart.
+/// The rules of the extra-allowance day chooser: which days can be chosen and which cannot (and why).
+/// Past days are not listed (nothing to give them); the list runs <see cref="HorizonDays"/> days ahead from the current day.
 /// </summary>
 public static class GrantDays
 {
     public const int HorizonDays = 30;
 
-    /// <summary>A most tartó nap kezdő dátuma a megadott beállításokkal (napi módban a visszaállítás órájától függ).</summary>
+    /// <summary>The start date of the current day with the given settings (in daily mode it depends on the reset hour).</summary>
     public static DateOnly Today(LimitSettings settings, DateTimeOffset now, TimeZoneInfo zone) =>
         new LimitSchedule(settings, zone).LogicalDay(now);
 
@@ -49,7 +49,7 @@ public static class GrantDays
         return list;
     }
 
-    /// <summary>A lejárt (a mostani napnál korábbi) extrák nélküli beállítások.</summary>
+    /// <summary>The settings without the expired extras (those before the current day).</summary>
     public static LimitSettings Pruned(LimitSettings settings, DateTimeOffset now, TimeZoneInfo zone) =>
         settings.WithoutGrantsBefore(Today(settings, now, zone));
 }

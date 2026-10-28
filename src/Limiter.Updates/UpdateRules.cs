@@ -2,21 +2,21 @@ using System.Text.RegularExpressions;
 
 namespace Limiter.Updates;
 
-/// <summary>Frissítési szabályok: verziók értelmezése és összehasonlítása, megbízható letöltési címek.</summary>
+/// <summary>Update rules: parsing and comparing versions, trusted download addresses.</summary>
 public static partial class UpdateRules
 {
     public const string DefaultRepository = "viktorferenczi/LolAndDoomScrollFix";
 
-    /// <summary>A telepítő fájlnév-mintája, pl. LolScrollLimiter-Setup-1.4.0.exe.</summary>
+    /// <summary>The installer's file-name pattern, e.g. LolScrollLimiter-Setup-1.4.0.exe.</summary>
     [GeneratedRegex(@"^LolScrollLimiter-Setup-(\d+\.\d+\.\d+)\.exe$")]
     public static partial Regex InstallerNamePattern();
 
     public const string ChecksumFileName = "SHA256SUMS.txt";
 
-    /// <summary>Legfeljebb ekkora telepítőt töltünk le.</summary>
+    /// <summary>The largest installer we download.</summary>
     public const long MaxInstallerBytes = 500L * 1024 * 1024;
 
-    /// <summary>„v1.3.2”, „1.3.2”, „1.3.2.0”, „1.3.2+abc123” → 1.3.2. Más formátumot nem fogad el.</summary>
+    /// <summary>"v1.3.2", "1.3.2", "1.3.2.0", "1.3.2+abc123" → 1.3.2. No other format is accepted.</summary>
     public static bool TryParseVersion(string? text, out Version version)
     {
         version = new Version(0, 0, 0);
@@ -30,16 +30,16 @@ public static partial class UpdateRules
         return true;
     }
 
-    /// <summary>Három tagúra normalizál (1.3 → 1.3.0, 1.3.2.0 → 1.3.2), hogy az összehasonlítás pontos legyen.</summary>
+    /// <summary>Normalizes to three components (1.3 → 1.3.0, 1.3.2.0 → 1.3.2) so that the comparison is exact.</summary>
     public static Version Normalize(Version v) => new(v.Major, v.Minor, Math.Max(v.Build, 0));
 
-    /// <summary>Csak szigorúan újabb verzió ajánlható (visszalépés és azonos verzió nem).</summary>
+    /// <summary>Only a strictly newer version can be offered (no downgrade, no same version).</summary>
     public static bool IsNewer(Version current, Version candidate) => Normalize(candidate) > Normalize(current);
 
     public static string InstallerFileName(Version v) => $"LolScrollLimiter-Setup-{v.Major}.{v.Minor}.{Math.Max(v.Build, 0)}.exe";
 
     /// <summary>
-    /// Csak a tároló saját kiadásaiból (https://github.com/{repo}/releases/download/…) tölthetünk le.
+    /// We may only download from the repository's own releases (https://github.com/{repo}/releases/download/…).
     /// </summary>
     public static bool IsTrustedAssetUrl(string? url, string repository)
     {
@@ -49,14 +49,14 @@ public static partial class UpdateRules
                && uri.AbsolutePath.StartsWith($"/{repository}/releases/download/", StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Az átirányítás után is csak GitHub-tárhelyen lehetünk (a kiadási fájlok ott élnek).</summary>
+    /// <summary>After a redirect we may still only be on GitHub hosting (the release files live there).</summary>
     public static bool IsTrustedFinalHost(Uri? uri) =>
         uri is { Scheme: "https" } && (HostIs(uri.Host, "github.com") || HostIs(uri.Host, "githubusercontent.com"));
 
     private static bool HostIs(string host, string domain) =>
         host.Equals(domain, StringComparison.OrdinalIgnoreCase) || host.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>A „SHA256SUMS” formátumú fájlból (hash  fájlnév) a megadott fájl ellenőrzőösszege, vagy null.</summary>
+    /// <summary>From a file in the "SHA256SUMS" format (hash  file name), the checksum of the given file, or null.</summary>
     public static string? FindChecksum(string checksumFileText, string fileName)
     {
         foreach (var rawLine in checksumFileText.Split('\n'))
@@ -73,7 +73,7 @@ public static partial class UpdateRules
     [GeneratedRegex(@"^([0-9a-fA-F]{64})\s+(.+)$")]
     private static partial Regex ChecksumLine();
 
-    /// <summary>A GitHub „digest” mezője („sha256:…”) → hexa összeg, vagy null.</summary>
+    /// <summary>GitHub's "digest" field ("sha256:…") → the hex checksum, or null.</summary>
     public static string? ParseDigest(string? digest)
     {
         if (digest is null || !digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)) return null;

@@ -5,9 +5,9 @@ using Limiter.Core;
 namespace Limiter.Tray;
 
 /// <summary>
-/// Admin-felület: a telepítéskor megadott beállítások (visszaállítás, keretek, hétvége, pihenőnap-jutalom,
-/// tiltott órák) szerkesztése. Csak emelt (rendszergazdai) jogosultsággal fut, mert a limits.json az adatmappában
-/// csak a rendszergazdáknak írható. A szolgáltatás 30 másodpercen belül átveszi a mentett értékeket.
+/// Admin panel: editing the settings given at install time (reset, limits, weekends, rest-day bonus,
+/// banned hours). It only runs with elevated (administrator) rights, because limits.json in the data folder
+/// is writable only by administrators. The service picks up the saved values within 30 seconds.
 /// </summary>
 public sealed class AdminForm : Form
 {
@@ -121,7 +121,7 @@ public sealed class AdminForm : Form
         LoadFromFile();
     }
 
-    // ---------- betöltés / mentés ----------
+    // ---------- loading / saving ----------
 
     private void LoadFromFile()
     {
@@ -201,7 +201,7 @@ public sealed class AdminForm : Form
             MessageBox.Show(this, Loc.T("The admin password was changed.", "Az admin jelszó megváltozott."), Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
-    // ---------- extra keret egy napra ----------
+    // ---------- extra allowance for a day ----------
 
     private Control GrantPanel()
     {
@@ -251,7 +251,7 @@ public sealed class AdminForm : Form
         }
     }
 
-    /// <summary>A beállításokból (az űrlap mostani állása szerint) újraépíti a választható napok listáját.</summary>
+    /// <summary>Rebuilds the list of selectable days from the settings (as the form currently stands).</summary>
     private void RefreshGrantDays()
     {
         var current = _grantDay.SelectedItem is DayItem item ? item.Option.Date : (DateOnly?)null;
@@ -263,10 +263,10 @@ public sealed class AdminForm : Form
         foreach (var o in options) _grantDay.Items.Add(new DayItem(o));
         _grantDay.EndUpdate();
 
-        // Marad a korábbi nap, ha még választható; különben az első választható nap.
+        // The earlier day stays if it is still selectable; otherwise the first selectable day.
         var index = options.ToList().FindIndex(o => o.Selectable && o.Date == current);
         if (index < 0) index = options.ToList().FindIndex(o => o.Selectable);
-        _grantDay.SelectedIndex = index; // -1, ha nincs választható nap
+        _grantDay.SelectedIndex = index; // -1 if there is no selectable day
         _lastSelectableDay = index;
         LoadGrantValues();
         RefreshGrantList();
@@ -296,7 +296,7 @@ public sealed class AdminForm : Form
     {
         if (_grantDay.SelectedItem is DayItem { Option.Selectable: false })
         {
-            // Tiltott nap: visszaállunk az előzőre.
+            // A forbidden day: we go back to the previous one.
             _grantDay.SelectedIndex = _lastSelectableDay;
             MessageBox.Show(this, Loc.T("No extra can be given for this day: there is no limit on weekends. Turn on the weekend limit if you need it.", "Erre a napra nem adható extra: hétvégén nincs korlát. Kapcsold be a hétvégi korlátot, ha szükséged van rá."),
                 Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -306,7 +306,7 @@ public sealed class AdminForm : Form
         LoadGrantValues();
     }
 
-    /// <summary>A kiválasztott nap meglévő extráját beírja a mezőkbe (ha nincs, nullák).</summary>
+    /// <summary>Writes the chosen day's existing extra into the fields (zeros if there is none).</summary>
     private void LoadGrantValues()
     {
         var existing = _grantDay.SelectedItem is DayItem item ? _grants.FirstOrDefault(g => g.Date == item.Option.Date) : null;
@@ -365,7 +365,7 @@ public sealed class AdminForm : Form
         _grantList.EndUpdate();
     }
 
-    /// <summary>A listából választott extra napját a napválasztóban is kijelöli (ha az a nap választható).</summary>
+    /// <summary>Also selects the day of the extra chosen from the list in the day chooser (if that day is selectable).</summary>
     private void OnGrantListChosen()
     {
         var i = _grantList.SelectedIndex;
@@ -382,7 +382,7 @@ public sealed class AdminForm : Form
         }
     }
 
-    // ---------- felépítés ----------
+    // ---------- construction ----------
 
     private Control ResetPanel()
     {
@@ -437,7 +437,7 @@ public sealed class AdminForm : Form
         return box;
     }
 
-    /// <summary>Egy tiltott időszak sora: jelölőnégyzet, kezdő és záró óra.</summary>
+    /// <summary>One row of a banned period: a checkbox, the start and the end hour.</summary>
     private sealed class BanRow
     {
         private readonly CheckBox _enabled;

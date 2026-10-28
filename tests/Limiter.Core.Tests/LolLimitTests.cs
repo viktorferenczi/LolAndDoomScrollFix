@@ -26,11 +26,11 @@ public class LolLimitTests
         Assert.Equal(MatchmakingAction.CancelSearch, env.Tracker.DecideMatchmaking(TestEnv.UserA, "Matchmaking", TestEnv.RankedSolo).Action);
         Assert.Equal(MatchmakingAction.DeclineReadyCheck, env.Tracker.DecideMatchmaking(TestEnv.UserA, "ReadyCheck", TestEnv.RankedSolo).Action);
 
-        // Egy másodperccel a 24 órás határ előtt még tiltott.
+        // One second before the 24-hour boundary it is still blocked.
         env.Clock.UtcNow = t0 + LimitEngine.Window - TimeSpan.FromSeconds(1);
         Assert.True(env.Engine.GetLolStatus(TestEnv.UserA).Blocked);
 
-        // Pontosan 24 órával az első meccs után felszabadul egy alkalom — nincs éjféli nullázás.
+        // Exactly 24 hours after the first match one attempt is released — there is no midnight reset.
         env.Clock.UtcNow = t0 + LimitEngine.Window + TimeSpan.FromSeconds(1);
         status = env.Engine.GetLolStatus(TestEnv.UserA);
         Assert.False(status.Blocked);
@@ -59,12 +59,12 @@ public class LolLimitTests
         env.Tracker.OnGameflow(TestEnv.UserA, TestEnv.Running(1));
         env.Tracker.OnGameflow(TestEnv.UserA, TestEnv.Running(2));
 
-        // A harmadik keresés még engedett.
+        // The third search is still allowed.
         Assert.Equal(MatchmakingAction.Allow, env.Tracker.DecideMatchmaking(TestEnv.UserA, "Matchmaking", TestEnv.RankedSolo).Action);
         Assert.Equal(MatchmakingAction.Allow, env.Tracker.DecideMatchmaking(TestEnv.UserA, "ReadyCheck", TestEnv.RankedSolo).Action);
         Assert.Equal(MatchRecordOutcome.Recorded, env.Tracker.OnGameflow(TestEnv.UserA, TestEnv.Running(3)));
 
-        // Újracsatlakozás a harmadikhoz: nem új alkalom, és nincs keresés, amit tiltani kellene.
+        // Reconnecting to the third: not a new attempt, and there is no search to block.
         Assert.Equal(MatchRecordOutcome.AlreadyRecorded, env.Tracker.OnGameflow(TestEnv.UserA, TestEnv.Running(3, phase: "Reconnect")));
         Assert.Equal(3, env.Engine.GetLolStatus(TestEnv.UserA).Used);
     }
@@ -78,7 +78,7 @@ public class LolLimitTests
         env.Tracker.OnGameflow(TestEnv.UserA, TestEnv.Running(3));
         Assert.True(env.Engine.GetLolStatus(TestEnv.UserA).Blocked);
 
-        // Rövid, de nem remake meccs: marad a számlálóban.
+        // A short but not remade match: it stays in the counter.
         env.Tracker.OnRemakeResult(TestEnv.UserA, 2, remade: false);
         Assert.True(env.Engine.GetLolStatus(TestEnv.UserA).Blocked);
 
@@ -163,7 +163,7 @@ public class LolLimitTests
     public void Counters_are_per_windows_user_but_shared_across_lol_accounts()
     {
         using var env = new TestEnv();
-        // Két különböző LoL-fiók ugyanazon a Windows-felhasználón: a SID azonos, a keret közös.
+        // Two different LoL accounts on the same Windows user: the SID is the same, the limit is shared.
         env.Tracker.OnGameflow(TestEnv.UserA, TestEnv.Running(1, TestEnv.RankedSolo));
         env.Tracker.OnGameflow(TestEnv.UserA, TestEnv.Running(2, TestEnv.Aram));
         env.Tracker.OnGameflow(TestEnv.UserA, TestEnv.Running(3, TestEnv.RankedSolo));

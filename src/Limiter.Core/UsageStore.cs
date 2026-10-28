@@ -8,7 +8,7 @@ public enum RemakeStatus
     NotRemake = 1,
     Remake = 2,
 
-    /// <summary>Korlátmentes időszakban (hétvégén) indult meccs: nem számít a keretbe.</summary>
+    /// <summary>A match started in an exempt period (weekend): it does not count toward the limit.</summary>
     Exempt = 3,
 }
 
@@ -16,13 +16,13 @@ public sealed record LolMatch(string UserSid, long GameId, DateTimeOffset Starte
 
 public sealed record UsageBucket(DateTimeOffset Start, long Milliseconds)
 {
-    /// <summary>A vödör ekkor esik ki teljesen a 24 órás ablakból (konzervatív: a vödör végétől számolva).</summary>
+    /// <summary>The bucket drops out of the 24-hour window completely at this time (conservative: counted from the bucket's end).</summary>
     public DateTimeOffset ReleasedAt => Start + UsageStore.BucketSize + LimitEngine.Window;
 }
 
 /// <summary>
-/// SQLite-alapú tár. A webes használat percenkénti vödrökben, a LoL-meccsek egyenként tárolódnak.
-/// Minden rekord Windows-felhasználó (SID) szerint van kulcsolva, így a Chrome-profilok és a LoL-fiókok közösek.
+/// SQLite-based store. Web usage is kept in per-minute buckets, LoL matches individually.
+/// Every record is keyed by Windows user (SID), so Chrome profiles and LoL accounts share the counters.
 /// </summary>
 public sealed class UsageStore : IDisposable
 {
@@ -70,8 +70,8 @@ public sealed class UsageStore : IDisposable
     private const string TrackingStartKey = "tracking_started_at";
 
     /// <summary>
-    /// Mióta méri a program a használatot. Első híváskor rögzíti: meglévő adatbázisnál (frissítés) a legkorábbi
-    /// rögzített használat időpontját, üres adatbázisnál (friss telepítés) a <paramref name="now"/>-t.
+    /// Since when the program measures usage. Recorded on the first call: with an existing database (update) the earliest
+    /// recorded usage time, with an empty database (fresh install) <paramref name="now"/>.
     /// </summary>
     public DateTimeOffset EnsureTrackingStart(DateTimeOffset now)
     {
@@ -133,7 +133,7 @@ public sealed class UsageStore : IDisposable
         }
     }
 
-    /// <summary>Azok a vödrök, amelyek <paramref name="windowStart"/> után még tartalmaznak használatot, időrendben.</summary>
+    /// <summary>The buckets that still contain usage after <paramref name="windowStart"/>, in chronological order.</summary>
     public IReadOnlyList<UsageBucket> GetWebBuckets(string userSid, WebCategory category, DateTimeOffset windowStart)
     {
         lock (_gate)
@@ -156,7 +156,7 @@ public sealed class UsageStore : IDisposable
         }
     }
 
-    /// <summary>Webes használat összesen a [from, to) időszakban (a percvödrök kezdete szerint).</summary>
+    /// <summary>Total web usage in the period [from, to) (by the start of the minute buckets).</summary>
     public long SumWebUsage(string userSid, WebCategory category, DateTimeOffset from, DateTimeOffset to)
     {
         lock (_gate)
@@ -174,7 +174,7 @@ public sealed class UsageStore : IDisposable
         }
     }
 
-    /// <summary>A keretbe számító (nem remake, nem mentes) meccsek száma a [from, to) időszakban.</summary>
+    /// <summary>The number of matches counting toward the limit (not remake, not exempt) in the period [from, to).</summary>
     public int CountCountedMatches(string userSid, DateTimeOffset from, DateTimeOffset to)
     {
         lock (_gate)
@@ -194,8 +194,8 @@ public sealed class UsageStore : IDisposable
         }
     }
 
-    /// <summary>Új meccs rögzítése. Ugyanaz a meccsazonosító (újracsatlakozás, ismételt esemény) nem kerül be újra.</summary>
-    /// <returns>Igaz, ha új alkalom keletkezett.</returns>
+    /// <summary>Records a new match. The same match ID (reconnect, repeated event) is not inserted again.</summary>
+    /// <returns>True if a new attempt was created.</returns>
     public bool TryRecordMatch(string userSid, long gameId, DateTimeOffset startedAt, int queueId,
         RemakeStatus initialStatus = RemakeStatus.Unchecked)
     {
@@ -228,7 +228,7 @@ public sealed class UsageStore : IDisposable
         }
     }
 
-    /// <summary>A <paramref name="since"/> után indult meccsek időrendben (a remake-ek is).</summary>
+    /// <summary>The matches started after <paramref name="since"/>, in chronological order (remakes too).</summary>
     public IReadOnlyList<LolMatch> GetMatchesSince(string userSid, DateTimeOffset since)
     {
         lock (_gate)

@@ -10,7 +10,7 @@ public sealed class FakeClock(DateTimeOffset start) : IClock
     public void Advance(TimeSpan by) => UtcNow += by;
 }
 
-/// <summary>Ideiglenes adatbázis-fájl egy teszthez; az „újraindítás” új tár-példányt nyit ugyanarra a fájlra.</summary>
+/// <summary>A temporary database file for a test; a "restart" opens a new store instance on the same file.</summary>
 public sealed class TestEnv : IDisposable
 {
     public const string UserA = "S-1-5-21-1000-1000-1000-1001";
@@ -19,8 +19,8 @@ public sealed class TestEnv : IDisposable
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "limiter-tests-" + Guid.NewGuid().ToString("N"));
 
     /// <summary>
-    /// Alapértelmezés: 2026. október 1., csütörtök 12:00 UTC, UTC időzónában. A pihenőnap-jutalom csak
-    /// <paramref name="restDayBonus"/> esetén él (üres adatbázisnál különben minden teszt „pihenőnap” után indulna).
+    /// Default: Thursday 1 October 2026, 12:00 UTC, in the UTC time zone. The rest-day bonus only
+    /// applies with <paramref name="restDayBonus"/> (with an empty database every test would otherwise start after a "rest day").
     /// </summary>
     public TestEnv(LimitSettings? settings = null, TimeZoneInfo? zone = null, DateTimeOffset? start = null,
         bool restDayBonus = false, DateTimeOffset? trackingStart = null)
@@ -30,7 +30,7 @@ public sealed class TestEnv : IDisposable
         if (!restDayBonus) Settings = Settings.WithoutRestDayBonus();
         Zone = zone ?? TimeZoneInfo.Utc;
         Clock = new FakeClock(start ?? new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
-        // A jutalom teszteiben a program „régóta mér”, kivéve ha a teszt külön megadja a mérés kezdetét.
+        // In the bonus tests the program "has been measuring for a long time", unless the test gives the start of the measurement itself.
         _initialTrackingStart = trackingStart ?? (restDayBonus ? Clock.UtcNow - TimeSpan.FromDays(30) : null);
         Open();
     }
@@ -47,7 +47,7 @@ public sealed class TestEnv : IDisposable
 
     public string DbPath => Path.Combine(_dir, "limiter.db");
 
-    /// <summary>A szolgáltatás újraindításának szimulálása.</summary>
+    /// <summary>Simulates restarting the service.</summary>
     public void Restart()
     {
         Store.Dispose();
@@ -60,7 +60,7 @@ public sealed class TestEnv : IDisposable
         if (_initialTrackingStart is { } tracking)
         {
             Store.SetTrackingStart(tracking);
-            _initialTrackingStart = null; // újraindításkor a tárolt érték marad
+            _initialTrackingStart = null; // on restart the stored value stays
         }
         Engine = new LimitEngine(Store, () => Settings, Clock, Zone);
         Tracker = new LolMatchTracker(Store, Engine, Clock);

@@ -4,7 +4,7 @@ using Limiter.Protocol;
 
 namespace Limiter.Service;
 
-/// <summary>A védelem működési állapota felhasználónként (LoL-kapcsolat, bővítmény jelentkezése, utolsó beavatkozás).</summary>
+/// <summary>The protection's operating state per user (LoL connection, the extension reporting, the last intervention).</summary>
 public sealed class ProtectionState(IClock clock)
 {
     private sealed class UserState
@@ -37,7 +37,7 @@ public sealed class ProtectionState(IClock clock)
         lock (u) u.LastExtensionPingAt = clock.UtcNow;
     }
 
-    /// <summary>Egy LoL-beavatkozás (keresés megszakítása, elutasítás, remake) rögzítése. Ugyanazt az üzenetet 30 mp-en belül nem ismétli.</summary>
+    /// <summary>Records a LoL intervention (cancelling a search, declining, remake). It does not repeat the same message within 30 s.</summary>
     public void LolAction(string sid, string message)
     {
         var u = For(sid);

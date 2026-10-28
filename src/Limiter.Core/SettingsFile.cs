@@ -3,12 +3,12 @@ using System.Text.Json;
 
 namespace Limiter.Core;
 
-/// <summary>A limits.json ellenőrzése, olvasása és biztonságos írása (az admin-felület használja).</summary>
+/// <summary>Validating, reading and safely writing limits.json (used by the admin panel).</summary>
 public static class SettingsFile
 {
     /// <summary>
-    /// Érték-ellenőrzés mentés előtt: a hibákat magyarul adja vissza (üres lista = rendben).
-    /// A szolgáltatás betöltéskor szintén határok közé szorít, de a felület ne némán módosítson.
+    /// Value validation before saving: returns the errors in the active language (empty list = fine).
+    /// The service also clamps to the bounds when loading, but the panel must not change values silently.
     /// </summary>
     public static IReadOnlyList<string> Validate(LimitSettings s, TimeZoneInfo? zone = null)
     {
@@ -63,7 +63,7 @@ public static class SettingsFile
         }
     }
 
-    /// <summary>Beolvassa a fájlt. Hiányzó fájlnál az alapértékeket adja; hibás fájlnál az alapértékeket és a hibát.</summary>
+    /// <summary>Reads the file. For a missing file it returns the defaults; for a faulty file the defaults and the error.</summary>
     public static (LimitSettings Settings, string? Warning) Load(string path)
     {
         try
@@ -78,8 +78,8 @@ public static class SettingsFile
     }
 
     /// <summary>
-    /// Érvényes értékeket ír: előbb egy ideiglenes fájlba, majd egy lépésben cseréli a limits.json-t, így a szolgáltatás
-    /// sosem olvas félig megírt fájlt. Érvénytelen értéknél kivételt dob, és a fájlhoz nem nyúl.
+    /// Writes valid values: first to a temporary file, then replaces limits.json in one step, so the service
+    /// never reads a half-written file. For an invalid value it throws and does not touch the file.
     /// </summary>
     public static void Save(string path, LimitSettings settings)
     {

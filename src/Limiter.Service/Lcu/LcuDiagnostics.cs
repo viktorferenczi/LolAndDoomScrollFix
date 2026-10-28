@@ -4,9 +4,9 @@ using Limiter.Core.Lol;
 namespace Limiter.Service.Lcu;
 
 /// <summary>
-/// Kézi ellenőrző eszköz: <c>Limiter.Service.exe --diagnose [--test-cancel]</c>.
-/// Kiírja a kliens állapotát, a sor besorolását és az utolsó meccsek remake-jelzőjét; --test-cancel esetén
-/// a folyamatban lévő keresést megszakítja / a meccselfogadást elutasítja, hogy a működés a jelenlegi kliensen igazolható legyen.
+/// A manual check tool: <c>Limiter.Service.exe --diagnose [--test-cancel]</c>.
+/// Prints the client's state, the queue's classification and the remake flag of the last matches; with --test-cancel
+/// it cancels a search in progress / declines the match accept, so that the behaviour can be verified on the current client.
 /// </summary>
 public static class LcuDiagnostics
 {

@@ -9,10 +9,10 @@ const t = (key, ...subs) => (chrome.i18n && chrome.i18n.getMessage(key, subs.map
 const HOST_NAME = 'hu.kmsoft.lolscrolllimiter';
 const CATEGORIES = ['shortVideo', 'facebookFeed'];
 const TICK_MS = 1000;
-const MAX_TICK_SECONDS = 1.5;     // alvás/felfüggesztés után sem számol többet egy lépésben
-const HEARTBEAT_FRESH_MS = 3000;  // ennél régebbi tartalomszkript-jelentés nem számít
-const STATUS_FRESH_MS = 10000;    // ennél régebbi szolgáltatói állapotnál fail-open
-const PING_MS = 5000;        // ennél sűrűbb, mint STATUS_FRESH_MS, így tétlenül sem avul el az állapot
+const MAX_TICK_SECONDS = 1.5;     // even after sleep/suspend it never counts more in one step
+const HEARTBEAT_FRESH_MS = 3000;  // a content-script report older than this does not count
+const STATUS_FRESH_MS = 10000;    // with a service state older than this: fail-open
+const PING_MS = 5000;        // more frequent than STATUS_FRESH_MS, so the state does not go stale even when idle
 
 let port = null;
 let reconnectDelay = 1000;
@@ -93,13 +93,13 @@ function healthy() {
   return !!(port && lastStatus && Date.now() - lastStatusAt < STATUS_FRESH_MS);
 }
 
-/** Tiltott-e a kategória. Hibás/elavult állapotnál enged (fail-open). */
+/** Whether the category is blocked. With a faulty/stale state it lets everything through (fail-open). */
 function isBlocked(category) {
   if (!category || !healthy()) return false;
   const s = lastStatus[category];
-  if (!s || s.exempt) return false; // hétvégén (ha így van beállítva) nincs korlát
+  if (!s || s.exempt) return false; // no limit on weekends (if configured so)
   if (s.blocked) return true;
-  // A még nyugtázatlan jelentéseket is levonjuk, így a tiltás egy másodpercen belül életbe lép.
+  // The reports not yet acknowledged are subtracted too, so the block takes effect within a second.
   let pending = 0;
   for (const r of inflight.values()) if (r.category === category) pending += r.seconds;
   return s.remainingSeconds - pending <= 0;
@@ -122,7 +122,7 @@ function stateFor(category) {
   };
 }
 
-// ---------- Fókusz, lapok, zárolás ----------
+// ---------- Focus, tabs, locking ----------
 
 chrome.windows.onFocusChanged.addListener((windowId) => {
   focusedWindowId = windowId;
@@ -162,9 +162,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 /**
- * Melyik lap fogyaszt most időt? Az aktív, látható lap a fókuszban lévő Chrome-ablakban.
- * Ha egyik Chrome-ablak sincs fókuszban (pl. másik monitoron fut a videó), az utoljára fókuszált ablak
- * látható lapja akkor számít, ha éppen lejátszik.
+ * Which tab uses time now? The active, visible tab in the focused Chrome window.
+ * If no Chrome window is focused (e.g. the video runs on another monitor), the last focused window's
+ * visible tab counts if it is playing right now.
  */
 function countingCategory(now) {
   if (idleState === 'locked') return null;
@@ -196,7 +196,7 @@ function tick() {
   pushStates();
 }
 
-/** Tiltási állapot változásakor azonnal szól az érintett lapoknak. */
+/** When the blocking state changes, it immediately tells the affected tabs. */
 function pushStates() {
   for (const category of CATEGORIES) {
     const blocked = isBlocked(category);
@@ -220,8 +220,8 @@ function updateBadge() {
   }
 }
 
-// A service workert a nyitott Native Messaging port életben tartja; ha mégis leállna,
-// az alarm 30 másodpercen belül újraindítja és újracsatlakozik.
+// The open Native Messaging port keeps the service worker alive; if it still stopped,
+// the alarm restarts it and reconnects within 30 seconds.
 chrome.alarms.create('keepalive', { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener(() => { if (!port && !reconnectTimer) connect(); });
 

@@ -2,7 +2,7 @@ using Limiter.Core;
 
 namespace Limiter.Service;
 
-/// <summary>Korlátok újraolvasása (30 mp) és a régi, már nem számító rekordok törlése (óránként).</summary>
+/// <summary>Re-reading the limits (30 s) and deleting old records that no longer count (hourly).</summary>
 public sealed class MaintenanceService(SettingsProvider settings, UsageStore store, IClock clock, ILogger<MaintenanceService> log)
     : BackgroundService
 {
@@ -17,7 +17,7 @@ public sealed class MaintenanceService(SettingsProvider settings, UsageStore sto
             {
                 try
                 {
-                    // A pihenőnap-jutalomhoz egy hétvégén túli napot is vissza kell nézni.
+                    // For the rest-day bonus, a day beyond a weekend must also be looked back at.
                     store.Prune(clock.UtcNow - TimeSpan.FromDays(9));
                     lastPrune = clock.UtcNow;
                 }

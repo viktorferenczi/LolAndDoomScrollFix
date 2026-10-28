@@ -2,7 +2,7 @@ namespace Limiter.Core.Tests;
 
 public class AdminPasswordTests
 {
-    // Gyors kör a teszteknek; az éles érték az alapértelmezés.
+    // A fast round count for the tests; the production value is the default.
     private const int Fast = 1_000;
 
     private static string TempFile() => Path.Combine(Path.GetTempPath(), "limiter-pw-" + Guid.NewGuid().ToString("N"), "admin.json");
@@ -43,7 +43,7 @@ public class AdminPasswordTests
     [Fact]
     public void Unicode_passwords_match_regardless_of_composition()
     {
-        var composed = "árvíztűrő";           // előre összeállított ékezetes betűk
+        var composed = "árvíztűrő";           // precomposed accented letters
         var decomposed = composed.Normalize(System.Text.NormalizationForm.FormD);
         var record = AdminPassword.Create(composed, Fast);
         Assert.True(AdminPassword.Verify(decomposed, record));
@@ -126,7 +126,7 @@ public class AdminPasswordTests
     [Theory]
     [InlineData("0061006200630031", "abc1")]
     [InlineData("00e1", "á")]
-    [InlineData("  00e1\r\n", "á")]            // lezáró sortörés megengedett
+    [InlineData("  00e1\r\n", "á")]            // a trailing line break is allowed
     [InlineData("0151", "ő")]
     public void Transfer_decoding_restores_the_characters(string hex, string expected) =>
         Assert.Equal(expected, AdminPassword.DecodeTransfer(hex));
@@ -134,7 +134,7 @@ public class AdminPasswordTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    [InlineData("006")]       // nem négy többszöröse
+    [InlineData("006")]       // not a multiple of four
     [InlineData("00zz")]
     public void Transfer_decoding_rejects_garbage(string? hex) => Assert.Null(AdminPassword.DecodeTransfer(hex));
 }

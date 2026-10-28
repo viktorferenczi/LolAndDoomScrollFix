@@ -7,8 +7,8 @@ namespace Limiter.Tray;
 
 /// <summary>
 /// Starting and protecting the admin panel. The program restarts itself with administrator rights
-/// (<c>--admin</c>): Windows then asks for the administrator password (UAC), and the window only appears after approval. Ezután az admin jelszót is be kell írni (<see cref="AdminGate"/>); a felhasználó a limits.json-hoz
-/// amúgy sem fér hozzá.
+/// (<c>--admin</c>): Windows then asks for the administrator password (UAC), and the window only appears after approval.
+/// Then the admin password has to be typed too (<see cref="AdminGate"/>); the user cannot reach limits.json anyway.
 /// </summary>
 public static class AdminLauncher
 {
@@ -19,7 +19,7 @@ public static class AdminLauncher
     public static string SettingsPath { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "LolScrollLimiter", "limits.json");
 
-    /// <summary>Újraindítja a programot emelt jogosultsággal. Jóváhagyás nélkül semmi sem nyílik meg.</summary>
+    /// <summary>Restarts the program with elevated rights. Without approval nothing opens.</summary>
     public static void Open(IWin32Window? owner)
     {
         try
@@ -40,19 +40,19 @@ public static class AdminLauncher
         }
     }
 
-    /// <summary>Emelt (rendszergazdai) jogosultsággal fut-e a folyamat.</summary>
+    /// <summary>Whether the process runs with elevated (administrator) rights.</summary>
     public static bool IsElevated()
     {
         using var identity = WindowsIdentity.GetCurrent();
         return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
     }
 
-    /// <summary>Az emelt folyamat belépési pontja (<c>Limiter.Tray.exe --admin</c>).</summary>
+    /// <summary>The entry point of the elevated process (<c>Limiter.Tray.exe --admin</c>).</summary>
     public static void RunElevated()
     {
         if (!IsElevated())
         {
-            // Jóváhagyás nélkül (pl. kézzel, parancssorból) indítva sem nyílik meg, és úgysem tudna írni.
+            // Started without approval (e.g. by hand, from the command line) it does not open either, and could not write anyway.
             MessageBox.Show(Loc.T("The admin panel can only be opened with administrator rights.\nUse the \"Admin settings\" button of the tray application.",
                                   "Az admin felület csak rendszergazdai jogosultsággal nyitható meg.\nHasználd a tálcaalkalmazás „Admin beállítások” gombját."),
                 Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -62,7 +62,7 @@ public static class AdminLauncher
         using var mutex = new Mutex(initiallyOwned: true, @"Local\LolScrollLimiterAdmin", out var created);
         if (!created) return;
 
-        // Második kapu: az admin jelszó (a Windows rendszergazdai jóváhagyás mellett).
+        // Second gate: the admin password (in addition to the Windows administrator approval).
         if (!AdminGate.Unlock(null)) return;
 
         Application.Run(new AdminForm(SettingsPath));

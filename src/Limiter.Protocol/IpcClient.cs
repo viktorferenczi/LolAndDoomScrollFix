@@ -6,9 +6,9 @@ using Limiter.Core;
 namespace Limiter.Protocol;
 
 /// <summary>
-/// Sor-alapú kliens a szolgáltatás named pipe-jához. Csatlakozás után ellenőrzi, hogy a túloldalon
-/// valóban a telepített szolgáltatás fut (0-s munkamenet, a telepítési mappából indított folyamat),
-/// így egy normál felhasználó által „elfoglalt” pipe-név nem tud hamis keretet visszaadni.
+/// A line-based client for the service's named pipe. After connecting it verifies that on the other side
+/// the installed service really runs (session 0, a process started from the install folder),
+/// so a pipe name "taken" by a normal user cannot return a fake limit.
 /// </summary>
 public sealed class IpcClient : IDisposable
 {
@@ -43,7 +43,7 @@ public sealed class IpcClient : IDisposable
         }
     }
 
-    /// <summary>Egy nyers JSON sort küld, és a válaszsort adja vissza.</summary>
+    /// <summary>Sends one raw JSON line and returns the response line.</summary>
     public async Task<string> SendLineAsync(string jsonLine, TimeSpan timeout, CancellationToken ct = default)
     {
         if (jsonLine.Contains('\n')) throw new ArgumentException(Loc.T("A request cannot contain a line break.", "A kérés nem tartalmazhat sortörést."), nameof(jsonLine));
@@ -60,7 +60,7 @@ public sealed class IpcClient : IDisposable
         return IpcJson.Deserialize<IpcResponse>(line) ?? throw new IOException(Loc.T("Empty response from the service.", "Üres válasz a szolgáltatástól."));
     }
 
-    /// <summary>Egyszeri kérés saját kapcsolattal (pl. a tálcaalkalmazás periodikus lekérdezéséhez).</summary>
+    /// <summary>A one-off request over its own connection (e.g. for the tray application's periodic polling).</summary>
     public static async Task<IpcResponse> RequestAsync(IpcRequest request, TimeSpan timeout, CancellationToken ct = default)
     {
         using var client = await ConnectAsync(timeout, ct).ConfigureAwait(false);

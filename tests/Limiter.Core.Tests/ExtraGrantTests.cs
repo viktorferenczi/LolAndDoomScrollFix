@@ -4,8 +4,8 @@ using Limiter.Core.Lol;
 namespace Limiter.Core.Tests;
 
 /// <summary>
-/// Az admin által egy napra adott extra keret. Naptár: 2026. október 1. csütörtök, 2. péntek, 3. szombat,
-/// 4. vasárnap, 5. hétfő.
+/// The extra allowance given by the admin for a day. Calendar: Thursday 1 October 2026, Friday the 2nd, Saturday the 3rd,
+/// Sunday the 4th, Monday the 5th.
 /// </summary>
 public class ExtraGrantTests
 {
@@ -19,7 +19,7 @@ public class ExtraGrantTests
 
     private static LimitSettings With(params DayGrant[] grants) => LimitSettings.Default with { ExtraGrants = grants };
 
-    // ---------- hatás a keretre ----------
+    // ---------- effect on the limit ----------
 
     [Fact]
     public void A_grant_for_today_adds_to_the_limits()
@@ -76,7 +76,7 @@ public class ExtraGrantTests
     public void The_grant_stacks_with_the_rest_day_bonus()
     {
         using var env = new TestEnv(With(Grant(1, lol: 2, video: 10)), start: At(1, 12), restDayBonus: true);
-        // Szerdán semmi sem fogyott → +1 meccs, +30 perc jutalom, mellé az extra.
+        // Nothing was used on Wednesday → +1 match, +30 minutes bonus, plus the extra.
         Assert.Equal(6, env.Engine.GetLolStatus(A).Limit);
         Assert.Equal(TimeSpan.FromMinutes(100), env.Engine.GetWebStatus(A, WebCategory.ShortVideo).Limit);
     }
@@ -108,7 +108,7 @@ public class ExtraGrantTests
         Assert.Equal(5, env.Engine.GetLolStatus(A).Limit);
     }
 
-    // ---------- gördülő mód: a nap éjféltől éjfélig tart ----------
+    // ---------- rolling mode: the day lasts from midnight to midnight ----------
 
     [Fact]
     public void Rolling_the_extra_ends_at_midnight_and_the_release_time_accounts_for_it()
@@ -119,8 +119,8 @@ public class ExtraGrantTests
         Assert.Equal(4, env.Engine.GetLolStatus(A).Limit);
         Assert.True(env.Engine.GetLolStatus(A).Blocked);
 
-        // Éjfél után az extra megszűnik: 4 meccs az ablakban 3-as kerettel is tilt. Kettőnek kell kiesnie (10:01, 10:02),
-        // hogy 3 alá kerüljön a számláló, vagyis 10:02-kor oldódik fel.
+        // After midnight the extra ends: 4 matches in the window block even with a limit of 3. Two must drop out (10:01, 10:02),
+        // for the counter to fall below 3, i.e. it is released at 10:02.
         env.Clock.UtcNow = At(2, 1);
         var lol = env.Engine.GetLolStatus(A);
         Assert.Equal(3, lol.Limit);
@@ -136,19 +136,19 @@ public class ExtraGrantTests
         for (var i = 0; i < 60; i++) env.Store.AddWebUsage(A, WebCategory.ShortVideo, At(1, 20) + i * Minute, 60_000);
         var video = env.Engine.GetWebStatus(A, WebCategory.ShortVideo);
         Assert.True(video.Blocked);
-        // Holnap 0:00-tól a keret 90 perc, a 60 percnyi használat alatta van → ott oldódik fel.
+        // From 0:00 tomorrow the limit is 90 minutes, the 60 minutes of usage is below it → it is released there.
         Assert.Equal(At(2, 0), video.AvailableAgainAt);
     }
 
-    // ---------- napi mód: a nap a visszaállítás órájától tart ----------
+    // ---------- daily mode: the day lasts from the reset hour ----------
 
     [Fact]
     public void Daily_before_the_reset_hour_the_current_day_is_still_yesterdays_date()
     {
         var s = With(Grant(1, lol: 2)) with { ResetMode = ResetMode.Daily, DailyResetHour = 3 };
-        using var env = new TestEnv(s, start: At(2, 1)); // pénteken 01:00 → még a csütörtökön kezdődött nap
+        using var env = new TestEnv(s, start: At(2, 1)); // Friday 01:00 → still the day that started on Thursday
         Assert.Equal(5, env.Engine.GetLolStatus(A).Limit);
-        env.Clock.UtcNow = At(2, 3); // 03:00 → péntek, extra nélkül
+        env.Clock.UtcNow = At(2, 3); // 03:00 → Friday, without the extra
         Assert.Equal(3, env.Engine.GetLolStatus(A).Limit);
     }
 
@@ -165,14 +165,14 @@ public class ExtraGrantTests
     [Fact]
     public void Daily_weekend_exemption_follows_the_day_start_date()
     {
-        // Szombaton 02:00 még a péntekről induló nap (hétköznap) tart; az extra rá érvényes.
+        // On Saturday at 02:00 the day that started on Friday (a weekday) is still running; the extra applies to it.
         var s = With(Grant(2, lol: 1)) with { ResetMode = ResetMode.Daily, DailyResetHour = 3 };
         using var env = new TestEnv(s, start: At(3, 2));
         Assert.False(env.Engine.GetLolStatus(A).Exempt);
         Assert.Equal(4, env.Engine.GetLolStatus(A).Limit);
     }
 
-    // ---------- napválasztó ----------
+    // ---------- day chooser ----------
 
     [Fact]
     public void Day_options_start_today_and_cover_the_horizon()
@@ -211,7 +211,7 @@ public class ExtraGrantTests
     {
         var s = LimitSettings.Default with { ResetMode = ResetMode.Daily, DailyResetHour = 3 };
         var options = GrantDays.Options(s, At(3, 1), TimeZoneInfo.Utc);
-        Assert.Equal(new DateOnly(2026, 10, 2), options[0].Date); // péntek
+        Assert.Equal(new DateOnly(2026, 10, 2), options[0].Date); // Friday
         Assert.True(options[0].Selectable);
         Assert.Equal(GrantDayStatus.ExemptWeekend, options[1].Status); // szombat
     }
@@ -235,7 +235,7 @@ public class ExtraGrantTests
     [Fact]
     public void Day_options_use_the_local_time_zone()
     {
-        // 2026-10-01 23:30 UTC már péntek 01:30 Budapesten.
+        // 2026-10-01 23:30 UTC is already Friday 01:30 in Budapest.
         var budapest = TimeZoneInfo.FindSystemTimeZoneById("Europe/Budapest");
         var options = GrantDays.Options(LimitSettings.Default, At(1, 23, 30), budapest);
         Assert.Equal(new DateOnly(2026, 10, 2), options[0].Date);
@@ -244,7 +244,7 @@ public class ExtraGrantTests
     [Fact]
     public void Day_options_across_the_dst_change_are_plain_calendar_days()
     {
-        // Az őszi óraátállítás 2026. október 25-én van Budapesten; a napok sorozata nem sérül.
+        // The autumn clock change is on 25 October 2026 in Budapest; the sequence of days is not disturbed.
         var budapest = TimeZoneInfo.FindSystemTimeZoneById("Europe/Budapest");
         var options = GrantDays.Options(LimitSettings.Default with { EnforceOnWeekends = true },
             new DateTimeOffset(2026, 10, 23, 12, 0, 0, TimeSpan.Zero), budapest);
@@ -262,7 +262,7 @@ public class ExtraGrantTests
         Assert.Equal([new DateOnly(2026, 10, 2), new DateOnly(2026, 10, 5)], pruned.ExtraGrants.Select(g => g.Date).ToArray());
     }
 
-    // ---------- beállítások: ellenőrzés, tárolás ----------
+    // ---------- settings: validation, storage ----------
 
     [Fact]
     public void Validate_flags_empty_duplicate_out_of_range_and_weekend_grants()
@@ -283,7 +283,7 @@ public class ExtraGrantTests
         var s = With(Grant(5, lol: 2, video: 15, feed: 0));
         var json = s.ToJson();
         Assert.Contains("\"2026-10-05\"", json);
-        Assert.DoesNotContain("isEmpty", json); // számított tulajdonság, nem kerül a fájlba
+        Assert.DoesNotContain("isEmpty", json); // a computed property, it does not go into the file
         var back = LimitSettings.Parse(json);
         Assert.Equal(s.ExtraGrants, back.ExtraGrants);
     }
@@ -308,7 +308,7 @@ public class ExtraGrantTests
         Assert.Equal(DayGrant.MaxMatches, clean[0].LolMatches);
         Assert.Equal(0, clean[0].ShortVideoMinutes);
         Assert.Equal(DayGrant.MaxMinutes, clean[0].FacebookFeedMinutes);
-        Assert.Equal(20, clean[1].ShortVideoMinutes); // az utolsó bejegyzés nyer
+        Assert.Equal(20, clean[1].ShortVideoMinutes); // the last entry wins
     }
 
     [Fact]

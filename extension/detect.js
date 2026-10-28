@@ -1,12 +1,12 @@
-// Felismerés: melyik időkeretet fogyasztja az aktuális oldal.
-// Tiszta függvények (nincs chrome.* hívás), így Node alatt is tesztelhetők.
+// Detection: which time limit the current page uses.
+// Pure functions (no chrome.* calls), so they can also be tested under Node.
 (function (root) {
   'use strict';
 
   const SHORT = 'shortVideo';
   const FEED = 'facebookFeed';
 
-  // TikTok-oldalak, amelyek nem rövidvideó-nézők.
+  // TikTok pages that are not short-video viewers.
   const TIKTOK_EXCLUDED = /^\/(messages|setting|settings|upload|login|signup|legal|privacy|tiktokstudio|business|coin|wallet)(\/|$)/i;
 
   function hostIs(host, domain) {
@@ -14,14 +14,14 @@
     return host === domain || host.endsWith('.' + domain);
   }
 
-  /** URL alapján. */
+  /** By URL. */
   function classifyUrl(host, path) {
     path = path || '/';
     if (hostIs(host, 'youtube.com')) {
       return /^\/shorts(\/|$)/i.test(path) ? SHORT : null;
     }
     if (hostIs(host, 'instagram.com')) {
-      // /reels/, /reel/<id>/, /<felhasználó>/reel/<id>/ (a profil Reels-rácsa nem lejátszó)
+      // /reels/, /reel/<id>/, /<user>/reel/<id>/ (a profile's Reels grid is not a player)
       return /^\/reels?(\/|$)/i.test(path) || /^\/[^/]+\/reel\/[^/]+/i.test(path) ? SHORT : null;
     }
     if (hostIs(host, 'tiktok.com')) {
@@ -30,13 +30,13 @@
     if (hostIs(host, 'facebook.com')) {
       if (/^\/reels?(\/|$)/i.test(path) || /^\/watch\/reels?(\/|$)/i.test(path)) return SHORT;
       if (path === '/' || path === '' || /^\/home\.php$/i.test(path)) return FEED;
-      // Messenger, profilok, csoportok és minden más: nincs időkorlát.
+      // Messenger, profiles, groups and everything else: no time limit.
       return null;
     }
     return null;
   }
 
-  /** Az oldalon megjelenő lejátszó alapján (pl. felugró Reels-nézet URL-váltás nélkül). */
+  /** By the player shown on the page (e.g. a pop-up Reels view without a URL change). */
   function classifyDom(host, doc) {
     if (!doc || typeof doc.querySelectorAll !== 'function') return null;
     if (hostIs(host, 'facebook.com') || hostIs(host, 'instagram.com')) {
@@ -47,11 +47,11 @@
         if (/reel/i.test(label) || dialog.querySelector('a[href*="/reel/"], a[href*="/reels/"]')) return SHORT;
       }
     }
-    // YouTube Shorts mindig /shorts/ URL-en fut; a rejtve megmaradó Shorts-elemek miatt itt nem vizsgáljuk a DOM-ot.
+    // YouTube Shorts always runs on a /shorts/ URL; because of Shorts elements that stay hidden we do not inspect the DOM here.
     return null;
   }
 
-  /** Egy oldal kategóriája. Egy időpontban csak egy kategória lehet: a rövid videó elsőbbséget élvez. */
+  /** A page's category. Only one category can apply at a time: short video takes precedence. */
   function classify(host, path, doc) {
     return classifyDom(host, doc) || classifyUrl(host, path);
   }

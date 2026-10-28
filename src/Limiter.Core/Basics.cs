@@ -13,13 +13,13 @@ public sealed class SystemClock : IClock
     public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
 }
 
-/// <summary>A webes időkeretek. Egy másodperc mindig legfeljebb az egyiket fogyasztja.</summary>
+/// <summary>The web time limits. A second always uses up at most one of them.</summary>
 public enum WebCategory
 {
-    /// <summary>Instagram Reels, TikTok, YouTube Shorts és Facebook Reels — közös keret.</summary>
+    /// <summary>Instagram Reels, TikTok, YouTube Shorts and Facebook Reels — one shared limit.</summary>
     ShortVideo = 1,
 
-    /// <summary>A Facebook kezdőlapi hírfolyama — külön keret.</summary>
+    /// <summary>The Facebook home feed — a separate limit.</summary>
     FacebookFeed = 2,
 }
 
@@ -39,19 +39,19 @@ public static class WebCategoryNames
     }
 }
 
-/// <summary>Mikor szabadul fel a felhasznált keret.</summary>
+/// <summary>When the used limit is released.</summary>
 public enum ResetMode
 {
-    /// <summary>Gördülő 24 óra: minden felhasználás pontosan 24 órával később szabadul fel.</summary>
+    /// <summary>Rolling 24 hours: every use is released exactly 24 hours later.</summary>
     Rolling = 0,
 
-    /// <summary>Naponta egyszer, a megadott órában minden keret egyszerre nullázódik.</summary>
+    /// <summary>Once a day, at the given hour, every limit resets at once.</summary>
     Daily = 1,
 }
 
 /// <summary>
-/// Tiltott időszak egy napon belül (helyi idő, egész órák): <see cref="From"/>-tól (benne) <see cref="To"/>-ig (nincs benne).
-/// Átnyúlhat éjfélen (pl. 22 → 6). A keretet és a nullázást nem érinti, csak közben nem lehet használni.
+/// A banned period within a day (local time, whole hours): from <see cref="From"/> (inclusive) to <see cref="To"/> (exclusive).
+/// It may span midnight (e.g. 22 → 6). It does not affect the limit or the reset; it only makes use impossible meanwhile.
 /// </summary>
 public sealed record BannedHours
 {
@@ -68,14 +68,14 @@ public sealed record BannedHours
         return this with { From = from, To = to, Enabled = Enabled && from != to };
     }
 
-    /// <summary>Az adott helyi órára esik-e a tiltás.</summary>
+    /// <summary>Whether the ban covers the given local hour.</summary>
     public bool Covers(int localHour) =>
         Enabled && (From < To ? localHour >= From && localHour < To : localHour >= From || localHour < To);
 }
 
 /// <summary>
-/// Az adminisztrátor által egy kiválasztott napra adott extra keret (a nap „kezdő dátuma” szerint: napi módban a
-/// visszaállítás órájától a következőig, gördülő módban éjféltől éjfélig). Az alapkerethez és a pihenőnap-jutalomhoz adódik.
+/// An extra allowance given by the administrator for a chosen day (by the day's "start date": in daily mode from the
+/// reset hour to the next one, in rolling mode from midnight to midnight). It is added to the base limit and the rest-day bonus.
 /// </summary>
 public sealed record DayGrant
 {
@@ -87,7 +87,7 @@ public sealed record DayGrant
     public int ShortVideoMinutes { get; init; }
     public int FacebookFeedMinutes { get; init; }
 
-    /// <summary>Nincs benne semmi (az ilyen bejegyzés nem tárolódik).</summary>
+    /// <summary>Contains nothing (such an entry is not stored).</summary>
     [JsonIgnore]
     public bool IsEmpty => LolMatches <= 0 && ShortVideoMinutes <= 0 && FacebookFeedMinutes <= 0;
 
@@ -99,39 +99,39 @@ public sealed record DayGrant
     };
 }
 
-/// <summary>Az adminisztrátor által módosítható korlátok (limits.json; a telepítő tölti ki).</summary>
+/// <summary>The limits the administrator can change (limits.json; filled in by the installer).</summary>
 public sealed record LimitSettings
 {
     public ResetMode ResetMode { get; init; } = ResetMode.Rolling;
 
-    /// <summary>Napi visszaállítás órája (0–23, helyi idő), csak <see cref="ResetMode.Daily"/> esetén.</summary>
+    /// <summary>Hour of the daily reset (0–23, local time), only for <see cref="ResetMode.Daily"/>.</summary>
     public int DailyResetHour { get; init; } = 3;
 
     public int LolPvpMatches { get; init; } = 3;
     public int ShortVideoMinutes { get; init; } = 60;
     public int FacebookFeedMinutes { get; init; } = 60;
 
-    /// <summary>Hétvégén (szombat, vasárnap) is érvényesek-e a korlátok. Alapértelmezés: nem.</summary>
+    /// <summary>Whether the limits also apply on weekends (Saturday, Sunday). Default: no.</summary>
     public bool EnforceOnWeekends { get; init; }
 
-    // Pihenőnap-jutalom: ha az előző korlátozott napon a keretből semmi sem fogyott,
-    // a következő napra ennyivel nagyobb a keret. Nem halmozódik (több üres nap után is csak egyszer jár).
+    // Rest-day bonus: if nothing was used from the limit on the previous limited day,
+    // the limit is larger by this much for the next day. It does not stack (it is given only once even after several empty days).
     public int LolRestDayBonusMatches { get; init; } = 1;
     public int ShortVideoRestDayBonusMinutes { get; init; } = 30;
     public int FacebookFeedRestDayBonusMinutes { get; init; } = 30;
 
-    // Tiltott órák keretenként (alapértelmezés: nincs).
+    // Banned hours per limit (default: none).
     public BannedHours LolBannedHours { get; init; } = BannedHours.Disabled;
     public BannedHours ShortVideoBannedHours { get; init; } = BannedHours.Disabled;
     public BannedHours FacebookFeedBannedHours { get; init; } = BannedHours.Disabled;
 
-    /// <summary>Egy-egy napra adott extra keretek (naponta legfeljebb egy bejegyzés, dátum szerint rendezve).</summary>
+    /// <summary>Extra allowances for single days (at most one entry per day, sorted by date).</summary>
     public IReadOnlyList<DayGrant> ExtraGrants { get; init; } = [];
 
     public const int MaxGrants = 400;
 
-    // A rekord alapértelmezett egyenlősége a listát hivatkozás szerint hasonlítaná össze, ezért kézzel írjuk.
-    // Új mező felvételekor ide is fel kell venni (a LimitSettingsEqualityTests ellenőrzi).
+    // The record's default equality would compare the list by reference, so it is written by hand.
+    // When a new field is added, it has to be added here too (LimitSettingsEqualityTests checks it).
     public bool Equals(LimitSettings? other) =>
         other is not null &&
         ResetMode == other.ResetMode &&
@@ -178,7 +178,7 @@ public sealed record LimitSettings
         _ => throw new ArgumentOutOfRangeException(nameof(category)),
     });
 
-    /// <summary>Beállítja (vagy felülírja) a nap extra keretét; üres bejegyzés törli.</summary>
+    /// <summary>Sets (or overwrites) the day's extra allowance; an empty entry removes it.</summary>
     public LimitSettings WithGrant(DayGrant grant) => this with
     {
         ExtraGrants = (ExtraGrants ?? []).Where(g => g.Date != grant.Date)
@@ -190,7 +190,7 @@ public sealed record LimitSettings
         ExtraGrants = (ExtraGrants ?? []).Where(g => g.Date != day).ToList(),
     };
 
-    /// <summary>Törli a megadott napnál korábbi extrákat (már lejárt, nincs hatásuk).</summary>
+    /// <summary>Deletes the extras before the given day (already expired, no effect).</summary>
     public LimitSettings WithoutGrantsBefore(DateOnly day) => this with
     {
         ExtraGrants = (ExtraGrants ?? []).Where(g => g.Date >= day).ToList(),
@@ -205,7 +205,7 @@ public sealed record LimitSettings
 
     public static LimitSettings Default { get; } = new();
 
-    /// <summary>A limits.json formátuma: camelCase mezők, "resetMode": "rolling" | "daily".</summary>
+    /// <summary>The format of limits.json: camelCase fields, "resetMode": "rolling" | "daily".</summary>
     public static JsonSerializerOptions JsonOptions { get; } = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
@@ -231,7 +231,7 @@ public sealed record LimitSettings
         _ => throw new ArgumentOutOfRangeException(nameof(category)),
     });
 
-    /// <summary>Jutalom nélküli változat (pl. tesztekhez).</summary>
+    /// <summary>A variant without bonus (e.g. for tests).</summary>
     public LimitSettings WithoutRestDayBonus() => this with
     {
         LolRestDayBonusMatches = 0,

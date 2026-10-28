@@ -3,8 +3,8 @@ using Limiter.Core.Lol;
 namespace Limiter.Core.Tests;
 
 /// <summary>
-/// Pihenőnap-jutalom. Naptár: 2026. szeptember 29. kedd, 30. szerda, október 1. csütörtök, 2. péntek,
-/// 3. szombat, 4. vasárnap, 5. hétfő.
+/// Rest-day bonus. Calendar: Tuesday 29 September 2026, Wednesday the 30th, Thursday 1 October, Friday the 2nd,
+/// Saturday the 3rd, Sunday the 4th, Monday the 5th.
 /// </summary>
 public class RestDayBonusTests
 {
@@ -16,7 +16,7 @@ public class RestDayBonusTests
     private static TestEnv Env(DateTimeOffset start, LimitSettings? settings = null) =>
         new(settings, start: start, restDayBonus: true);
 
-    /// <summary>Percenként egy teljes perc használat a megadott kezdettől.</summary>
+    /// <summary>One full minute of usage per minute from the given start.</summary>
     private static void Seed(TestEnv env, WebCategory category, DateTimeOffset from, int minutes)
     {
         for (var i = 0; i < minutes; i++)
@@ -30,13 +30,13 @@ public class RestDayBonusTests
     public void A_day_without_short_videos_gives_30_extra_minutes_next_day()
     {
         using var env = Env(At(10, 1, 12));
-        Seed(env, WebCategory.FacebookFeed, At(9, 30, 10), 5); // szerdán volt hírfolyam, rövid videó nem
+        Seed(env, WebCategory.FacebookFeed, At(9, 30, 10), 5); // there was feed on Wednesday, no short video
 
         var shortVideo = env.Engine.GetWebStatus(A, WebCategory.ShortVideo);
         Assert.Equal(TimeSpan.FromMinutes(90), shortVideo.Limit);
         Assert.Equal(TimeSpan.FromMinutes(30), shortVideo.Bonus);
 
-        // A két keret jutalma független: a hírfolyamnál szerdán fogyott, így ott nincs jutalom.
+        // The bonuses of the two limits are independent: the feed was used on Wednesday, so there is no bonus there.
         var feed = env.Engine.GetWebStatus(A, WebCategory.FacebookFeed);
         Assert.Equal(TimeSpan.FromMinutes(60), feed.Limit);
         Assert.Equal(TimeSpan.Zero, feed.Bonus);
@@ -46,7 +46,7 @@ public class RestDayBonusTests
     public void The_bonus_does_not_stack_over_several_empty_days()
     {
         using var env = Env(At(10, 1, 12));
-        Seed(env, WebCategory.ShortVideo, At(9, 25, 10), 5); // utoljára egy hete
+        Seed(env, WebCategory.ShortVideo, At(9, 25, 10), 5); // last a week ago
         Assert.Equal(TimeSpan.FromMinutes(90), env.Engine.GetWebStatus(A, WebCategory.ShortVideo).Limit);
         Assert.Equal(4, env.Engine.GetLolStatus(A).Limit);
     }
@@ -89,14 +89,14 @@ public class RestDayBonusTests
     {
         var daily = LimitSettings.Default with { ResetMode = ResetMode.Daily, DailyResetHour = 3 };
 
-        // Csütörtök 02:30 még a szerdai naphoz tartozik → csütörtök 03:00 után nincs jutalom.
+        // Thursday 02:30 still belongs to the Wednesday day → no bonus after Thursday 03:00.
         using (var env = Env(At(10, 1, 12), daily))
         {
             Seed(env, WebCategory.ShortVideo, At(10, 1, 2, 30), 1);
             Assert.Equal(TimeSpan.FromMinutes(60), env.Engine.GetWebStatus(A, WebCategory.ShortVideo).Limit);
         }
 
-        // Csütörtök 03:30 már a mai nap → a szerdai nap üres volt, jár a jutalom.
+        // Thursday 03:30 is already today → the Wednesday day was empty, the bonus is due.
         using (var env = Env(At(10, 1, 12), daily))
         {
             Seed(env, WebCategory.ShortVideo, At(10, 1, 3, 30), 1);
@@ -111,13 +111,13 @@ public class RestDayBonusTests
     {
         using (var env = Env(At(10, 5, 10)))
         {
-            Seed(env, WebCategory.ShortVideo, At(10, 2, 18), 10); // pénteken volt használat
+            Seed(env, WebCategory.ShortVideo, At(10, 2, 18), 10); // there was usage on Friday
             Assert.Equal(TimeSpan.FromMinutes(60), env.Engine.GetWebStatus(A, WebCategory.ShortVideo).Limit);
         }
 
         using (var env = Env(At(10, 5, 10)))
         {
-            Seed(env, WebCategory.ShortVideo, At(10, 1, 18), 10); // csak csütörtökön → péntek üres
+            Seed(env, WebCategory.ShortVideo, At(10, 1, 18), 10); // only on Thursday → Friday is empty
             Assert.Equal(TimeSpan.FromMinutes(90), env.Engine.GetWebStatus(A, WebCategory.ShortVideo).Limit);
         }
     }
@@ -127,7 +127,7 @@ public class RestDayBonusTests
     {
         var settings = LimitSettings.Default with { EnforceOnWeekends = true };
         using var env = Env(At(10, 5, 10), settings);
-        Seed(env, WebCategory.ShortVideo, At(10, 2, 18), 10); // péntek igen, vasárnap nem
+        Seed(env, WebCategory.ShortVideo, At(10, 2, 18), 10); // Friday yes, Sunday no
         Assert.Equal(TimeSpan.FromMinutes(90), env.Engine.GetWebStatus(A, WebCategory.ShortVideo).Limit);
     }
 
@@ -148,7 +148,7 @@ public class RestDayBonusTests
 
         var status = env.Engine.GetWebStatus(A, WebCategory.ShortVideo);
         Assert.True(status.Blocked);
-        // Pénteken a keret 60 perc (csütörtökön fogyott), így 31 percnyinek kell kiesnie: péntek 22:31.
+        // On Friday the limit is 60 minutes (it was used on Thursday), so 31 minutes must drop out: Friday 22:31.
         Assert.Equal(At(10, 2, 22, 31), status.AvailableAgainAt);
 
         env.Clock.UtcNow = At(10, 2, 0, 5);
@@ -167,7 +167,7 @@ public class RestDayBonusTests
 
         var status = env.Engine.GetLolStatus(A);
         Assert.True(status.Blocked);
-        Assert.Equal(At(10, 2, 21), status.AvailableAgainAt); // pénteken 3 a keret: 2 meccsnek kell kiesnie
+        Assert.Equal(At(10, 2, 21), status.AvailableAgainAt); // on Friday the limit is 3: 2 matches must drop out
 
         env.Clock.UtcNow = At(10, 2, 20, 30);
         Assert.True(env.Engine.GetLolStatus(A).Blocked);
@@ -188,12 +188,12 @@ public class RestDayBonusTests
         Assert.Equal(30, s.FacebookFeedRestDayBonusMinutes);
     }
 
-    // --- Friss telepítés: a program indulása előtti nap nem „üres nap” ---
+    // --- Fresh install: the day before the program started is not an "empty day" ---
 
     [Fact]
     public void A_fresh_install_gets_no_bonus_for_the_day_before_it_existed()
     {
-        // Csütörtökön 12:00-kor telepítve, üres adatbázissal; a keretek alaposak: nincs jutalom.
+        // Installed on Thursday at 12:00 with an empty database; the limits are the base ones: no bonus.
         using var env = new TestEnv(start: At(10, 1, 12), restDayBonus: true, trackingStart: At(10, 1, 12));
         Assert.Equal(3, env.Engine.GetLolStatus(A).Limit);
         Assert.Equal(TimeSpan.FromMinutes(60), env.Engine.GetWebStatus(A, WebCategory.ShortVideo).Limit);
@@ -203,11 +203,11 @@ public class RestDayBonusTests
     [Fact]
     public void A_fresh_install_with_the_real_engine_start_gets_no_bonus_either()
     {
-        // Nincs előre beállított mérési kezdet: az engine az induláskori időt rögzíti (a valódi telepítési eset).
+        // There is no preset start of measurement: the engine records the start-up time (the real install case).
         using var env = new TestEnv(start: At(10, 1, 12), restDayBonus: true);
         env.Store.Dispose();
         File.Delete(env.DbPath);
-        env.Restart(); // új, üres adatbázis
+        env.Restart(); // a new, empty database
         Assert.Equal(At(10, 1, 12), env.Engine.TrackingStart);
         Assert.Equal(3, env.Engine.GetLolStatus(A).Limit);
     }
@@ -215,7 +215,7 @@ public class RestDayBonusTests
     [Fact]
     public void Installed_in_the_middle_of_the_previous_day_is_still_not_a_full_day()
     {
-        // Szerdán 15:00-kor telepítve; csütörtökön a szerdai nap csak részben mért → nincs jutalom.
+        // Installed on Wednesday at 15:00; on Thursday the Wednesday day is only partly measured → no bonus.
         using var env = new TestEnv(start: At(10, 1, 9), restDayBonus: true, trackingStart: At(9, 30, 15));
         Assert.Equal(3, env.Engine.GetLolStatus(A).Limit);
         Assert.Equal(TimeSpan.FromMinutes(60), env.Engine.GetWebStatus(A, WebCategory.ShortVideo).Limit);
@@ -224,7 +224,7 @@ public class RestDayBonusTests
     [Fact]
     public void The_bonus_appears_once_the_previous_day_was_fully_tracked()
     {
-        // Szerdán 00:00 előtt telepítve → csütörtökön a teljes, üres szerdáért jár a jutalom.
+        // Installed before Wednesday 00:00 → on Thursday the bonus is due for the full, empty Wednesday.
         using var env = new TestEnv(start: At(10, 1, 9), restDayBonus: true, trackingStart: At(9, 29, 23));
         Assert.Equal(4, env.Engine.GetLolStatus(A).Limit);
         Assert.Equal(TimeSpan.FromMinutes(90), env.Engine.GetWebStatus(A, WebCategory.ShortVideo).Limit);
@@ -233,7 +233,7 @@ public class RestDayBonusTests
     [Fact]
     public void Install_day_flow_second_full_day_earns_the_bonus_but_the_first_day_does_not()
     {
-        // Telepítés kedden 20:00. Szerda: nincs jutalom (kedd nem teljes). Csütörtök: van (szerda teljes és üres).
+        // Installed on Tuesday at 20:00. Wednesday: no bonus (Tuesday is not complete). Thursday: yes (Wednesday is complete and empty).
         using var env = new TestEnv(start: At(9, 29, 20), restDayBonus: true, trackingStart: At(9, 29, 20));
         Assert.Equal(3, env.Engine.GetLolStatus(A).Limit);
 
@@ -256,14 +256,14 @@ public class RestDayBonusTests
     [Fact]
     public void An_existing_database_without_a_tracking_value_uses_its_earliest_usage()
     {
-        // Frissítés régebbi verzióról: nincs mentett kezdet, de van korábbi használat → az a kezdet.
+        // Update from an older version: no stored start, but there is earlier usage → that is the start.
         using var env = new TestEnv(start: At(10, 1, 12));
         env.Store.AddWebUsage(A, WebCategory.ShortVideo, At(9, 20, 18), 60_000);
         using var fresh = new UsageStore(Path.Combine(Path.GetTempPath(), "limiter-tests-upgrade-" + Guid.NewGuid().ToString("N") + ".db"));
         fresh.AddWebUsage(A, WebCategory.ShortVideo, At(9, 20, 18), 60_000);
         fresh.TryRecordMatch(A, 1, At(9, 22, 20), 420);
         Assert.Equal(At(9, 20, 18), fresh.EnsureTrackingStart(At(10, 1, 12)));
-        // Második hívás ugyanazt adja, akkor is, ha az idő közben telt.
+        // A second call gives the same, even if time has passed meanwhile.
         Assert.Equal(At(9, 20, 18), fresh.EnsureTrackingStart(At(10, 5, 12)));
     }
 }

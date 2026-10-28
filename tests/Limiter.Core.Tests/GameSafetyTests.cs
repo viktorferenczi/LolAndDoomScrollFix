@@ -3,8 +3,8 @@ using Limiter.Core.Lol;
 namespace Limiter.Core.Tests;
 
 /// <summary>
-/// A program soha nem nyúlhat a klienshez játék közben: a megszakítás/elutasítás csak keresés és meccselfogadás
-/// közben mehet ki, és a lekérdezés játék közben ritkább.
+/// The program must never touch the client during a game: cancelling/declining may only go out while searching and at a match accept,
+/// and polling is slower during a game.
 /// </summary>
 public class GameSafetyTests
 {
@@ -63,7 +63,7 @@ public class GameSafetyTests
         for (var i = 1; i <= 3; i++) env.Tracker.OnGameflow(TestEnv.UserA, TestEnv.Running(i));
         Assert.True(env.Engine.GetLolStatus(TestEnv.UserA).Blocked);
 
-        // Elfogyott keret mellett is: játék közben nincs Cancel/Decline döntés.
+        // Even with a used-up limit: there is no Cancel/Decline decision during a game.
         foreach (var phase in new[] { "GameStart", "InProgress", "Reconnect", "ChampSelect", "Lobby" })
             Assert.Equal(MatchmakingAction.Allow, env.Tracker.DecideMatchmaking(TestEnv.UserA, phase, TestEnv.RankedSolo).Action);
     }

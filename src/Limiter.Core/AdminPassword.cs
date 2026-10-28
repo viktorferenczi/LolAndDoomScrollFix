@@ -6,16 +6,16 @@ namespace Limiter.Core;
 
 public enum PasswordFileState
 {
-    /// <summary>Nincs jelszó beállítva.</summary>
+    /// <summary>No password is set.</summary>
     Missing,
 
     Valid,
 
-    /// <summary>A fájl megvan, de nem értelmezhető. Nem tekintjük „nincs jelszónak”: a védelem nem esik el némán.</summary>
+    /// <summary>The file exists but cannot be interpreted. It is not treated as "no password": the protection must not disappear silently.</summary>
     Corrupt,
 }
 
-/// <summary>A tárolt jelszó-ellenőrző (PBKDF2-SHA256); maga a jelszó sehol sem tárolódik.</summary>
+/// <summary>The stored password verifier (PBKDF2-SHA256); the password itself is never stored.</summary>
 public sealed record PasswordRecord
 {
     public int Version { get; init; } = 1;
@@ -25,8 +25,8 @@ public sealed record PasswordRecord
 }
 
 /// <summary>
-/// Az admin jelszava: a telepítéskor adják meg, és az admin-felület megnyitásához, valamint az eltávolításhoz kell.
-/// A fájl (admin.json) az adatmappában van, ahová csak a rendszergazdák és a SYSTEM fér hozzá.
+/// The admin password: given at install time, needed to open the admin panel and to uninstall.
+/// The file (admin.json) is in the data folder, which only administrators and SYSTEM can access.
 /// </summary>
 public static class AdminPassword
 {
@@ -43,7 +43,7 @@ public static class AdminPassword
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
-    /// <summary>Hibaszöveg, ha a jelszó nem fogadható el; különben null.</summary>
+    /// <summary>An error text if the password is not acceptable; otherwise null.</summary>
     public static string? Validate(string? password)
     {
         if (string.IsNullOrEmpty(password)) return Loc.T("Enter the password.", "Add meg a jelszót.");
@@ -91,7 +91,7 @@ public static class AdminPassword
         }
     }
 
-    /// <summary>Egy lépésben cseréli a fájlt (ideiglenes fájl, majd átnevezés), így sosem marad félig megírt jelszófájl.</summary>
+    /// <summary>Replaces the file in one step (temporary file, then rename), so a half-written password file never remains.</summary>
     public static void Save(string path, PasswordRecord record)
     {
         if (!IsWellFormed(record, out _, out _)) throw new ArgumentException("Invalid password verifier.", nameof(record));
@@ -110,8 +110,8 @@ public static class AdminPassword
     }
 
     /// <summary>
-    /// A telepítő a jelszót ideiglenes fájlban adja át: minden UTF-16 karakter négy hexa számjegy (így az ékezetes
-    /// betűk és a kódlap sem okozhat eltérést). Érvénytelen bemenetnél null.
+    /// The installer hands the password over in a temporary file: every UTF-16 character is four hex digits (so accented
+    /// letters and the code page cannot cause a mismatch). Null for invalid input.
     /// </summary>
     public static string? DecodeTransfer(string? text)
     {

@@ -5,9 +5,9 @@ using Microsoft.Extensions.Hosting.WindowsServices;
 namespace Limiter.Service;
 
 /// <summary>
-/// Az adatmappa (%ProgramData%\LolScrollLimiter): adatbázis és limits.json.
-/// Szolgáltatásként indulva minden induláskor újra beállítja a jogosultságokat:
-/// csak a SYSTEM és a rendszergazdák férnek hozzá, normál felhasználó se nem olvashatja, se nem írhatja.
+/// The data folder (%ProgramData%\LolScrollLimiter): the database and limits.json.
+/// When started as a service it resets the permissions on every start:
+/// only SYSTEM and administrators have access, a normal user can neither read nor write it.
 /// </summary>
 public sealed record DataPaths(string Directory, string DatabasePath, string SettingsPath)
 {
@@ -36,7 +36,7 @@ public sealed record DataPaths(string Directory, string DatabasePath, string Set
         security.SetOwner(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null));
         new DirectoryInfo(dir).SetAccessControl(security);
 
-        // A meglévő fájlokról töröljük az explicit jogokat, így csak a mappától örökölt szabályok maradnak.
+        // The explicit rights are removed from the existing files, so only the rules inherited from the folder remain.
         foreach (var file in new DirectoryInfo(dir).EnumerateFiles())
         {
             var fs = new FileSecurity();

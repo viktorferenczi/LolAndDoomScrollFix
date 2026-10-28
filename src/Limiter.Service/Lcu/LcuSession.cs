@@ -8,8 +8,8 @@ using Limiter.Protocol;
 namespace Limiter.Service.Lcu;
 
 /// <summary>
-/// Kapcsolat egy futó LoL-klienssel. Eseményekre (WebSocket) és 2 másodperces lekérdezésre is kiértékel,
-/// így egy elmaradt esemény sem enged át keresést. Hiba esetén enged (fail-open) és jelzi a hibát.
+/// A connection to one running LoL client. It evaluates on events (WebSocket) and on a 2-second poll too,
+/// so a missed event cannot let a search through. On an error it lets everything through (fail-open) and reports it.
 /// </summary>
 public sealed class LcuSession : IDisposable
 {
@@ -83,7 +83,7 @@ public sealed class LcuSession : IDisposable
                 {
                     var result = await ws.ReceiveAsync(buffer, ct).ConfigureAwait(false);
                     if (result.MessageType == WebSocketMessageType.Close) break;
-                    // Az esemény tartalma nem érdekes: minden releváns változás teljes kiértékelést indít.
+                    // The event's content does not matter: every relevant change triggers a full evaluation.
                     if (result.EndOfMessage) _evaluateKick.Writer.TryWrite(true);
                 }
             }
@@ -186,8 +186,8 @@ public sealed class LcuSession : IDisposable
             ? Loc.T("a banned period is active", "tiltott időszak van")
             : Loc.T("the match limit is used up", "elfogyott a meccskeret");
 
-        // A döntés óta eltelt néhány kérés; közvetlenül a küldés előtt újra ellenőrizzük a fázist,
-        // hogy hősválasztásba vagy meccsbe lépés után soha ne érkezzen megszakítás/elutasítás a klienshez.
+        // A few requests have passed since the decision; right before sending we check the phase again,
+        // so that a cancel/decline never reaches the client after it has entered champion select or a match.
         if (decision.Action != MatchmakingAction.Allow &&
             !LolMatchTracker.ActionStillApplies(decision.Action, await _api.GetPhaseAsync(ct).ConfigureAwait(false)))
         {
@@ -207,7 +207,7 @@ public sealed class LcuSession : IDisposable
             case MatchmakingAction.DeclineReadyCheck:
             {
                 var status = await _api.DeclineReadyCheckAsync(ct).ConfigureAwait(false);
-                // Elutasítás után csak akkor szüntetjük meg a keresést, ha a kliens még keres.
+                // After declining, we only cancel the search if the client is still searching.
                 if (LolMatchTracker.ActionStillApplies(MatchmakingAction.CancelSearch, await _api.GetPhaseAsync(ct).ConfigureAwait(false)))
                     await _api.CancelSearchAsync(ct).ConfigureAwait(false);
                 Report(status, Loc.T($"PvP match accept declined: {reason}.", $"PvP-meccselfogadás elutasítva: {reason}."),
@@ -239,7 +239,7 @@ public sealed class LcuSession : IDisposable
                 try
                 {
                     await _remakeKick.Reader.ReadAsync(timeout.Token).ConfigureAwait(false);
-                    // A meccs végi statisztika pár másodperc múlva áll elő.
+                    // The end-of-match stats are produced a few seconds later.
                     await Task.Delay(TimeSpan.FromSeconds(5), ct).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }
@@ -262,7 +262,7 @@ public sealed class LcuSession : IDisposable
                     }
                     else if (_clock.UtcNow - match.StartedAt > RemakeGiveUpAfter)
                     {
-                        // Nem igazolható remake: a meccs számít (rövid játékidő önmagában nem elég).
+                        // Not a confirmable remake: the match counts (a short game time alone is not enough).
                         _tracker.OnRemakeResult(Sid, match.GameId, remade: false);
                     }
                 }

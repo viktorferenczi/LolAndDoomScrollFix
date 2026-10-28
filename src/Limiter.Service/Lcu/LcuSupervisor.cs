@@ -5,8 +5,8 @@ using Limiter.Core.Lol;
 namespace Limiter.Service.Lcu;
 
 /// <summary>
-/// 3 másodpercenként megnézi, fut-e LoL-kliens (olcsó folyamatlista), és csak új kliens esetén kérdezi le a részleteit
-/// (WMI); mindegyikhez saját <see cref="LcuSession"/>-t indít.
+/// Every 3 seconds it checks whether a LoL client is running (a cheap process list), and only for a new client queries its details
+/// (WMI); it starts a separate <see cref="LcuSession"/> for each.
 /// </summary>
 public sealed class LcuSupervisor(
     LolMatchTracker tracker,
@@ -39,8 +39,8 @@ public sealed class LcuSupervisor(
 
     private void Scan(CancellationToken ct)
     {
-        // 1. Olcsó lépés: csak a futó kliensfolyamatok azonosítóit listázzuk (a folyamattábla pillanatképe).
-        //    Itt semmilyen más folyamatot (a játékot sem) nem nyitunk meg, és semmi más tulajdonságot nem olvasunk.
+        // 1. Cheap step: we only list the IDs of the running client processes (a snapshot of the process table).
+        //    Here we open no other process (not the game either), and read no other property.
         HashSet<uint> running;
         try
         {
@@ -60,14 +60,14 @@ public sealed class LcuSupervisor(
         var unresolved = running.Where(pid => !known.Contains(pid)).ToList();
         if (unresolved.Count == 0)
         {
-            // Nincs új kliens (vagy nem fut): a költséges WMI-lekérdezés ilyenkor nem indul el.
+            // No new client (or none running): the expensive WMI query does not start then.
             if (running.Count == 0) protection.SetDiscoveryError(null);
             return;
         }
 
         if (clock.UtcNow < _nextDiscoveryAllowed) return;
 
-        // 2. Költséges lépés (WMI): csak új kliensfolyamat esetén — port, jelszó és tulajdonos kiolvasása.
+        // 2. Expensive step (WMI): only for a new client process — reading the port, the password and the owner.
         IReadOnlyList<LcuProcess> found;
         try
         {
@@ -90,7 +90,7 @@ public sealed class LcuSupervisor(
             _sessions[process] = (cts, Task.Run(() => session.RunAsync(cts.Token), cts.Token), session);
         }
 
-        // Ha egy futó klienst nem sikerült azonosítani (még indul), nem kérdezünk újra azonnal.
+        // If a running client could not be identified (still starting), we do not query again immediately.
         if (unresolved.Any(pid => found.All(f => f.ProcessId != pid)))
             _nextDiscoveryAllowed = clock.UtcNow + DiscoveryRetry;
     }

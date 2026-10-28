@@ -1,9 +1,9 @@
 namespace Limiter.Core;
 
 /// <summary>
-/// Időbeosztás: honnan számít a keret (gördülő 24 óra vagy a napi visszaállítás óta), és mikor mentes a hétvége.
-/// A „nap” napi módban a visszaállítás órájától tart a következő napi visszaállításig (pl. 03:00–03:00),
-/// gördülő módban éjféltől éjfélig. Hétvége: az a nap, amelyik szombaton vagy vasárnap kezdődik.
+/// Schedule: from when the limit counts (rolling 24 hours or since the daily reset), and when the weekend is exempt.
+/// In daily mode a "day" lasts from the reset hour to the next daily reset (e.g. 03:00–03:00),
+/// in rolling mode from midnight to midnight. Weekend: a day that starts on Saturday or Sunday.
 /// </summary>
 public sealed class LimitSchedule
 {
@@ -20,34 +20,34 @@ public sealed class LimitSchedule
 
     private int DayStartHour => _settings.ResetMode == ResetMode.Daily ? _settings.DailyResetHour : 0;
 
-    /// <summary>A <paramref name="now"/> időpontot tartalmazó nap kezdőnapja (helyi dátum).</summary>
+    /// <summary>The start date of the day containing <paramref name="now"/> (local date).</summary>
     public DateTime LogicalDate(DateTimeOffset now)
     {
         var local = TimeZoneInfo.ConvertTime(now, _zone);
         return local.TimeOfDay < TimeSpan.FromHours(DayStartHour) ? local.Date.AddDays(-1) : local.Date;
     }
 
-    /// <summary>A <paramref name="now"/>-t tartalmazó nap kezdő dátuma (az extra keretek ehhez kötődnek).</summary>
+    /// <summary>The start date of the day containing <paramref name="now"/> (extra allowances are tied to it).</summary>
     public DateOnly LogicalDay(DateTimeOffset now) => DateOnly.FromDateTime(LogicalDate(now));
 
-    /// <summary>Mentes-e a megadott nap (hétvége, ha a hétvégi korlát nincs bekapcsolva).</summary>
+    /// <summary>Whether the given day is exempt (weekend, if the weekend limit is not on).</summary>
     public bool IsExemptDay(DateOnly day) => !_settings.EnforceOnWeekends && IsWeekend(day.ToDateTime(TimeOnly.MinValue));
 
-    /// <summary>Az aktuális nap kezdete (napi módban: az utolsó visszaállítás).</summary>
+    /// <summary>The start of the current day (in daily mode: the last reset).</summary>
     public DateTimeOffset DayStart(DateTimeOffset now) => ToUtc(LogicalDate(now).AddHours(DayStartHour));
 
-    /// <summary>A következő nap kezdete (napi módban: a következő visszaállítás).</summary>
+    /// <summary>The start of the next day (in daily mode: the next reset).</summary>
     public DateTimeOffset NextDayStart(DateTimeOffset now) => ToUtc(LogicalDate(now).AddDays(1).AddHours(DayStartHour));
 
-    /// <summary>A keretbe számító időszak kezdete.</summary>
+    /// <summary>The start of the period that counts toward the limit.</summary>
     public DateTimeOffset WindowStart(DateTimeOffset now) =>
         _settings.ResetMode == ResetMode.Daily ? DayStart(now) : now - LimitEngine.Window;
 
-    /// <summary>Mentes-e most a korlátozás alól (hétvége, ha a hétvégi korlát nincs bekapcsolva).</summary>
+    /// <summary>Whether we are exempt from the restriction now (weekend, if the weekend limit is not on).</summary>
     public bool IsExempt(DateTimeOffset now) =>
         !_settings.EnforceOnWeekends && IsWeekend(LogicalDate(now));
 
-    /// <summary>A következő mentes (hétvégi) időszak kezdete, vagy null, ha a hétvégén is van korlát.</summary>
+    /// <summary>The start of the next exempt (weekend) period, or null if there is a limit on weekends too.</summary>
     public DateTimeOffset? NextExemptStart(DateTimeOffset now)
     {
         if (_settings.EnforceOnWeekends) return null;
@@ -57,12 +57,12 @@ public sealed class LimitSchedule
         return ToUtc(date.AddHours(DayStartHour));
     }
 
-    /// <summary>A mai nap határai (napi módban: két visszaállítás között, gördülő módban: éjféltől éjfélig).</summary>
+    /// <summary>The bounds of today (in daily mode: between two resets, in rolling mode: from midnight to midnight).</summary>
     public (DateTimeOffset Start, DateTimeOffset End) Today(DateTimeOffset now) => (DayStart(now), NextDayStart(now));
 
     /// <summary>
-    /// A legutóbbi korlátozott nap a mai előtt. Mentes hétvégénél a hétvégét átugorja
-    /// (hétfőn a péntek számít), mert hétvégén nem rögzül használat.
+    /// The most recent limited day before today. With an exempt weekend it skips the weekend
+    /// (on Monday Friday counts), because no usage is recorded on weekends.
     /// </summary>
     public (DateTimeOffset Start, DateTimeOffset End)? PreviousEnforcedDay(DateTimeOffset now)
     {
@@ -77,7 +77,7 @@ public sealed class LimitSchedule
     }
 
     /// <summary>
-    /// Tart-e most a tiltott időszak, és ha igen, meddig. Mentes időszakban (hétvége) nincs tiltás.
+    /// Whether a banned period is active now, and if so, until when. There is no ban in an exempt period (weekend).
     /// </summary>
     public (bool Active, DateTimeOffset? Until) Ban(BannedHours ban, DateTimeOffset now)
     {
@@ -94,7 +94,7 @@ public sealed class LimitSchedule
     private DateTimeOffset ToUtc(DateTime localWallClock)
     {
         var local = DateTime.SpecifyKind(localWallClock, DateTimeKind.Unspecified);
-        // Nyári időszámítás kezdetekor a kihagyott óra nem létezik: ilyenkor egy órával később.
+        // When daylight saving time starts, the skipped hour does not exist: then one hour later.
         if (_zone.IsInvalidTime(local)) local = local.AddHours(1);
         return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(local, _zone), TimeSpan.Zero);
     }

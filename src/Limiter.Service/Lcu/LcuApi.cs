@@ -14,8 +14,8 @@ public sealed class LcuHttpException(HttpStatusCode status, string path)
 }
 
 /// <summary>
-/// Vékony réteg a League Client helyi REST API-ja fölött (https://127.0.0.1:port, „riot” felhasználó).
-/// A Riot ezt a felületet harmadik félnek hivatalosan nem támogatja, ezért minden hívás hibatűrő.
+/// A thin layer over the League Client's local REST API (https://127.0.0.1:port, user "riot").
+/// Riot does not officially support this interface for third parties, so every call is fault tolerant.
 /// </summary>
 public sealed class LcuApi : IDisposable
 {
@@ -28,7 +28,7 @@ public sealed class LcuApi : IDisposable
         _authHeader = "Basic " + Convert.ToBase64String(Encoding.ASCII.GetBytes("riot:" + token));
         var handler = new SocketsHttpHandler
         {
-            // A kliens saját (Riot) tanúsítványt használ; csak a 127.0.0.1-re szóló kapcsolatnál fogadjuk el.
+            // The client uses its own (Riot) certificate; we only accept it for connections to 127.0.0.1.
             SslOptions = { RemoteCertificateValidationCallback = (_, _, _, _) => true },
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
         };
@@ -43,7 +43,7 @@ public sealed class LcuApi : IDisposable
 
     public int Port { get; }
 
-    /// <summary>GET; 404 esetén null.</summary>
+    /// <summary>GET; null for a 404.</summary>
     public async Task<JsonElement?> GetAsync(string path, CancellationToken ct)
     {
         using var response = await _http.GetAsync(path.TrimStart('/'), ct).ConfigureAwait(false);
@@ -77,8 +77,8 @@ public sealed class LcuApi : IDisposable
             : new GameflowSnapshot("None", 0, QueueInfo.Empty, null);
 
     /// <summary>
-    /// A keresés/elfogadás alatti sor meghatározása: elsőként a gameflow-munkamenetből, majd a lobbyból,
-    /// végül a sor részletes adataiból (kategória, típus).
+    /// Determining the queue during searching/accepting: first from the gameflow session, then from the lobby,
+    /// finally from the queue's detailed data (category, type).
     /// </summary>
     public async Task<QueueInfo> ResolveQueueAsync(CancellationToken ct)
     {
@@ -94,17 +94,17 @@ public sealed class LcuApi : IDisposable
         return queue;
     }
 
-    /// <summary>A PvP-keresés megszakítása.</summary>
+    /// <summary>Cancelling the PvP search.</summary>
     public Task<HttpStatusCode> CancelSearchAsync(CancellationToken ct) =>
         SendAsync(HttpMethod.Delete, "/lol-lobby/v2/lobby/matchmaking/search", ct);
 
-    /// <summary>A felugró meccselfogadás elutasítása.</summary>
+    /// <summary>Declining the pop-up match accept.</summary>
     public Task<HttpStatusCode> DeclineReadyCheckAsync(CancellationToken ct) =>
         SendAsync(HttpMethod.Post, "/lol-matchmaking/v1/ready-check/decline", ct);
 
     /// <summary>
-    /// Igazolt remake ellenőrzése: először a meccs végi statisztika (ha ugyanarról a meccsről szól, és remake-et mutat),
-    /// majd a meccstörténet. null: még nem dönthető el.
+    /// Checking for a confirmed remake: first the end-of-match stats (if they are about the same match and show a remake),
+    /// then the match history. null: cannot be decided yet.
     /// </summary>
     public async Task<bool?> CheckRemakeAsync(long gameId, CancellationToken ct)
     {
@@ -122,7 +122,7 @@ public sealed class LcuApi : IDisposable
             : null;
     }
 
-    /// <summary>WebSocket a kliens eseményeihez (WAMP 1.0: [5, "esemény"] feliratkozás).</summary>
+    /// <summary>WebSocket for the client's events (WAMP 1.0: [5, "event"] subscription).</summary>
     public async Task<ClientWebSocket> ConnectEventsAsync(IEnumerable<string> events, CancellationToken ct)
     {
         var ws = new ClientWebSocket();
