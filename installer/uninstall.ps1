@@ -9,6 +9,10 @@
 [CmdletBinding()]
 param([switch]$RemoveData)
 
+# Ha a telepítőt PowerShell 7-ből indították, az örökölt PSModulePath a Windows PowerShell 5.1 beépített moduljait
+# összeakasztja (Get-Acl: „The member Path is already present”). A gépszintű alapértékre állítjuk.
+$env:PSModulePath = [Environment]::GetEnvironmentVariable('PSModulePath', 'Machine')
+
 $ErrorActionPreference = 'Continue'
 $ServiceName = 'LolScrollLimiter'
 $HostName = 'hu.kmsoft.lolscrolllimiter'

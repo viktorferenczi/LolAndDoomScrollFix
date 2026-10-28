@@ -91,6 +91,10 @@ param(
     [switch]$DevMode
 )
 
+# Ha a telepítőt PowerShell 7-ből indították, az örökölt PSModulePath a Windows PowerShell 5.1 beépített moduljait
+# összeakasztja (Get-Acl: „The member Path is already present”). A gépszintű alapértékre állítjuk.
+$env:PSModulePath = [Environment]::GetEnvironmentVariable('PSModulePath', 'Machine')
+
 $ErrorActionPreference = 'Stop'
 # Hibakereséshez a teljes kimenet a futtató (rendszergazdai) felhasználó ideiglenes mappájába is kerül.
 try { Start-Transcript -Path (Join-Path $env:TEMP 'LolScrollLimiter-install.log') -Force | Out-Null } catch { }
