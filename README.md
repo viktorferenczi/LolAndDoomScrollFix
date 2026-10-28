@@ -2,6 +2,8 @@
 
 Windows 11-es alkalmazás Chrome-bővítménnyel.
 
+**Chrome-bővítmény:** [Telepítés a Chrome Web Store-ból](https://chromewebstore.google.com/detail/lol-%C3%A9s-g%C3%B6rget%C3%A9skorl%C3%A1toz%C3%B3/mkoeoadekdfnbjpmhiabpjlmhdoimcml) (azonosító: `mkoeoadekdfnbjpmhiabpjlmhdoimcml`). A teljes védelemhez a bővítmény mellé a [telepítőt](https://github.com/viktorferenczi/LolAndDoomScrollFix/releases/latest) is telepíteni kell.
+
 | Tevékenység | Korlát (alapértelmezés) | A keret elfogyásakor |
 |---|---:|---|
 | LoL PvP | 3 meccs | Új PvP-keresés megszakítva, meccselfogadás elutasítva |

@@ -36,13 +36,15 @@ A Chrome Windows alatt, tartományba nem léptetett gépen **csak a Chrome Web S
 4. Az adatvédelmi lapon jelöld: a bővítmény nem gyűjt és nem továbbít adatot; a `nativeMessaging` engedély a helyi korlátozó szolgáltatással való kapcsolathoz kell.
 5. Várd meg a Google jóváhagyását. Jegyezd fel a kapott **32 betűs bővítményazonosítót**.
 
+> **A közzétett bővítmény:** [Chrome Web Store-oldal](https://chromewebstore.google.com/detail/lol-%C3%A9s-g%C3%B6rget%C3%A9skorl%C3%A1toz%C3%B3/mkoeoadekdfnbjpmhiabpjlmhdoimcml) — az azonosítója: `mkoeoadekdfnbjpmhiabpjlmhdoimcml`. Éles telepítéskor ezt kell megadni a telepítőben.
+
 Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. pont), de az **nem nyújt valódi védelmet**, mert a bővítmény kikapcsolható.
 
 ## 4. Telepítés (éles)
 
 1. Futtasd a `LolScrollLimiter-Setup-1.5.1.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
 2. Telepítési mód: **Éles**.
-3. Bővítményazonosító: az áruházi azonosító (3. pont).
+3. Bővítményazonosító: az áruházi azonosító (3. pont): `mkoeoadekdfnbjpmhiabpjlmhdoimcml`.
 4. **Korlátok** oldal:
 
    | Beállítás | Lehetőségek | Alapértelmezés |
