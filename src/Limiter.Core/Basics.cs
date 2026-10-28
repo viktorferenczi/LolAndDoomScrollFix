@@ -88,6 +88,7 @@ public sealed record DayGrant
     public int FacebookFeedMinutes { get; init; }
 
     /// <summary>Nincs benne semmi (az ilyen bejegyzés nem tárolódik).</summary>
+    [JsonIgnore]
     public bool IsEmpty => LolMatches <= 0 && ShortVideoMinutes <= 0 && FacebookFeedMinutes <= 0;
 
     public DayGrant Sanitized() => this with

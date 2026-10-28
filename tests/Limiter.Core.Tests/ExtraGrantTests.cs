@@ -283,6 +283,7 @@ public class ExtraGrantTests
         var s = With(Grant(5, lol: 2, video: 15, feed: 0));
         var json = s.ToJson();
         Assert.Contains("\"2026-10-05\"", json);
+        Assert.DoesNotContain("isEmpty", json); // számított tulajdonság, nem kerül a fájlba
         var back = LimitSettings.Parse(json);
         Assert.Equal(s.ExtraGrants, back.ExtraGrants);
     }
