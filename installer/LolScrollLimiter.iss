@@ -623,6 +623,9 @@ begin
         Params := Params + ' -ExtensionId ' + ExtId;
       if RegQueryDWordValue(HKLM, MarkerKey, 'DevMode', DevModeValue) and (DevModeValue = 1) then
         Params := Params + ' -DevMode';
+      // An installation from before the language support has no stored language: take the installer's.
+      if not RegValueExists(HKLM, MarkerKey, 'Language') then
+        Params := Params + ' -Language ' + ActiveLanguage;
       Params := Params + ' -KeepSettings';
     end
     else
