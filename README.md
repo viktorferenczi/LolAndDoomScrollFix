@@ -252,6 +252,8 @@ A telepítésről és az ellenőrzésről lásd lent a hivatkozott útmutatókat
 
 ## Verziók
 
+_Még ki nem adott változtatások:_ kétnyelvű (angol és magyar) felület (telepítő, tálcaalkalmazás, admin felület, szolgáltatásüzenetek, Chrome-bővítmény), angol dokumentáció, és az angol README az első.
+
 A közzétett kiadások a [kiadások oldalán](https://github.com/viktorferenczi/LolAndDoomScrollFix/releases) tölthetők le (a telepítő, a bővítménycsomagok és az ellenőrzőösszegek). A tálcaalkalmazás „Frissítések keresése” gombja a legújabbat telepíti. A lista a legújabbal kezdődik.
 
 ### 1.6.1 — 2026-10-28

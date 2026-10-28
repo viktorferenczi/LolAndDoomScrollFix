@@ -78,7 +78,7 @@ public sealed class AdminForm : Form
             (Loc.T("Short videos (Reels, TikTok, Shorts):", "Rövid videók (Reels, TikTok, Shorts):"), _shortMinutes, Loc.T("min", "perc")),
             (Loc.T("Facebook home feed:", "Facebook kezdőlapi hírfolyam:"), _feedMinutes, Loc.T("min", "perc"))), _weekends));
         root.Controls.Add(Group(Loc.T("Rest-day bonus (the next day after an empty day, does not stack; 0 = off)", "Pihenőnap-jutalom (üres nap után másnap, nem halmozódik; 0 = kikapcsolva)"), Grid(
-            ("LoL PvP-meccsek:", _lolBonus, "meccs"),
+            (Loc.T("LoL PvP matches:", "LoL PvP-meccsek:"), _lolBonus, Loc.T("matches", "meccs")),
             (Loc.T("Short videos:", "Rövid videók:"), _shortBonus, Loc.T("min", "perc")),
             (Loc.T("Facebook home feed:", "Facebook kezdőlapi hírfolyam:"), _feedBonus, Loc.T("min", "perc")))));
         root.Controls.Add(Group(Loc.T("Banned hours (cannot be used between the given hours; the limit is not affected)", "Tiltott órák (a megadott órák között nem használható; a keretet nem érinti)"),

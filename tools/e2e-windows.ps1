@@ -203,6 +203,21 @@ if ($form) {
     Start-Sleep -Seconds 1
     Shot 'admin-form'
 
+    # Language leak check: no Hungarian text may appear in the English panel (and the other way round, the Hungarian panel must
+    # contain its own typical words).
+    $names = @($form.FindAll($Scope::Descendants, [System.Windows.Automation.Condition]::TrueCondition) | ForEach-Object { $_.Current.Name })
+    Set-Content -Path (Join-Path $Evidence 'admin-form-names.txt') -Value $names
+    if ($Language -eq 'en') {
+        $leak = @($names | Where-Object { $_ -match '[áéíóöőúüűÁÉÍÓÖŐÚÜŰ]|\bmeccs|\bperc\b|PvP-meccsek' })
+        if ($leak.Count -gt 0) { Write-Host ('Hungarian text found: ' + ($leak -join ' | ')) }
+        Check ($leak.Count -eq 0) 'No Hungarian text in the English admin panel'
+    } else {
+        Check (@($names | Where-Object { $_ -match 'Mentés|perc|meccs' }).Count -gt 0) 'The Hungarian admin panel is in Hungarian'
+        $english = @($names | Where-Object { $_ -match '\b(Save|Cancel|Short videos|Banned hours|matches)\b' })
+        if ($english.Count -gt 0) { Write-Host ('English text found: ' + ($english -join ' | ')) }
+        Check ($english.Count -eq 0) 'No English text in the Hungarian admin panel'
+    }
+
     $combo = Find-Named $form $Ui.ExtraDay
     Check ($null -ne $combo) 'There is a day chooser'
     if ($combo) {

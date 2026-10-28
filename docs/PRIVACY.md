@@ -1,10 +1,28 @@
-# Adatvédelmi nyilatkozat / Privacy policy
+# Privacy policy / Adatvédelmi nyilatkozat
 
-*Utolsó frissítés / Last updated: 2026-10-26*
+*Last updated / Utolsó frissítés: 2026-10-28*
+
+## English
+
+The "LoL & Doomscroll Limiter" (Hungarian name: "LoL- és görgetéskorlátozó") Chrome extension and its companion Windows app **do not send any data off your computer**.
+
+**What does the extension process?** It only runs on Instagram, TikTok, YouTube and Facebook pages. It looks at the current page address (to tell whether it is a short-video or feed page) and whether a video is playing in the visible, active tab, and turns that into a per-second counter.
+
+**Where does it go?** The extension sends the counter through Chrome's own Native Messaging channel to exactly one place: the limiter service running **on the same computer**. The service stores only aggregated time (seconds summed per minute) and the number of LoL matches in a protected local database. The extension does not read, store or transmit page addresses, page content, names or sign-in data.
+
+There is **no** analytics, advertising, tracking, remote server, sale or sharing of data, and the extension does not download or run remote code.
+
+**Update check.** The tray app's "Check for updates" button ("Frissítések keresése" in Hungarian) — only when pressed — reads GitHub's public release list. Like any web request, GitHub sees it (IP address, the app's name and version); no personal data is sent. This is not part of the Chrome extension.
+
+**Language.** The language the programs use (English or Hungarian) is stored on the computer only (a registry value written by the installer); it is never transmitted.
+
+**Deletion.** Removing the extension deletes all of its data; the local service's data (`C:\ProgramData\LolScrollLimiter`) can be deleted by the administrator when uninstalling the app.
+
+Contact: see the contact shown on the Chrome Web Store page and on the project's GitHub page.
 
 ## Magyarul
 
-A „LoL- és görgetéskorlátozó” Chrome-bővítmény és a hozzá tartozó Windows-alkalmazás **semmilyen adatot nem küld ki a számítógépről**.
+A „LoL- és görgetéskorlátozó” (angolul: „LoL & Doomscroll Limiter”) Chrome-bővítmény és a hozzá tartozó Windows-alkalmazás **semmilyen adatot nem küld ki a számítógépről**.
 
 **Mit dolgoz fel a bővítmény?** Csak az Instagram, a TikTok, a YouTube és a Facebook oldalain fut. Megnézi az éppen megnyitott oldal címét (hogy rövid videó vagy hírfolyam-e) és azt, hogy lejátszik-e videót, a lap látható és aktív-e. Ebből másodpercenként egy számlálót képez.
 
@@ -14,22 +32,8 @@ A „LoL- és görgetéskorlátozó” Chrome-bővítmény és a hozzá tartozó
 
 **Frissítések keresése.** A tálcaalkalmazás „Frissítések keresése” gombja – csak gombnyomásra – lekérdezi a GitHub nyilvános kiadási listáját. Mint minden webkérést, ezt is látja a GitHub (IP-cím, a program neve és verziója); személyes adatot nem küldünk. Ez nem a Chrome-bővítmény része.
 
+**Nyelv.** A programok nyelvét (angol vagy magyar) csak a számítógép tárolja (a telepítő által írt rendszerleíró-adat), sehová sem továbbítódik.
+
 **Törlés.** A bővítmény eltávolításával a bővítmény minden adata törlődik; a helyi szolgáltatás adatait (`C:\ProgramData\LolScrollLimiter`) a program eltávolításakor a rendszergazda törölheti.
 
 Kapcsolat: lásd a Chrome Web Store-oldalon és a projekt GitHub-oldalán megadott kapcsolattartót.
-
-## English
-
-The "LoL- és görgetéskorlátozó" (LoL and scroll limiter) Chrome extension and its companion Windows app **do not send any data off your computer**.
-
-**What does the extension process?** It only runs on Instagram, TikTok, YouTube and Facebook pages. It looks at the current page address (to tell whether it is a short-video or feed page) and whether a video is playing in the visible, active tab, and turns that into a per-second counter.
-
-**Where does it go?** The extension sends the counter through Chrome's own Native Messaging channel to exactly one place: the limiter service running **on the same computer**. The service stores only aggregated time (seconds summed per minute) and the number of LoL matches in a protected local database. The extension does not read, store or transmit page addresses, page content, names or sign-in data.
-
-There is **no** analytics, advertising, tracking, remote server, sale or sharing of data, and the extension does not download or run remote code.
-
-**Update check.** The tray app's "Frissítések keresése" (check for updates) button — only when pressed — reads GitHub's public release list. Like any web request, GitHub sees it (IP address, the app's name and version); no personal data is sent. This is not part of the Chrome extension.
-
-**Deletion.** Removing the extension deletes all of its data; the local service's data (`C:\ProgramData\LolScrollLimiter`) can be deleted by the administrator when uninstalling the app.
-
-Contact: see the contact shown on the Chrome Web Store page and on the project's GitHub page.
