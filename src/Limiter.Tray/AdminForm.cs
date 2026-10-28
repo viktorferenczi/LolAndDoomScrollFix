@@ -110,6 +110,11 @@ public sealed class AdminForm : Form
         _daily.CheckedChanged += (_, _) => { _resetHour.Enabled = _daily.Checked; RefreshGrantDays(); };
         _resetHour.SelectedIndexChanged += (_, _) => RefreshGrantDays();
         _weekends.CheckedChanged += (_, _) => RefreshGrantDays();
+        // Hozzáférhetőségi nevek (képernyőolvasók és az automatikus Windows-próba is ezeket keresi).
+        _grantDay.AccessibleName = "Extra napja";
+        _grantLol.AccessibleName = "Extra LoL-meccsek";
+        _grantShort.AccessibleName = "Extra rövid videó percek";
+        _grantFeed.AccessibleName = "Extra hírfolyam percek";
         _grantDay.DrawItem += DrawGrantDay;
         _grantDay.SelectionChangeCommitted += (_, _) => OnGrantDayChosen();
         _grantList.SelectedIndexChanged += (_, _) => OnGrantListChosen();
