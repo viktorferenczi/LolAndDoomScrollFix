@@ -70,6 +70,45 @@ A cél az, hogy megfékezze a végtelen görgetést és a túlzott League of Leg
 
 A telepítésről és az ellenőrzésről lásd lent a hivatkozott útmutatókat.
 
+## Verziók
+
+A közzétett kiadások a [kiadások oldalán](https://github.com/viktorferenczi/LolAndDoomScrollFix/releases) tölthetők le (a telepítő, a bővítménycsomagok és az ellenőrzőösszegek). A tálcaalkalmazás „Frissítések keresése” gombja a legújabbat telepíti. A lista a legújabbal kezdődik.
+
+### 1.6.0 — 2026-10-28
+
+- **Extra keret egy napra:** az admin beállításokban egy kiválasztott napra extra LoL-meccs, rövid videós és Facebook-hírfolyam-idő adható. A napválasztóban a múltbeli napok nem szerepelnek, a hétvégék pedig nem választhatók, ha a hétvégi korlát ki van kapcsolva. Napi nullázásnál a nap a nullázás órájától tart. Az extra látszik a tálcán és a bővítmény felugró ablakában is.
+- **Admin jelszó:** a telepítés új lapján adható meg (legalább 6 karakter); az admin beállítások megnyitásához és a program eltávolításához kell, a Windows rendszergazdai jóváhagyása mellett. Csak egy PBKDF2-SHA256 ellenőrző tárolódik az admin-only adatmappában. A beállítások ablakban a jelszó módosítható.
+- Csendes telepítés és eltávolítás nem akad el a jelszó-ellenőrzésen; a telepítő PowerShell 7-ből indítva sem hibázik.
+- Windowsos végpontok közötti próba (telepítés, jelszó, admin felület, eltávolítás) a GitHub Actionsben.
+
+### 1.5.2 — 2026-10-28
+
+- A telepítő alapértelmezett bővítményazonosítója a Chrome Web Store-ban közzétett bővítmény (fejlesztői módban a fejlesztői azonosító).
+
+### 1.5.1 — 2026-10-27
+
+- Szerzői jogi (all rights reserved) licenc: a hivatalos kiadások letölthetők és ingyen használhatók, a forráskód módosítása és az értékesítés tilos.
+- Karbantartás: verziószám és dokumentáció.
+
+### 1.5.0 — 2026-10-27
+
+- **Admin beállítások:** a tálcaikon menüjéből és a Részletek ablakból nyílik (Windows rendszergazdai jóváhagyással). Itt módosíthatók a telepítéskor megadott értékek: visszaállítás, keretek, hétvége, pihenőnap-jutalom, tiltott órák. Mentés előtt ellenőrzi az értékeket, a szolgáltatás 30 másodpercen belül átveszi őket.
+- Chrome Web Store-közzétételi anyagok és adatvédelmi nyilatkozat (`docs/CHROME_WEBSTORE.md`, `docs/PRIVACY.md`).
+
+### 1.4.1 — 2026-10-26 (első közzétett kiadás)
+
+A program a következőket tudja ebben a kiadásban:
+
+- **Korlátok:** LoL PvP-meccsek száma, rövid videók (Instagram Reels, TikTok, YouTube Shorts, Facebook Reels) közös időkerete és a Facebook-hírfolyam külön időkerete. Közös számláló minden Chrome-profilra és LoL-fiókra.
+- **Telepítéskor választható:** gördülő 24 óra vagy napi nullázás egy megadott órában; a keretek percei; hétvégi korlát (alapból nincs).
+- **Pihenőnap-jutalom:** üres nap után másnap több keret jár (nem halmozódik); a mértéke a telepítőben állítható.
+- **Tiltott órák:** keretenként megadható napi időszak, amikor semmi sem használható; a keretet nem érinti.
+- **Inkognitó:** az „Engedélyezés inkognitó módban” kapcsoló dönt róla.
+- **Játékbiztonság:** a program csak a LoL-klienst figyeli, játék közben nem nyúl semmihez, és a terhelése alacsony.
+- **Frissítések keresése gomb:** ellenőrzőösszeggel és a GitHub-kiadások szigorú ellenőrzésével tölt le és telepít.
+- **Hibatűrés:** felismerési vagy működési hibánál a program enged tovább, és hibát jelez (tálcaikon, a bővítmény piros jelvénye).
+- Kiadás-automatizálás: a `vX.Y.Z` címke feltöltésekor a GitHub Actions lefordítja és közzéteszi a telepítőt.
+
 ## Felépítés
 
 ```
