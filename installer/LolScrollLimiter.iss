@@ -423,6 +423,8 @@ begin
   Result := True;
   if CurPageID = PasswordPage.ID then
   begin
+    // Csendes telepítésnél a lapok láthatatlanul „továbblépnek”; üres jelszóval nem szabad elakadni.
+    if WizardSilent then Exit;
     if Trim(PasswordPage.Values[0]) = '' then
       MsgBox('Add meg a jelszót.', mbError, MB_OK)
     else if Length(PasswordPage.Values[0]) < 6 then

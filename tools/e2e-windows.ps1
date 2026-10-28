@@ -90,15 +90,28 @@ function Texts($win) {
 
 function Hex([string]$s) { return (($s.ToCharArray() | ForEach-Object { '{0:x4}' -f [int]$_ }) -join '') }
 
-function Run-Helper([string[]]$args) {
-    return Start-Process -FilePath $TrayExe -ArgumentList $args -PassThru
+function Run-Helper([string[]]$arguments) {
+    return Start-Process -FilePath $TrayExe -ArgumentList $arguments -PassThru
+}
+
+# Korlátozott várakozás: a próba sosem akadhat el végtelen ideig.
+function Wait-Process-Bounded($proc, [int]$seconds, [string]$what) {
+    if (-not $proc.WaitForExit($seconds * 1000)) {
+        Shot "hang-$($what -replace '\W', '-')"
+        Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+        $script:failures.Add("Időtúllépés: $what")
+        Write-Host "FAIL  Időtúllépés: $what"
+        return $false
+    }
+    return $true
 }
 
 # ---------------------------------------------------------------- 1. csendes telepítés
 Write-Host "== Telepítés: $Installer"
 $log = Join-Path $Evidence 'setup.log'
-$p = Start-Process -FilePath $Installer -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$log" -Wait -PassThru
-Check ($p.ExitCode -eq 0) "A csendes telepítés sikeres (kód: $($p.ExitCode))"
+$p = Start-Process -FilePath $Installer -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$log" -PassThru
+[void](Wait-Process-Bounded $p 420 'csendes telepítés')
+Check ($p.HasExited -and $p.ExitCode -eq 0) "A csendes telepítés sikeres (kód: $($p.ExitCode))"
 Check (Test-Path $TrayExe) 'A tálcaalkalmazás telepítve van'
 Check (Test-Path (Join-Path $DataDir 'limits.json')) 'limits.json létrejött'
 Check (-not (Test-Path $AdminJson)) 'Csendes telepítés után még nincs admin.json'
@@ -110,7 +123,7 @@ Write-Host '== Jelszó beállítása (telepítői segédparancs)'
 $short = Join-Path $env:TEMP 'lsl-short.dat'
 Set-Content -Path $short -Value (Hex 'abc') -Encoding ascii
 $r = Run-Helper @('--set-password-file', "`"$short`"")
-$r.WaitForExit()
+[void](Wait-Process-Bounded $r 30 'rövid jelszó átadása')
 Check ($r.ExitCode -eq 3) "Rövid jelszót elutasít (kód: $($r.ExitCode))"
 Check (-not (Test-Path $AdminJson)) 'Rövid jelszónál nem jön létre admin.json'
 Check (-not (Test-Path $short)) 'Az átadó fájl törlődik (rövid jelszónál is)'
@@ -118,7 +131,7 @@ Check (-not (Test-Path $short)) 'Az átadó fájl törlődik (rövid jelszónál
 $file = Join-Path $env:TEMP 'lsl-admin.dat'
 Set-Content -Path $file -Value (Hex $Password) -Encoding ascii
 $r = Run-Helper @('--set-password-file', "`"$file`"")
-$r.WaitForExit()
+[void](Wait-Process-Bounded $r 30 'jelszó átadása')
 Check ($r.ExitCode -eq 0) "A jelszó beállítása sikeres (kód: $($r.ExitCode))"
 Check (-not (Test-Path $file)) 'Az átadó fájl törlődik'
 Check (Test-Path $AdminJson) 'admin.json létrejött'
