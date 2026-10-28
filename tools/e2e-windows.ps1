@@ -114,6 +114,8 @@ $log = Join-Path $Evidence 'setup.log'
 $p = Start-Process -FilePath $Installer -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$log" -PassThru
 [void](Wait-Process-Bounded $p 240 'csendes telepítés')
 Check ($p.HasExited -and $p.ExitCode -eq 0) "A csendes telepítés sikeres (kód: $($p.ExitCode))"
+$tr = Join-Path $env:TEMP 'LolScrollLimiter-install.log'
+if (Test-Path $tr) { Copy-Item $tr (Join-Path $Evidence 'install-transcript.log') -Force } # még a diagnosztikus futtatás előtt
 if (-not (Test-Path (Join-Path $DataDir 'limits.json'))) {
     # A telepítő a rendszerbeállítást rejtetten futtatja; hiba esetén látható kimenettel újrafuttatjuk a diagnózishoz.
     Write-Host '== Diagnózis: install.ps1 kézi futtatása'
@@ -121,8 +123,6 @@ if (-not (Test-Path (Join-Path $DataDir 'limits.json'))) {
         Tee-Object -FilePath (Join-Path $Evidence 'install-ps1.log') | Out-Host
     Write-Host "install.ps1 kilépési kód: $LASTEXITCODE"
 }
-$tr = Join-Path $env:TEMP 'LolScrollLimiter-install.log'
-if (Test-Path $tr) { Copy-Item $tr (Join-Path $Evidence 'install-transcript.log') }
 Check (Test-Path $TrayExe) 'A tálcaalkalmazás telepítve van'
 Check (Test-Path (Join-Path $DataDir 'limits.json')) 'limits.json létrejött'
 Check (-not (Test-Path $AdminJson)) 'Csendes telepítés után még nincs admin.json'
