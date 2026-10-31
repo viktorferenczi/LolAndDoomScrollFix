@@ -51,7 +51,7 @@ public enum ResetMode
 
 /// <summary>
 /// A banned period within a day (local time, whole hours): from <see cref="From"/> (inclusive) to <see cref="To"/> (exclusive).
-/// It may span midnight (e.g. 22 → 6). It does not affect the limit or the reset; it only makes use impossible meanwhile.
+/// It may span midnight (e.g. 22 → 6), and 0 → 24 is the whole day. It does not affect the limit or the reset; it only makes use impossible meanwhile.
 /// </summary>
 public sealed record BannedHours
 {
@@ -64,13 +64,86 @@ public sealed record BannedHours
     public BannedHours Sanitized()
     {
         var from = Math.Clamp(From, 0, 23);
-        var to = Math.Clamp(To, 0, 23);
+        var to = Math.Clamp(To, 0, 24);
         return this with { From = from, To = to, Enabled = Enabled && from != to };
     }
 
     /// <summary>Whether the ban covers the given local hour.</summary>
     public bool Covers(int localHour) =>
         Enabled && (From < To ? localHour >= From && localHour < To : localHour >= From || localHour < To);
+}
+
+/// <summary>
+/// Banned hours per weekday. A period belongs to the calendar day it starts on: Monday 22 → 6 lasts until Tuesday 06:00.
+/// </summary>
+public sealed record WeeklyBan
+{
+    public BannedHours Monday { get; init; } = BannedHours.Disabled;
+    public BannedHours Tuesday { get; init; } = BannedHours.Disabled;
+    public BannedHours Wednesday { get; init; } = BannedHours.Disabled;
+    public BannedHours Thursday { get; init; } = BannedHours.Disabled;
+    public BannedHours Friday { get; init; } = BannedHours.Disabled;
+    public BannedHours Saturday { get; init; } = BannedHours.Disabled;
+    public BannedHours Sunday { get; init; } = BannedHours.Disabled;
+
+    public static WeeklyBan Disabled { get; } = new();
+
+    /// <summary>The days in the order they are shown: Monday first.</summary>
+    public static IReadOnlyList<DayOfWeek> Days { get; } =
+        [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday];
+
+    [JsonIgnore]
+    public bool AnyEnabled => Days.Any(d => For(d).Enabled);
+
+    public BannedHours For(DayOfWeek day) => day switch
+    {
+        DayOfWeek.Monday => Monday,
+        DayOfWeek.Tuesday => Tuesday,
+        DayOfWeek.Wednesday => Wednesday,
+        DayOfWeek.Thursday => Thursday,
+        DayOfWeek.Friday => Friday,
+        DayOfWeek.Saturday => Saturday,
+        DayOfWeek.Sunday => Sunday,
+        _ => throw new ArgumentOutOfRangeException(nameof(day)),
+    };
+
+    public WeeklyBan With(DayOfWeek day, BannedHours hours) => day switch
+    {
+        DayOfWeek.Monday => this with { Monday = hours },
+        DayOfWeek.Tuesday => this with { Tuesday = hours },
+        DayOfWeek.Wednesday => this with { Wednesday = hours },
+        DayOfWeek.Thursday => this with { Thursday = hours },
+        DayOfWeek.Friday => this with { Friday = hours },
+        DayOfWeek.Saturday => this with { Saturday = hours },
+        DayOfWeek.Sunday => this with { Sunday = hours },
+        _ => throw new ArgumentOutOfRangeException(nameof(day)),
+    };
+
+    /// <summary>
+    /// A single period from a file of an earlier version: every day, but the weekend only if the limits applied on weekends,
+    /// because earlier a free weekend had no ban either.
+    /// </summary>
+    public static WeeklyBan FromLegacy(BannedHours? hours, bool enforceOnWeekends)
+    {
+        if (hours is not { Enabled: true }) return Disabled;
+        var ban = Disabled;
+        foreach (var day in Days)
+        {
+            if (enforceOnWeekends || day is not (DayOfWeek.Saturday or DayOfWeek.Sunday)) ban = ban.With(day, hours);
+        }
+        return ban;
+    }
+
+    public WeeklyBan Sanitized() => this with
+    {
+        Monday = (Monday ?? BannedHours.Disabled).Sanitized(),
+        Tuesday = (Tuesday ?? BannedHours.Disabled).Sanitized(),
+        Wednesday = (Wednesday ?? BannedHours.Disabled).Sanitized(),
+        Thursday = (Thursday ?? BannedHours.Disabled).Sanitized(),
+        Friday = (Friday ?? BannedHours.Disabled).Sanitized(),
+        Saturday = (Saturday ?? BannedHours.Disabled).Sanitized(),
+        Sunday = (Sunday ?? BannedHours.Disabled).Sanitized(),
+    };
 }
 
 /// <summary>
@@ -120,10 +193,20 @@ public sealed record LimitSettings
     public int ShortVideoRestDayBonusMinutes { get; init; } = 30;
     public int FacebookFeedRestDayBonusMinutes { get; init; } = 30;
 
-    // Banned hours per limit (default: none).
-    public BannedHours LolBannedHours { get; init; } = BannedHours.Disabled;
-    public BannedHours ShortVideoBannedHours { get; init; } = BannedHours.Disabled;
-    public BannedHours FacebookFeedBannedHours { get; init; } = BannedHours.Disabled;
+    // Banned hours per limit and weekday (default: none). A day's ban also applies on a weekend without limits.
+    public WeeklyBan LolBannedDays { get; init; } = WeeklyBan.Disabled;
+    public WeeklyBan ShortVideoBannedDays { get; init; } = WeeklyBan.Disabled;
+    public WeeklyBan FacebookFeedBannedDays { get; init; } = WeeklyBan.Disabled;
+
+    // The single period of earlier versions: only read from an old file, Sanitized converts it to the weekly form.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public BannedHours? LolBannedHours { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public BannedHours? ShortVideoBannedHours { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public BannedHours? FacebookFeedBannedHours { get; init; }
 
     /// <summary>Extra allowances for single days (at most one entry per day, sorted by date).</summary>
     public IReadOnlyList<DayGrant> ExtraGrants { get; init; } = [];
@@ -143,6 +226,9 @@ public sealed record LimitSettings
         LolRestDayBonusMatches == other.LolRestDayBonusMatches &&
         ShortVideoRestDayBonusMinutes == other.ShortVideoRestDayBonusMinutes &&
         FacebookFeedRestDayBonusMinutes == other.FacebookFeedRestDayBonusMinutes &&
+        Equals(LolBannedDays, other.LolBannedDays) &&
+        Equals(ShortVideoBannedDays, other.ShortVideoBannedDays) &&
+        Equals(FacebookFeedBannedDays, other.FacebookFeedBannedDays) &&
         Equals(LolBannedHours, other.LolBannedHours) &&
         Equals(ShortVideoBannedHours, other.ShortVideoBannedHours) &&
         Equals(FacebookFeedBannedHours, other.FacebookFeedBannedHours) &&
@@ -160,6 +246,9 @@ public sealed record LimitSettings
         hash.Add(LolRestDayBonusMatches);
         hash.Add(ShortVideoRestDayBonusMinutes);
         hash.Add(FacebookFeedRestDayBonusMinutes);
+        hash.Add(LolBannedDays);
+        hash.Add(ShortVideoBannedDays);
+        hash.Add(FacebookFeedBannedDays);
         hash.Add(LolBannedHours);
         hash.Add(ShortVideoBannedHours);
         hash.Add(FacebookFeedBannedHours);
@@ -196,12 +285,17 @@ public sealed record LimitSettings
         ExtraGrants = (ExtraGrants ?? []).Where(g => g.Date >= day).ToList(),
     };
 
-    public BannedHours WebBannedHours(WebCategory category) => category switch
+    public WeeklyBan LolBan() => Effective(LolBannedDays, LolBannedHours);
+
+    public WeeklyBan WebBan(WebCategory category) => category switch
     {
-        WebCategory.ShortVideo => ShortVideoBannedHours,
-        WebCategory.FacebookFeed => FacebookFeedBannedHours,
+        WebCategory.ShortVideo => Effective(ShortVideoBannedDays, ShortVideoBannedHours),
+        WebCategory.FacebookFeed => Effective(FacebookFeedBannedDays, FacebookFeedBannedHours),
         _ => throw new ArgumentOutOfRangeException(nameof(category)),
     };
+
+    private WeeklyBan Effective(WeeklyBan? days, BannedHours? legacy) =>
+        days is { AnyEnabled: true } ? days : WeeklyBan.FromLegacy(legacy, EnforceOnWeekends);
 
     public static LimitSettings Default { get; } = new();
 
@@ -249,9 +343,12 @@ public sealed record LimitSettings
         LolRestDayBonusMatches = Math.Clamp(LolRestDayBonusMatches, 0, 10),
         ShortVideoRestDayBonusMinutes = Math.Clamp(ShortVideoRestDayBonusMinutes, 0, 24 * 60),
         FacebookFeedRestDayBonusMinutes = Math.Clamp(FacebookFeedRestDayBonusMinutes, 0, 24 * 60),
-        LolBannedHours = (LolBannedHours ?? BannedHours.Disabled).Sanitized(),
-        ShortVideoBannedHours = (ShortVideoBannedHours ?? BannedHours.Disabled).Sanitized(),
-        FacebookFeedBannedHours = (FacebookFeedBannedHours ?? BannedHours.Disabled).Sanitized(),
+        LolBannedDays = Effective(LolBannedDays, LolBannedHours?.Sanitized()).Sanitized(),
+        ShortVideoBannedDays = Effective(ShortVideoBannedDays, ShortVideoBannedHours?.Sanitized()).Sanitized(),
+        FacebookFeedBannedDays = Effective(FacebookFeedBannedDays, FacebookFeedBannedHours?.Sanitized()).Sanitized(),
+        LolBannedHours = null,
+        ShortVideoBannedHours = null,
+        FacebookFeedBannedHours = null,
         ExtraGrants = (ExtraGrants ?? [])
             .Where(g => g is not null && g.Date != default)
             .Select(g => g.Sanitized())

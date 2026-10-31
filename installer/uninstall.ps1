@@ -23,6 +23,8 @@ $Marker = 'HKLM:\SOFTWARE\LolScrollLimiter'
 Write-Host '==> Stopping the tray application and the service'
 Get-Process -Name 'Limiter.Tray' -ErrorAction SilentlyContinue | Stop-Process -Force
 if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
+    # The running service keeps its permissions closed; the uninstaller has already verified the admin password.
+    & sc.exe sdset $ServiceName 'D:(A;;CCLCSWRPWPDTLOCRRCWD;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)(A;;CCLCSWLOCRRC;;;AU)' | Out-Null
     Stop-Service -Name $ServiceName -Force -ErrorAction SilentlyContinue
     & sc.exe delete $ServiceName | Out-Null
 }

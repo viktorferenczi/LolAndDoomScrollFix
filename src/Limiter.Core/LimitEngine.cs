@@ -28,10 +28,10 @@ public sealed record LolLimitStatus(
 /// <summary>
 /// Calculation of the limits. In rolling mode there is no midnight reset: every use is released exactly
 /// 24 hours later (web time minute by minute, gradually). In daily mode, at the given hour
-/// every limit resets at once. In an exempt period (weekend) nothing blocks and nothing is used up.
+/// every limit resets at once. In an exempt period (weekend) nothing is used up, and only banned hours block.
 /// Rest-day bonus: if nothing was used from a limit on the previous limited day, it is larger by this much today
 /// (does not stack; not given for a base limit of 0). The extra allowance the admin gave for a day (<see cref="DayGrant"/>) is added to it, by the day's
-/// start date; it has no effect on an exempt day. In banned hours the limit is not used up and not reset, it only blocks.
+/// start date; it has no effect on an exempt day. In banned hours the limit is not used up and not reset, it only blocks; this holds on an exempt day too.
 /// </summary>
 public sealed class LimitEngine
 {
@@ -111,7 +111,12 @@ public sealed class LimitEngine
         var used = TimeSpan.FromMilliseconds(buckets.Sum(b => b.Milliseconds));
 
         if (schedule.IsExempt(now))
-            return new WebLimitStatus(category, limit, used, limit, false, null, null, Exempt: true, Bonus: bonus, Extra: extra);
+        {
+            var exemptBan = schedule.Ban(settings.WebBan(category), now);
+            return exemptBan.Active
+                ? new WebLimitStatus(category, limit, used, limit, true, null, exemptBan.Until, Bonus: bonus, Banned: true, Extra: extra)
+                : new WebLimitStatus(category, limit, used, limit, false, null, null, Exempt: true, Bonus: bonus, Extra: extra);
+        }
 
         var remaining = used >= limit ? TimeSpan.Zero : limit - used;
         var blocked = used >= limit;
@@ -138,8 +143,7 @@ public sealed class LimitEngine
             }
         }
 
-        var banned = ApplyBan(schedule.Ban(settings.WebBannedHours(category), now), ref blocked, ref availableAgain);
-        if (blocked) availableAgain = EarlierOfExempt(schedule, now, availableAgain);
+        var banned = ApplyBan(schedule, settings.WebBan(category), now, ref blocked, ref availableAgain);
         return new WebLimitStatus(category, limit, used, remaining, blocked, next, availableAgain, Bonus: bonus, Banned: banned, Extra: extra);
     }
 
@@ -161,7 +165,12 @@ public sealed class LimitEngine
         var used = counted.Count;
 
         if (schedule.IsExempt(now))
-            return new LolLimitStatus(limit, used, limit, false, null, null, Exempt: true, Bonus: bonus, Extra: extra);
+        {
+            var exemptBan = schedule.Ban(settings.LolBan(), now);
+            return exemptBan.Active
+                ? new LolLimitStatus(limit, used, limit, true, null, exemptBan.Until, Bonus: bonus, Banned: true, Extra: extra)
+                : new LolLimitStatus(limit, used, limit, false, null, null, Exempt: true, Bonus: bonus, Extra: extra);
+        }
 
         var blocked = used >= limit;
         DateTimeOffset? next, availableAgain = null;
@@ -186,8 +195,7 @@ public sealed class LimitEngine
             }
         }
 
-        var banned = ApplyBan(schedule.Ban(settings.LolBannedHours, now), ref blocked, ref availableAgain);
-        if (blocked) availableAgain = EarlierOfExempt(schedule, now, availableAgain);
+        var banned = ApplyBan(schedule, settings.LolBan(), now, ref blocked, ref availableAgain);
         return new LolLimitStatus(limit, used, Math.Max(0, limit - used), blocked, next, availableAgain, Bonus: bonus, Banned: banned, Extra: extra);
     }
 
@@ -233,15 +241,19 @@ public sealed class LimitEngine
 
     /// <summary>
     /// Blocks during a banned period; the release is the end of the ban, or if the limit is not released by then, the limit's release.
+    /// The release never falls into a later banned period (e.g. a used-up Friday limit, when Saturday morning is banned).
     /// </summary>
-    private static bool ApplyBan((bool Active, DateTimeOffset? Until) ban, ref bool blocked, ref DateTimeOffset? availableAgain)
+    private static bool ApplyBan(LimitSchedule schedule, WeeklyBan ban, DateTimeOffset now, ref bool blocked, ref DateTimeOffset? availableAgain)
     {
-        if (!ban.Active) return false;
-        var until = ban.Until;
-        if (blocked && (availableAgain is null || availableAgain > until)) until = availableAgain;
-        blocked = true;
-        availableAgain = until;
-        return true;
+        if (blocked) availableAgain = EarlierOfExempt(schedule, now, availableAgain);
+        var (active, until) = schedule.Ban(ban, now);
+        if (active)
+        {
+            if (!blocked || (availableAgain is not null && (until is null || availableAgain < until))) availableAgain = until;
+            blocked = true;
+        }
+        if (blocked && availableAgain is { } at && schedule.Ban(ban, at) is { Active: true } later) availableAgain = later.Until;
+        return active;
     }
 
     /// <summary>If the weekend starts earlier than the limit is released, that is the release time.</summary>

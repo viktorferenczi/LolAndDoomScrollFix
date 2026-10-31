@@ -10,6 +10,8 @@ if (args.Contains("--diagnose", StringComparer.OrdinalIgnoreCase))
     return await LcuDiagnostics.RunAsync(args.Contains("--test-cancel", StringComparer.OrdinalIgnoreCase));
 }
 
+ServiceLock.Apply();
+
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddWindowsService(o => o.ServiceName = IpcConstants.ServiceName);
 

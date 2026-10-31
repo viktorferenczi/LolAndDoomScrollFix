@@ -79,20 +79,32 @@ en.UnitMatches=matches
 hu.UnitMatches=meccs
 en.BanTitle=Banned hours
 hu.BanTitle=Tiltott órák
-en.BanSubtitle=During which hours should playing or scrolling be impossible?
-hu.BanSubtitle=Mely órákban ne lehessen játszani vagy görgetni?
-en.BanNote=When ticked, that activity cannot be used at all between the given hours (e.g. 01:00–05:00), even if some of the limit is left. The limit and the reset are not affected. The period may span midnight (e.g. 22:00–06:00). If there is no limit on weekends, there is no ban on weekends either.
-hu.BanNote=Bejelölve a megadott órák között (pl. 01:00–05:00) az adott dolog egyáltalán nem használható, akkor sem, ha a keretből még maradt. A keretet és a nullázást nem érinti. Átnyúlhat éjfélen (pl. 22:00–06:00). Ha hétvégén nincs korlát, akkor hétvégén tiltás sincs.
+en.BanSubtitle=LoL: on which days and hours should playing be impossible?
+hu.BanSubtitle=LoL: mely napokon és órákban ne lehessen játszani?
+en.BanSubtitleShort=Short videos: on which days and hours should watching be impossible?
+hu.BanSubtitleShort=Rövid videók: mely napokon és órákban ne lehessen nézni?
+en.BanSubtitleFeed=Facebook feed: on which days and hours should scrolling be impossible?
+hu.BanSubtitleFeed=Facebook-hírfolyam: mely napokon és órákban ne lehessen görgetni?
+en.BanNote=On a ticked day this cannot be used at all between the given hours, even if some of the limit is left. A period may run past midnight (22:00–06:00), and 00:00–24:00 is the whole day. It also applies on weekends without limits.
+hu.BanNote=A bejelölt napon ez a megadott órák között egyáltalán nem használható, akkor sem, ha a keretből még maradt. Az időszak átnyúlhat éjfélen (22:00–06:00), a 00:00–24:00 az egész nap. Korlát nélküli hétvégén is érvényes.
+en.Day0=Monday
+hu.Day0=Hétfő
+en.Day1=Tuesday
+hu.Day1=Kedd
+en.Day2=Wednesday
+hu.Day2=Szerda
+en.Day3=Thursday
+hu.Day3=Csütörtök
+en.Day4=Friday
+hu.Day4=Péntek
+en.Day5=Saturday
+hu.Day5=Szombat
+en.Day6=Sunday
+hu.Day6=Vasárnap
 en.BanStart=start
 hu.BanStart=kezdete
 en.BanEnd=end
 hu.BanEnd=vége
-en.BanLol=LoL PvP matches
-hu.BanLol=LoL PvP-meccsek
-en.BanShort=Short videos
-hu.BanShort=Rövid videók
-en.BanFeed=Facebook feed
-hu.BanFeed=Facebook-hírfolyam
 en.ModeTitle=Installation mode
 hu.ModeTitle=Telepítési mód
 en.ModeSubtitle=Production or development test version?
@@ -135,8 +147,8 @@ en.ErrPwMatch=The two passwords do not match.
 hu.ErrPwMatch=A két jelszó nem egyezik.
 en.ErrMinutes=The time limit must be a whole number between 0 and 1440 (minutes).
 hu.ErrMinutes=Az időkeret 0 és 1440 közötti egész szám (perc) lehet.
-en.ErrBan=The start and the end of a banned period cannot be the same hour.
-hu.ErrBan=A tiltott időszak kezdete és vége nem lehet ugyanaz az óra.
+en.ErrBan=The start and the end of a banned period cannot be the same hour (for the whole day: 00:00–24:00).
+hu.ErrBan=A tiltott időszak kezdete és vége nem lehet ugyanaz az óra (az egész napra: 00:00–24:00).
 en.ErrBonusLol=The LoL bonus must be a whole number between 0 and 10 (matches).
 hu.ErrBonusLol=A LoL-jutalom 0 és 10 közötti egész szám (meccs) lehet.
 en.ErrBonusMinutes=A bonus given in minutes must be a whole number between 0 and 1440.
@@ -165,9 +177,10 @@ var
   WeekendCheck: TNewCheckBox;
   BonusPage: TWizardPage;
   LolBonusEdit, ShortVideoBonusEdit, FeedBonusEdit: TNewEdit;
-  BanPage: TWizardPage;
-  LolBanCheck, ShortVideoBanCheck, FeedBanCheck: TNewCheckBox;
-  LolBanFrom, LolBanTo, ShortVideoBanFrom, ShortVideoBanTo, FeedBanFrom, FeedBanTo: TNewComboBox;
+  // Banned hours: three pages (LoL, short videos, feed), seven days each; index = page * 7 + day, Monday first.
+  BanPages: array[0..2] of TWizardPage;
+  BanChecks: array[0..20] of TNewCheckBox;
+  BanFroms, BanTos: array[0..20] of TNewComboBox;
 
 procedure ResetModeChanged(Sender: TObject);
 begin
@@ -334,17 +347,18 @@ begin
   Result := False;
   if IsUpdate then
     Result := (PageID = ModePage.ID) or (PageID = ExtensionPage.ID) or (PageID = LimitsPage.ID) or
-              (PageID = BonusPage.ID) or (PageID = BanPage.ID) or (PageID = PasswordPage.ID);
+              (PageID = BonusPage.ID) or (PageID = BanPages[0].ID) or (PageID = BanPages[1].ID) or (PageID = BanPages[2].ID) or (PageID = PasswordPage.ID);
 end;
 
 procedure BanCheckChanged(Sender: TObject);
+var
+  I: Integer;
 begin
-  LolBanFrom.Enabled := LolBanCheck.Checked;
-  LolBanTo.Enabled := LolBanCheck.Checked;
-  ShortVideoBanFrom.Enabled := ShortVideoBanCheck.Checked;
-  ShortVideoBanTo.Enabled := ShortVideoBanCheck.Checked;
-  FeedBanFrom.Enabled := FeedBanCheck.Checked;
-  FeedBanTo.Enabled := FeedBanCheck.Checked;
+  for I := 0 to 20 do
+  begin
+    BanFroms[I].Enabled := BanChecks[I].Checked;
+    BanTos[I].Enabled := BanChecks[I].Checked;
+  end;
 end;
 
 function AddHourCombo(Parent: TWizardPage; Left, Top, Hour: Integer): TNewComboBox;
@@ -368,60 +382,93 @@ begin
   Result := TNewCheckBox.Create(Parent);
   Result.Parent := Parent.Surface;
   Result.Top := Top + ScaleY(2);
-  Result.Width := ScaleX(220);
+  Result.Width := ScaleX(180);
   Result.Caption := Caption;
   Result.Checked := False;
   Result.OnClick := @BanCheckChanged;
 end;
 
-procedure CreateBanPage(AfterID: Integer);
+function DayCaption(Day: Integer): String;
+begin
+  case Day of
+    0: Result := CustomMessage('Day0');
+    1: Result := CustomMessage('Day1');
+    2: Result := CustomMessage('Day2');
+    3: Result := CustomMessage('Day3');
+    4: Result := CustomMessage('Day4');
+    5: Result := CustomMessage('Day5');
+  else
+    Result := CustomMessage('Day6');
+  end;
+end;
+
+procedure CreateBanPage(Index, AfterID: Integer; const Subtitle: String);
 var
-  Y: Integer;
+  Y, Day, I: Integer;
   Note: TNewStaticText;
 begin
-  BanPage := CreateCustomPage(AfterID, CustomMessage('BanTitle'),
-    CustomMessage('BanSubtitle'));
+  BanPages[Index] := CreateCustomPage(AfterID, CustomMessage('BanTitle'), Subtitle);
 
-  Note := AddLabel(BanPage,
-    CustomMessage('BanNote'), 0, 0);
+  Note := AddLabel(BanPages[Index], CustomMessage('BanNote'), 0, 0);
   Note.AutoSize := False;
   Note.WordWrap := True;
-  Note.Width := BanPage.SurfaceWidth;
-  Note.Height := ScaleY(56);
-  Y := ScaleY(66);
+  Note.Width := BanPages[Index].SurfaceWidth;
+  Note.Height := ScaleY(44);
+  Y := ScaleY(46);
 
-  AddLabel(BanPage, CustomMessage('BanStart'), ScaleX(230), Y);
-  AddLabel(BanPage, CustomMessage('BanEnd'), ScaleX(330), Y);
-  Y := Y + ScaleY(20);
+  AddLabel(BanPages[Index], CustomMessage('BanStart'), ScaleX(190), Y);
+  AddLabel(BanPages[Index], CustomMessage('BanEnd'), ScaleX(290), Y);
+  Y := Y + ScaleY(16);
 
-  LolBanCheck := AddBanCheck(BanPage, CustomMessage('BanLol'), Y);
-  LolBanFrom := AddHourCombo(BanPage, ScaleX(230), Y, 1);
-  AddLabel(BanPage, '–', ScaleX(310), Y + ScaleY(3));
-  LolBanTo := AddHourCombo(BanPage, ScaleX(330), Y, 5);
-  Y := Y + ScaleY(30);
-
-  ShortVideoBanCheck := AddBanCheck(BanPage, CustomMessage('BanShort'), Y);
-  ShortVideoBanFrom := AddHourCombo(BanPage, ScaleX(230), Y, 1);
-  AddLabel(BanPage, '–', ScaleX(310), Y + ScaleY(3));
-  ShortVideoBanTo := AddHourCombo(BanPage, ScaleX(330), Y, 5);
-  Y := Y + ScaleY(30);
-
-  FeedBanCheck := AddBanCheck(BanPage, CustomMessage('BanFeed'), Y);
-  FeedBanFrom := AddHourCombo(BanPage, ScaleX(230), Y, 1);
-  AddLabel(BanPage, '–', ScaleX(310), Y + ScaleY(3));
-  FeedBanTo := AddHourCombo(BanPage, ScaleX(330), Y, 5);
+  for Day := 0 to 6 do
+  begin
+    I := Index * 7 + Day;
+    BanChecks[I] := AddBanCheck(BanPages[Index], DayCaption(Day), Y);
+    BanFroms[I] := AddHourCombo(BanPages[Index], ScaleX(190), Y, 1);
+    AddLabel(BanPages[Index], '–', ScaleX(270), Y + ScaleY(3));
+    BanTos[I] := AddHourCombo(BanPages[Index], ScaleX(290), Y, 5);
+    // The end may be 24:00, so that a whole day can be banned.
+    BanTos[I].Items.Add('24:00');
+    Y := Y + ScaleY(26);
+  end;
 end;
 
-function BanValid(Check: TNewCheckBox; FromCombo, ToCombo: TNewComboBox): Boolean;
+function BansValid(Index: Integer): Boolean;
+var
+  Day, I: Integer;
 begin
-  Result := not Check.Checked or (FromCombo.ItemIndex <> ToCombo.ItemIndex);
+  Result := True;
+  for Day := 0 to 6 do
+  begin
+    I := Index * 7 + Day;
+    if BanChecks[I].Checked and (BanFroms[I].ItemIndex = BanTos[I].ItemIndex) then
+      Result := False;
+  end;
 end;
 
-function BanParams(const Name: String; Check: TNewCheckBox; FromCombo, ToCombo: TNewComboBox): String;
+// ' -LolBanDays 1-5,1-5,,,,,22-6' (Monday first); nothing if no day is ticked.
+function BanParams(const Name: String; Index: Integer): String;
+var
+  Day, I: Integer;
+  Value: String;
+  Any: Boolean;
 begin
+  Value := '';
+  Any := False;
+  for Day := 0 to 6 do
+  begin
+    I := Index * 7 + Day;
+    if Day > 0 then
+      Value := Value + ',';
+    if BanChecks[I].Checked then
+    begin
+      Value := Value + IntToStr(BanFroms[I].ItemIndex) + '-' + IntToStr(BanTos[I].ItemIndex);
+      Any := True;
+    end;
+  end;
   Result := '';
-  if Check.Checked then
-    Result := ' -' + Name + 'BanFrom ' + IntToStr(FromCombo.ItemIndex) + ' -' + Name + 'BanTo ' + IntToStr(ToCombo.ItemIndex);
+  if Any then
+    Result := ' -' + Name + 'BanDays ' + Value;
 end;
 
 procedure InitializeWizard;
@@ -442,9 +489,11 @@ begin
 
   CreateLimitsPage(ExtensionPage.ID);
   CreateBonusPage(LimitsPage.ID);
-  CreateBanPage(BonusPage.ID);
+  CreateBanPage(0, BonusPage.ID, CustomMessage('BanSubtitle'));
+  CreateBanPage(1, BanPages[0].ID, CustomMessage('BanSubtitleShort'));
+  CreateBanPage(2, BanPages[1].ID, CustomMessage('BanSubtitleFeed'));
 
-  PasswordPage := CreateInputQueryPage(BanPage.ID,
+  PasswordPage := CreateInputQueryPage(BanPages[2].ID,
     CustomMessage('PwTitle'), CustomMessage('PwSubtitle'),
     CustomMessage('PwDesc'));
   PasswordPage.Add(CustomMessage('PwLabel'), True);
@@ -556,15 +605,12 @@ begin
     end;
     Exit;
   end;
-  if CurPageID = BanPage.ID then
+  if ((CurPageID = BanPages[0].ID) and not BansValid(0)) or
+     ((CurPageID = BanPages[1].ID) and not BansValid(1)) or
+     ((CurPageID = BanPages[2].ID) and not BansValid(2)) then
   begin
-    if not BanValid(LolBanCheck, LolBanFrom, LolBanTo) or
-       not BanValid(ShortVideoBanCheck, ShortVideoBanFrom, ShortVideoBanTo) or
-       not BanValid(FeedBanCheck, FeedBanFrom, FeedBanTo) then
-    begin
-      MsgBox(CustomMessage('ErrBan'), mbError, MB_OK);
-      Result := False;
-    end;
+    MsgBox(CustomMessage('ErrBan'), mbError, MB_OK);
+    Result := False;
     Exit;
   end;
   if CurPageID = BonusPage.ID then
@@ -599,7 +645,8 @@ function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   Code: Integer;
 begin
-  // On update the running files have to be released.
+  // On update the running files have to be released. The running service keeps its permissions closed, so they are opened first.
+  Exec(ExpandConstant('{sys}\sc.exe'), 'sdset LolScrollLimiter D:(A;;CCLCSWRPWPDTLOCRRCWD;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)(A;;CCLCSWLOCRRC;;;AU)', '', SW_HIDE, ewWaitUntilTerminated, Code);
   Exec(ExpandConstant('{sys}\sc.exe'), 'stop LolScrollLimiter', '', SW_HIDE, ewWaitUntilTerminated, Code);
   Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM Limiter.Tray.exe', '', SW_HIDE, ewWaitUntilTerminated, Code);
   Sleep(2000);
@@ -653,9 +700,9 @@ begin
         ' -LolRestDayBonusMatches ' + IntToStr(StrToInt(Trim(LolBonusEdit.Text))) +
         ' -ShortVideoRestDayBonusMinutes ' + IntToStr(StrToInt(Trim(ShortVideoBonusEdit.Text))) +
         ' -FacebookFeedRestDayBonusMinutes ' + IntToStr(StrToInt(Trim(FeedBonusEdit.Text))) +
-        BanParams('Lol', LolBanCheck, LolBanFrom, LolBanTo) +
-        BanParams('ShortVideo', ShortVideoBanCheck, ShortVideoBanFrom, ShortVideoBanTo) +
-        BanParams('FacebookFeed', FeedBanCheck, FeedBanFrom, FeedBanTo);
+        BanParams('Lol', 0) +
+        BanParams('ShortVideo', 1) +
+        BanParams('FacebookFeed', 2);
     end;
     Log('install.ps1 parameters: ' + Params);
     WizardForm.StatusLabel.Caption := CustomMessage('StatusConfiguring');

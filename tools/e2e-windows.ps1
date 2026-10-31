@@ -264,6 +264,49 @@ Write-Host '== Service and the new extra'
 $svc = Get-Service LolScrollLimiter
 Check ($svc.Status -eq 'Running') 'The service keeps running after saving'
 
+# ---------------------------------------------------------------- 4b. protection against stopping and killing
+Write-Host '== Protection of the service'
+Start-Sleep -Seconds 3
+$denied = $false
+try { Stop-Service LolScrollLimiter -Force -ErrorAction Stop } catch { $denied = $true }
+Check ($denied -and (Get-Service LolScrollLimiter).Status -eq 'Running') 'An administrator cannot stop the service with Stop-Service'
+& sc.exe config LolScrollLimiter start= disabled | Out-Null
+Check ($LASTEXITCODE -ne 0) 'An administrator cannot disable the service with sc config'
+& sc.exe delete LolScrollLimiter | Out-Null
+Check ($LASTEXITCODE -ne 0 -and $null -ne (Get-Service LolScrollLimiter -ErrorAction SilentlyContinue)) 'An administrator cannot delete the service with sc delete'
+
+foreach ($round in 1, 2, 3, 4) {
+    $before = (Get-Process Limiter.Service).Id
+    Stop-Process -Id $before -Force
+    $back = $null
+    $killedAt = Get-Date
+    while (-not $back -and ((Get-Date) - $killedAt).TotalSeconds -lt 15) {
+        Start-Sleep -Milliseconds 250
+        $p = Get-Process Limiter.Service -ErrorAction SilentlyContinue
+        if ($p -and $p.Id -ne $before) { $back = $p }
+    }
+    $seconds = [math]::Round(((Get-Date) - $killedAt).TotalSeconds, 1)
+    Write-Host "   kill $round`: new process after $seconds s"
+    Check ($null -ne $back -and $seconds -lt 6) "Killed service restarts quickly (round $round, $seconds s)"
+    Start-Sleep -Seconds 2
+}
+
+# Re-running the setup over a running, locked service: the same path an update takes. The weekly table comes from the parameter.
+Write-Host '== Setup over the locked service, banned hours per day'
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $AppDir 'install.ps1') -InstallDir $AppDir -LolBanDays '1-5,,,,22-6,0-24,' *>&1 |
+    Tee-Object -FilePath (Join-Path $Evidence 'install-over-locked.log') | Out-Null
+Check ($LASTEXITCODE -eq 0) "install.ps1 runs over the locked service (exit code: $LASTEXITCODE)"
+$limits = Get-Content $limitsPath -Raw | ConvertFrom-Json
+Check ($limits.lolBannedDays.monday.enabled -and $limits.lolBannedDays.monday.to -eq 5) 'Monday''s banned hours are in limits.json'
+Check (-not $limits.lolBannedDays.tuesday.enabled) 'Tuesday has no banned hours'
+Check ($limits.lolBannedDays.friday.from -eq 22 -and $limits.lolBannedDays.friday.to -eq 6) 'Friday''s period runs past midnight'
+Check ($limits.lolBannedDays.saturday.from -eq 0 -and $limits.lolBannedDays.saturday.to -eq 24) 'Saturday is banned all day'
+Check (-not $limits.lolBannedDays.sunday.enabled) 'Sunday has no banned hours'
+Check ((Get-Service LolScrollLimiter).Status -eq 'Running') 'The service runs after the setup'
+$denied = $false
+try { Stop-Service LolScrollLimiter -Force -ErrorAction Stop } catch { $denied = $true }
+Check $denied 'The permissions are closed again after the setup'
+
 # ---------------------------------------------------------------- 5. uninstall
 Write-Host '== Uninstall'
 $unins = Get-ChildItem (Join-Path $AppDir 'unins*.exe') | Select-Object -First 1

@@ -24,8 +24,18 @@ public static class SettingsFile
         CheckBan("LoL", s.LolBannedHours);
         CheckBan(Loc.T("Short videos", "Rövid videók"), s.ShortVideoBannedHours);
         CheckBan(Loc.T("Facebook feed", "Facebook-hírfolyam"), s.FacebookFeedBannedHours);
+        CheckWeek("LoL", s.LolBannedDays);
+        CheckWeek(Loc.T("Short videos", "Rövid videók"), s.ShortVideoBannedDays);
+        CheckWeek(Loc.T("Facebook feed", "Facebook-hírfolyam"), s.FacebookFeedBannedDays);
         CheckGrants();
         return errors;
+
+        void CheckWeek(string what, WeeklyBan week)
+        {
+            if (week is null) return;
+            foreach (var day in WeeklyBan.Days)
+                CheckBan($"{what} ({Loc.Culture.DateTimeFormat.GetDayName(day)})", week.For(day));
+        }
 
         void CheckGrants()
         {
@@ -53,13 +63,13 @@ public static class SettingsFile
             if (minutes is < 0 or > 24 * 60) errors.Add(Loc.T($"{what} must be between 0 and 1440 minutes.", $"{what} értéke 0 és 1440 perc között lehet."));
         }
 
-        void CheckBan(string what, BannedHours ban)
+        void CheckBan(string what, BannedHours? ban)
         {
             if (ban is null) return;
-            if (ban.From is < 0 or > 23 || ban.To is < 0 or > 23)
-                errors.Add(Loc.T($"{what}: banned hours must be between 0 and 23.", $"{what}: a tiltott órák 0 és 23 között lehetnek."));
+            if (ban.From is < 0 or > 23 || ban.To is < 0 or > 24)
+                errors.Add(Loc.T($"{what}: a banned period starts between 00:00 and 23:00 and ends between 00:00 and 24:00.", $"{what}: a tiltott időszak 00:00 és 23:00 között kezdődik, és 00:00 és 24:00 között ér véget."));
             else if (ban.Enabled && ban.From == ban.To)
-                errors.Add(Loc.T($"{what}: the start and the end of the banned period cannot be the same hour.", $"{what}: a tiltott időszak kezdete és vége nem lehet ugyanaz az óra."));
+                errors.Add(Loc.T($"{what}: the start and the end of the banned period cannot be the same hour (for the whole day: 00:00–24:00).", $"{what}: a tiltott időszak kezdete és vége nem lehet ugyanaz az óra (az egész napra: 00:00–24:00)."));
         }
     }
 

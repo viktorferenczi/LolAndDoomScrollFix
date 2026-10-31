@@ -210,6 +210,7 @@ Tip: `"shortVideoMinutes": 2`, `"facebookFeedMinutes": 2`.
 | 4.5 | `sc stop LolScrollLimiter` or Services → Stop | Access denied |
 | 4.6 | Ending `Limiter.Service.exe` from Task Manager | Access denied |
 | 4.7 | Ending `Limiter.NativeHost.exe` from Task Manager | The extension reconnects within a few seconds |
-| 4.8 | (As administrator) stopping the service | The tray icon turns red, "!" on the extension, everything is let through; within 5-10 s after starting the service it recovers by itself |
-| 4.9 | (As administrator) killing the service's process | Windows restarts it after 5 s; it recovers |
+| 4.8 | (As administrator) Admin settings → Protection → Stop the protection | The tray icon turns red, "!" on the extension, everything is let through; within 5-10 s after Start the protection it recovers by itself |
+| 4.9 | (As administrator) killing the service's process, several times in a row | Windows restarts it after about 1 s every time; it recovers (a search in progress is cancelled after the restart) |
+| 4.9b | (As administrator) `Stop-Service`, `sc stop`, `sc config LolScrollLimiter start= disabled`, `sc delete LolScrollLimiter` | Access denied |
 | 4.10 | Breaking `limits.json` (as administrator) | A yellow warning, the previous limit stays |

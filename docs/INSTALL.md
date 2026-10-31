@@ -74,7 +74,7 @@ Until the approval arrives, the development test version can be used (section 6)
 
    0 = that bonus is off.
 
-   **Banned hours** page: one checkbox and two hours (start, end) per limit. When ticked, that activity cannot be used at all between the given hours, even if some of the limit is left (details: section 7).
+   **Banned hours** pages (LoL, short videos, feed): one checkbox and two hours (start, end) for each day of the week. On a ticked day that activity cannot be used at all between the given hours, even if some of the limit is left (details: section 7).
 
    | Row | Default |
    |---|---|
@@ -165,9 +165,9 @@ By hand: with an editor running as administrator (e.g. Notepad "Run as administr
   "lolRestDayBonusMatches": 1,
   "shortVideoRestDayBonusMinutes": 30,
   "facebookFeedRestDayBonusMinutes": 30,
-  "lolBannedHours": { "enabled": false, "from": 1, "to": 5 },
-  "shortVideoBannedHours": { "enabled": false, "from": 1, "to": 5 },
-  "facebookFeedBannedHours": { "enabled": false, "from": 1, "to": 5 },
+  "lolBannedDays": { "monday": { "enabled": true, "from": 1, "to": 5 }, "saturday": { "enabled": true, "from": 0, "to": 24 } },
+  "shortVideoBannedDays": { "friday": { "enabled": true, "from": 22, "to": 6 } },
+  "facebookFeedBannedDays": {},
   "extraGrants": [
     { "date": "2026-11-02", "lolMatches": 2, "shortVideoMinutes": 15, "facebookFeedMinutes": 0 }
   ]
@@ -183,7 +183,7 @@ By hand: with an editor running as administrator (e.g. Notepad "Run as administr
 | `enforceOnWeekends` | `true`: there is a limit on weekends too; `false`: no limit on weekends |
 | `lolRestDayBonusMatches` | Rest-day bonus: this many extra matches if there was no PvP match the day before (0-10; 0 = off) |
 | `shortVideoRestDayBonusMinutes`, `facebookFeedRestDayBonusMinutes` | Rest-day bonus in minutes if 0 minutes were used from that limit the day before (0 = off) |
-| `lolBannedHours`, `shortVideoBannedHours`, `facebookFeedBannedHours` | Banned hours: `enabled` (on/off), `from` (start hour, 0-23, inclusive), `to` (end hour, 0-23, exclusive). With `from` = `to` there is no ban |
+| `lolBannedDays`, `shortVideoBannedDays`, `facebookFeedBannedDays` | Banned hours per weekday (`monday` ... `sunday`), each with `enabled` (on/off), `from` (start hour, 0-23, inclusive), `to` (end hour, 0-24, exclusive). With `from` = `to` there is no ban. A file with the earlier `lolBannedHours` form is still read: its period applies from Monday to Friday, and on the weekend too if `enforceOnWeekends` is on |
 | `extraGrants` | Extra allowances for single days: `date` (`yyyy-MM-dd`, the day's start date), `lolMatches` (0-100), `shortVideoMinutes`, `facebookFeedMinutes` (0-1440). One entry per day; weekends are ignored when the weekend limit is off |
 
 ### Rest-day bonus
@@ -204,6 +204,17 @@ By hand: with an editor running as administrator (e.g. Notepad "Run as administr
 The service picks it up within 30 seconds. With an invalid file the previous limit stays in effect, and the tray icon warns.
 When switching modes, usage that is already recorded counts under the new rule (e.g. switching from rolling to daily, only the usage since the last reset).
 
+### Protection against stopping the service
+
+- **On a normal account** the service cannot be stopped or killed: Task Manager and `sc stop` report "Access denied".
+- **On an administrator account** Windows does not allow any program to fully protect itself. What the program does:
+  `Stop-Service`, `sc stop`, Services → Stop, Task Manager's Services tab, `sc config` and `sc delete` are refused, and a process killed from
+  Task Manager is restarted by Windows after 1 second, every time. A search that was running gets cancelled after the restart,
+  but a match accepted in that second can still go ahead. A determined administrator can get around all of this
+  (e.g. by changing the service's permissions first), so **real protection needs a normal account** (section 1).
+- The tray application only shows the state: killing it does not stop the blocking; it starts again at the next login.
+- To stop the service deliberately: Admin settings (password) → Protection → **Stop the protection**. It starts again with the button next to it or at the next Windows start.
+
 ### Banned hours
 
 - During the banned period the activity cannot be used: for LoL the program cancels a new PvP search and declines a match accept;
@@ -211,11 +222,12 @@ When switching modes, usage that is already recorded counts under the new rule (
 - **The limit and the reset are not affected:** nothing is used up during a ban, and the daily reset also happens during a ban.
   If the limit is also used up at the end of the ban, the release is the later of the two times.
 - Whole hours, in local time; the start hour is inclusive, the end hour is exclusive (01:00-05:00 = from 01:00:00 to 04:59:59).
-  It may span midnight (22:00-06:00).
+  It may span midnight (22:00-06:00): such a period belongs to the day it starts on, so Monday 22:00-06:00 lasts until Tuesday 06:00.
+  The end can be 24:00, so 00:00-24:00 bans the whole day.
+- **Every day has its own hours,** separately for each limit. The days are calendar days, also with a daily reset.
 - **A match in progress:** a match that is running when the ban starts may finish, and reconnecting works too.
 - TFT, bot games, practice, custom games and spectating are available during a ban as well.
-- **Weekends:** if there is no limit on weekends, there is no ban either. With a daily reset the weekend counts from the reset hour
-  (with a 03:00 reset, Saturday 02:00 still belongs to Friday, so the ban still applies then).
+- **Weekends:** the hours given for Saturday and Sunday apply even if there is no limit on weekends. With free weekends, outside those hours everything can be used and nothing is counted.
 
 ## 8. What does the tray icon's colour mean?
 
@@ -283,7 +295,7 @@ The counters are kept (they continue after a reinstall). Full deletion from an a
   it only sends commands to the LoL client while searching or at a match accept (cancelling the search, declining the accept), and
   only if, right before, the client is still in the same phase. During a game it queries the client at most every 15 seconds.
   If you still notice stuttering, isolate the cause:
-  1. In an administrator PowerShell: `Stop-Service LolScrollLimiter`, then play a match. If it still stutters, the program is not the cause (graphics driver, overheating, Vanguard, etc.).
+  1. Admin settings → Protection → **Stop the protection**, then play a match. If it still stutters, the program is not the cause (graphics driver, overheating, Vanguard, etc.).
   2. If it only stutters with the service: Task Manager → Details → CPU use of `Limiter.Service.exe` and `WmiPrvSE.exe` during a game; send the log (Event Viewer → Application, source: `LolScrollLimiter`) with the time of the game.
 - **The extension does not report:** `chrome://extensions` → the extension's details → "Service worker" → console. Check the `HKLM\SOFTWARE\Google\Chrome\NativeMessagingHosts\hu.kmsoft.lolscrolllimiter` key and the `allowed_origins` ID in the JSON file it refers to.
 

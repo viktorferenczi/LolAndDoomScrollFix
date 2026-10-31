@@ -62,11 +62,11 @@ public sealed record StatusView(
         var exempt = s.Schedule?.ExemptNow == true;
         var lolText = lol is null
             ? "LoL PvP: –"
-            : exempt
-                ? Loc.T("LoL PvP: weekend — no limit", "LoL PvP: hétvége — nincs korlát")
             : lol.Banned
                 ? Loc.T($"LoL PvP: banned period ({Range(s.Schedule?.LolBannedHours)}) — available again: {When(lol.AvailableAgainAt, now)}",
                         $"LoL PvP: tiltott időszak ({Range(s.Schedule?.LolBannedHours)}) — újra: {When(lol.AvailableAgainAt, now)}")
+            : exempt
+                ? Loc.T("LoL PvP: weekend — no limit", "LoL PvP: hétvége — nincs korlát")
             : lol.Blocked
                 ? Loc.T($"LoL PvP: used up ({lol.Used}/{lol.Limit}) — available again: {When(lol.AvailableAgainAt, now)}",
                         $"LoL PvP: elfogyott ({lol.Used}/{lol.Limit}) — újra: {When(lol.AvailableAgainAt, now)}")
@@ -152,8 +152,8 @@ public sealed record StatusView(
         if (schedule.ShortVideoBannedHours is { Enabled: true } sb) { bansEn.Add($"short videos {Range(sb)}"); bansHu.Add($"rövid videó {Range(sb)}"); }
         if (schedule.FacebookFeedBannedHours is { Enabled: true } fb) { bansEn.Add($"feed {Range(fb)}"); bansHu.Add($"hírfolyam {Range(fb)}"); }
         var banText = bansEn.Count > 0
-            ? Loc.T("\nBanned hours (daily, on limited days): " + string.Join(", ", bansEn) + ".",
-                    "\nTiltott órák (naponta, a korlátozott napokon): " + string.Join(", ", bansHu) + ".")
+            ? Loc.T("\nBanned hours today: " + string.Join(", ", bansEn) + ".",
+                    "\nTiltott órák ma: " + string.Join(", ", bansHu) + ".")
             : "";
         return reset + "\n" + weekend + bonus + banText;
     }

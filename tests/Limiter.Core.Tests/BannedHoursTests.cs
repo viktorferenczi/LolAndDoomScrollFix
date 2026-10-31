@@ -145,6 +145,136 @@ public class BannedHoursTests
         Assert.Equal(new DateTimeOffset(2026, 10, 2, 5, 0, 0, TimeSpan.FromHours(2)), status.AvailableAgainAt);
     }
 
+    // Calendar: Thursday 1 October 2026, Saturday the 3rd, Sunday the 4th, Monday the 5th.
+    private static LimitSettings LolDays(WeeklyBan ban, bool weekends = false) => LimitSettings.Default with { LolBannedDays = ban, EnforceOnWeekends = weekends };
+
+    [Fact]
+    public void Each_day_has_its_own_hours()
+    {
+        var ban = WeeklyBan.Disabled with { Thursday = Ban(1, 5), Friday = Ban(10, 12) };
+        using var env = new TestEnv(LolDays(ban), start: At(1, 2));
+        Assert.True(env.Engine.GetLolStatus(A).Banned);
+
+        env.Clock.UtcNow = At(1, 11); // Thursday's hours do not cover it
+        Assert.False(env.Engine.GetLolStatus(A).Banned);
+        env.Clock.UtcNow = At(2, 2); // nor do they apply on Friday
+        Assert.False(env.Engine.GetLolStatus(A).Banned);
+        env.Clock.UtcNow = At(2, 11);
+        Assert.True(env.Engine.GetLolStatus(A).Banned);
+        Assert.Equal(At(2, 12), env.Engine.GetLolStatus(A).AvailableAgainAt);
+    }
+
+    [Fact]
+    public void A_period_past_midnight_belongs_to_the_day_it_starts_on()
+    {
+        var ban = WeeklyBan.Disabled with { Thursday = Ban(22, 6) };
+        using var env = new TestEnv(LolDays(ban), start: At(1, 23));
+        Assert.Equal(At(2, 6), env.Engine.GetLolStatus(A).AvailableAgainAt);
+
+        env.Clock.UtcNow = At(2, 5); // Friday morning, still Thursday's period
+        Assert.True(env.Engine.GetLolStatus(A).Banned);
+        env.Clock.UtcNow = At(2, 6);
+        Assert.False(env.Engine.GetLolStatus(A).Banned);
+        env.Clock.UtcNow = At(2, 23); // Friday has no period of its own
+        Assert.False(env.Engine.GetLolStatus(A).Banned);
+        env.Clock.UtcNow = At(1, 3); // Thursday morning: Wednesday had none
+        Assert.False(env.Engine.GetLolStatus(A).Banned);
+    }
+
+    [Fact]
+    public void A_whole_day_can_be_banned_and_adjoining_periods_count_as_one()
+    {
+        var ban = WeeklyBan.Disabled with { Thursday = Ban(0, 24), Friday = Ban(0, 8) };
+        using var env = new TestEnv(LolDays(ban), start: At(1, 12));
+        var status = env.Engine.GetLolStatus(A);
+        Assert.True(status.Banned);
+        Assert.Equal(At(2, 8), status.AvailableAgainAt);
+    }
+
+    [Fact]
+    public void A_week_banned_all_the_time_has_no_release_time()
+    {
+        var all = Ban(0, 24);
+        var ban = new WeeklyBan { Monday = all, Tuesday = all, Wednesday = all, Thursday = all, Friday = all, Saturday = all, Sunday = all };
+        using var env = new TestEnv(LolDays(ban), start: At(1, 12));
+        var status = env.Engine.GetLolStatus(A);
+        Assert.True(status.Blocked);
+        Assert.Null(status.AvailableAgainAt);
+    }
+
+    [Fact]
+    public void A_day_ban_applies_on_a_weekend_without_limits()
+    {
+        var settings = LimitSettings.Default with
+        {
+            LolBannedDays = WeeklyBan.Disabled with { Saturday = Ban(8, 12) },
+            ShortVideoBannedDays = WeeklyBan.Disabled with { Saturday = Ban(8, 12) },
+        };
+        using var env = new TestEnv(settings, start: At(3, 9));
+        var lol = env.Engine.GetLolStatus(A);
+        Assert.True(lol.Blocked);
+        Assert.True(lol.Banned);
+        Assert.False(lol.Exempt); // the clients check "exempt" first
+        Assert.Equal(At(3, 12), lol.AvailableAgainAt);
+        Assert.Equal(MatchmakingAction.CancelSearch, env.Tracker.DecideMatchmaking(A, "Matchmaking", TestEnv.RankedSolo).Action);
+        Assert.True(env.Engine.GetWebStatus(A, WebCategory.ShortVideo).Banned);
+        Assert.False(env.Engine.GetWebStatus(A, WebCategory.FacebookFeed).Blocked);
+
+        // Outside the hours the weekend stays free, and nothing is used up.
+        env.Clock.UtcNow = At(3, 13);
+        Assert.True(env.Engine.GetLolStatus(A).Exempt);
+        Assert.False(env.Engine.GetLolStatus(A).Blocked);
+    }
+
+    [Fact]
+    public void The_release_does_not_fall_into_a_later_ban()
+    {
+        // The limit used up on Friday would be released by the free weekend at midnight, but Saturday morning is banned.
+        var settings = LimitSettings.Default with { LolPvpMatches = 0, LolRestDayBonusMatches = 0, LolBannedDays = WeeklyBan.Disabled with { Saturday = Ban(0, 9) } };
+        using var env = new TestEnv(settings, start: At(2, 20));
+        var status = env.Engine.GetLolStatus(A);
+        Assert.True(status.Blocked);
+        Assert.False(status.Banned);
+        Assert.Equal(At(3, 9), status.AvailableAgainAt);
+    }
+
+    [Fact]
+    public void Days_are_calendar_days_with_a_daily_reset_too()
+    {
+        // With a reset at 03:00, Friday 02:00 is still "Thursday's limit", but its ban is Friday's.
+        var settings = LolDays(WeeklyBan.Disabled with { Friday = Ban(1, 3) }) with { ResetMode = ResetMode.Daily, DailyResetHour = 3 };
+        using var env = new TestEnv(settings, start: At(2, 2));
+        Assert.True(env.Engine.GetLolStatus(A).Banned);
+    }
+
+    [Fact]
+    public void Shows_the_period_in_effect_otherwise_todays()
+    {
+        var ban = WeeklyBan.Disabled with { Thursday = Ban(22, 6), Friday = Ban(10, 12) };
+        var schedule = new LimitSchedule(LimitSettings.Default, TimeZoneInfo.Utc);
+        Assert.Equal(Ban(22, 6), schedule.CurrentOrToday(ban, At(2, 5)));
+        Assert.Equal(Ban(10, 12), schedule.CurrentOrToday(ban, At(2, 7)));
+        Assert.False(schedule.CurrentOrToday(ban, At(3, 7)).Enabled);
+    }
+
+    [Fact]
+    public void Validates_each_day_and_allows_24_only_as_the_end()
+    {
+        Assert.Empty(SettingsFile.Validate(LolDays(WeeklyBan.Disabled with { Sunday = Ban(0, 24) }, weekends: true)));
+        Assert.NotEmpty(SettingsFile.Validate(LolDays(WeeklyBan.Disabled with { Sunday = Ban(4, 4) })));
+        Assert.NotEmpty(SettingsFile.Validate(LolDays(WeeklyBan.Disabled with { Sunday = Ban(24, 2) })));
+        Assert.NotEmpty(SettingsFile.Validate(LolDays(WeeklyBan.Disabled with { Sunday = Ban(2, 25) })));
+    }
+
+    [Fact]
+    public void Weekly_table_round_trips_through_limits_json()
+    {
+        var s = LolDays(WeeklyBan.Disabled with { Monday = Ban(22, 6), Sunday = Ban(0, 24) }).Sanitized();
+        var back = LimitSettings.Parse(s.ToJson());
+        Assert.Equal(s, back);
+        Assert.Equal(24, back.LolBannedDays.Sunday.To);
+    }
+
     [Fact]
     public void Parses_banned_hours_from_limits_json()
     {
@@ -155,12 +285,17 @@ public class BannedHoursTests
               "facebookFeedBannedHours": { "enabled": true, "from": 4, "to": 4 }
             }
             """);
-        Assert.Equal(Ban(1, 5), s.LolBannedHours);
-        Assert.Equal(Ban(22, 6), s.ShortVideoBannedHours);
-        Assert.False(s.FacebookFeedBannedHours.Enabled);
+        // A file of an earlier version: the single period becomes the weekdays' period (the weekend was free).
+        Assert.Equal(Ban(1, 5), s.LolBannedDays.Monday);
+        Assert.Equal(Ban(1, 5), s.LolBannedDays.Friday);
+        Assert.False(s.LolBannedDays.Saturday.Enabled);
+        Assert.Equal(Ban(22, 6), s.ShortVideoBannedDays.Wednesday);
+        Assert.False(s.FacebookFeedBannedDays.AnyEnabled);
+        Assert.Null(s.LolBannedHours);
+        Assert.DoesNotContain("lolBannedHours", s.ToJson());
 
         // An old file without the fields: no ban.
-        Assert.False(LimitSettings.Parse("""{ "shortVideoMinutes": 60 }""").LolBannedHours.Enabled);
+        Assert.False(LimitSettings.Parse("""{ "shortVideoMinutes": 60 }""").LolBannedDays.AnyEnabled);
         Assert.Equal(s, LimitSettings.Parse(s.ToJson()));
     }
 }

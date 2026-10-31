@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Limiter.Protocol;
 
 namespace Limiter.Core.Tests;
 
@@ -21,6 +22,17 @@ public partial class InstallerMessagesTests
         foreach (Match m in MessageLine().Matches(source))
             (m.Groups[1].Value == "en" ? en : hu)[m.Groups[2].Value] = m.Groups[3].Value.TrimEnd('\r');
         return (en, hu, source);
+    }
+
+    [Fact]
+    public void Service_permissions_are_the_same_everywhere()
+    {
+        var install = File.ReadAllText(RepoFile("installer", "install.ps1"));
+        Assert.Contains(IpcConstants.ServiceSecurity.Locked, install);
+        Assert.Contains(IpcConstants.ServiceSecurity.Open, install);
+        // Updating and uninstalling cannot stop the service without opening its permissions.
+        Assert.Contains(IpcConstants.ServiceSecurity.Open, File.ReadAllText(RepoFile("installer", "uninstall.ps1")));
+        Assert.Contains(IpcConstants.ServiceSecurity.Open, File.ReadAllText(RepoFile("installer", "LolScrollLimiter.iss")));
     }
 
     [GeneratedRegex(@"^(en|hu)\.(\w+)=(.*)$", RegexOptions.Multiline)]

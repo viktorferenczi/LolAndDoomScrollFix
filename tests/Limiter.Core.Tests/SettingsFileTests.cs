@@ -136,7 +136,7 @@ public class SettingsFileTests
             var (settings, warning) = SettingsFile.Load(path);
             Assert.Null(warning);
             Assert.Empty(SettingsFile.Validate(settings));
-            Assert.False(settings.LolBannedHours.Enabled);
+            Assert.False(settings.LolBannedDays.AnyEnabled);
         }
         finally { Cleanup(path); }
     }

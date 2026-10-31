@@ -32,7 +32,9 @@ public class LimitSettingsEqualityTests
         int i => i + 1,
         bool b => !b,
         ResetMode m => m == ResetMode.Daily ? ResetMode.Rolling : ResetMode.Daily,
+        null when type == typeof(BannedHours) => new BannedHours { Enabled = true },
         BannedHours h => h with { Enabled = !h.Enabled },
+        WeeklyBan w => w with { Monday = w.Monday with { Enabled = !w.Monday.Enabled } },
         IReadOnlyList<DayGrant> list => list.Count == 0
             ? new List<DayGrant> { new() { Date = new DateOnly(2026, 1, 1), LolMatches = 1 } }
             : new List<DayGrant> { list[0] with { LolMatches = list[0].LolMatches + 1 } },

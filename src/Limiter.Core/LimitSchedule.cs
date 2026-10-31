@@ -77,16 +77,37 @@ public sealed class LimitSchedule
     }
 
     /// <summary>
-    /// Whether a banned period is active now, and if so, until when. There is no ban in an exempt period (weekend).
+    /// Whether a banned period is active now, and if so, until when (adjoining periods of the next days count as one;
+    /// null if it does not end within a week). The days are calendar days, also with a daily reset, and an exempt weekend has its own ban too.
     /// </summary>
-    public (bool Active, DateTimeOffset? Until) Ban(BannedHours ban, DateTimeOffset now)
+    public (bool Active, DateTimeOffset? Until) Ban(WeeklyBan ban, DateTimeOffset now)
     {
-        if (!ban.Enabled || IsExempt(now)) return (false, null);
-        var local = TimeZoneInfo.ConvertTime(now, _zone);
-        if (!ban.Covers(local.Hour)) return (false, null);
-        var end = local.Date.AddHours(ban.To);
-        if (end <= local.DateTime) end = end.AddDays(1);
-        return (true, ToUtc(end));
+        var local = TimeZoneInfo.ConvertTime(now, _zone).DateTime;
+        if (Covering(ban, local) is null) return (false, null);
+        var hour = local.Date.AddHours(local.Hour);
+        for (var i = 0; i < 8 * 24; i++)
+        {
+            hour = hour.AddHours(1);
+            if (Covering(ban, hour) is null) return (true, ToUtc(hour));
+        }
+        return (true, null);
+    }
+
+    /// <summary>The period to show now: the one in effect, otherwise today's.</summary>
+    public BannedHours CurrentOrToday(WeeklyBan ban, DateTimeOffset now)
+    {
+        var local = TimeZoneInfo.ConvertTime(now, _zone).DateTime;
+        return Covering(ban, local) ?? ban.For(local.DayOfWeek);
+    }
+
+    /// <summary>The period covering the given local time: today's, or yesterday's if that spans midnight.</summary>
+    private static BannedHours? Covering(WeeklyBan ban, DateTime local)
+    {
+        var today = ban.For(local.DayOfWeek);
+        if (today.Enabled && today.From != today.To && local.Hour >= today.From && (today.From > today.To || local.Hour < today.To))
+            return today;
+        var yesterday = ban.For(local.AddDays(-1).DayOfWeek);
+        return yesterday.Enabled && yesterday.From > yesterday.To && local.Hour < yesterday.To ? yesterday : null;
     }
 
     private static bool IsWeekend(DateTime date) => date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;

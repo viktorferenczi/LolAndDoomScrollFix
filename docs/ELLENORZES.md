@@ -207,6 +207,7 @@ Tipp: `"shortVideoMinutes": 2`, `"facebookFeedMinutes": 2`.
 | 4.5 | `sc stop LolScrollLimiter` vagy Szolgáltatások → Leállítás | Hozzáférés megtagadva |
 | 4.6 | Feladatkezelőből `Limiter.Service.exe` leállítása | Hozzáférés megtagadva |
 | 4.7 | Feladatkezelőből `Limiter.NativeHost.exe` leállítása | A bővítmény pár mp-en belül újracsatlakozik |
-| 4.8 | (Rendszergazdaként) szolgáltatás leállítása | Tálcaikon piros, a bővítményen „!”, minden enged; a szolgáltatás indítása után 5–10 mp-en belül magától helyreáll |
-| 4.9 | (Rendszergazdaként) a szolgáltatás folyamatának leölése | A Windows 5 mp múlva újraindítja; helyreáll |
+| 4.8 | (Rendszergazdaként) Admin beállítások → Védelem → Védelem leállítása | Tálcaikon piros, a bővítményen „!”, minden enged; a Védelem indítása után 5–10 mp-en belül magától helyreáll |
+| 4.9 | (Rendszergazdaként) a szolgáltatás folyamatának leölése, többször egymás után | A Windows minden alkalommal kb. 1 mp múlva újraindítja; helyreáll (a folyamatban lévő keresést az újraindulás után megszakítja) |
+| 4.9b | (Rendszergazdaként) `Stop-Service`, `sc stop`, `sc config LolScrollLimiter start= disabled`, `sc delete LolScrollLimiter` | Hozzáférés megtagadva |
 | 4.10 | `limits.json` elrontása (rendszergazdaként) | Sárga figyelmeztetés, az előző korlát marad |

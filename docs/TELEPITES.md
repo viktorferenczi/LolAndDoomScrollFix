@@ -74,7 +74,7 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
 
    0 = az adott jutalom kikapcsolva.
 
-   **Tiltott órák** oldal: keretenként egy jelölőnégyzet és két óra (kezdete, vége). Bejelölve a megadott órák között
+   **Tiltott órák** oldalak (LoL, rövid videók, hírfolyam): a hét minden napjára egy jelölőnégyzet és két óra (kezdete, vége). Bejelölve a megadott órák között
    az adott dolog egyáltalán nem használható, akkor sem, ha a keretből még maradt (részletek: 6. pont).
 
    | Sor | Alapértelmezés |
@@ -166,9 +166,9 @@ Kézzel: rendszergazdai jogú szerkesztővel (pl. Jegyzettömb „Futtatás rend
   "lolRestDayBonusMatches": 1,
   "shortVideoRestDayBonusMinutes": 30,
   "facebookFeedRestDayBonusMinutes": 30,
-  "lolBannedHours": { "enabled": false, "from": 1, "to": 5 },
-  "shortVideoBannedHours": { "enabled": false, "from": 1, "to": 5 },
-  "facebookFeedBannedHours": { "enabled": false, "from": 1, "to": 5 }
+  "lolBannedDays": { "monday": { "enabled": true, "from": 1, "to": 5 }, "saturday": { "enabled": true, "from": 0, "to": 24 } },
+  "shortVideoBannedDays": { "friday": { "enabled": true, "from": 22, "to": 6 } },
+  "facebookFeedBannedDays": {}
 }
 ```
 
@@ -181,7 +181,7 @@ Kézzel: rendszergazdai jogú szerkesztővel (pl. Jegyzettömb „Futtatás rend
 | `enforceOnWeekends` | `true`: hétvégén is van korlát; `false`: hétvégén nincs |
 | `lolRestDayBonusMatches` | Pihenőnap-jutalom: ennyi meccs jár pluszban, ha előző nap egy PvP-meccs sem volt (0–10; 0 = kikapcsolva) |
 | `shortVideoRestDayBonusMinutes`, `facebookFeedRestDayBonusMinutes` | Pihenőnap-jutalom percben, ha előző nap 0 perc fogyott az adott keretből (0 = kikapcsolva) |
-| `lolBannedHours`, `shortVideoBannedHours`, `facebookFeedBannedHours` | Tiltott órák: `enabled` (be/ki), `from` (kezdő óra, 0–23, benne van), `to` (záró óra, 0–23, nincs benne). `from` = `to` esetén nincs tiltás |
+| `lolBannedDays`, `shortVideoBannedDays`, `facebookFeedBannedDays` | Tiltott órák a hét napjaira (`monday` … `sunday`), mindegyiknél `enabled` (be/ki), `from` (kezdő óra, 0–23, benne van), `to` (záró óra, 0–24, nincs benne). `from` = `to` esetén nincs tiltás. A korábbi `lolBannedHours` formájú fájlt is beolvassa: az időszak hétfőtől péntekig érvényes, hétvégén pedig akkor, ha az `enforceOnWeekends` be van kapcsolva |
 
 ### Pihenőnap-jutalom
 
@@ -201,6 +201,17 @@ Kézzel: rendszergazdai jogú szerkesztővel (pl. Jegyzettömb „Futtatás rend
 A szolgáltatás 30 másodpercen belül átveszi. Hibás fájlnál az előző korlát marad érvényben, és a tálcaikon figyelmeztet.
 Módváltáskor a már rögzített használat az új szabály szerint számít (pl. gördülőről napira váltva csak az utolsó nullázás óta eltelt használat).
 
+### Védelem a szolgáltatás leállítása ellen
+
+- **Normál fiókon** a szolgáltatás nem állítható le és nem lőhető ki: a Feladatkezelő és az `sc stop` „Hozzáférés megtagadva” hibát ad.
+- **Rendszergazdai fiókon** a Windows egyetlen programnak sem engedi, hogy teljesen megvédje magát. Amit a program tesz:
+  a `Stop-Service`, az `sc stop`, a Szolgáltatások → Leállítás, a Feladatkezelő Szolgáltatások lapja, az `sc config` és az `sc delete` elutasításra kerül, a Feladatkezelőből kilőtt folyamatot
+  pedig a Windows 1 másodperc múlva újraindítja, minden alkalommal. A futó keresést az újraindulás után megszakítja,
+  de az alatt az egy másodperc alatt elfogadott meccs még elindulhat. Egy elszánt rendszergazda mindezt megkerülheti
+  (pl. ha előbb átírja a szolgáltatás jogosultságait), ezért **a valódi védelemhez normál fiók kell** (1. szakasz).
+- A tálcaalkalmazás csak az állapotot mutatja: a kilövése nem állítja le a tiltást; a következő bejelentkezéskor újra elindul.
+- A szolgáltatás szándékos leállítása: Admin beállítások (jelszó) → Védelem → **Védelem leállítása**. A mellette lévő gombbal vagy a Windows következő indításakor újra elindul.
+
 ### Tiltott órák
 
 - A tiltott időszakban az adott dolog nem használható: LoL-nál az új PvP-keresést a program megszakítja,
@@ -208,11 +219,12 @@ Módváltáskor a már rögzített használat az új szabály szerint számít (
 - **A keretet és a nullázást nem érinti:** tiltás alatt semmi sem fogy, és a napi nullázás a tiltás alatt is megtörténik.
   Ha a tiltás végén a keret is elfogyott, a feloldás a későbbi időpont.
 - Egész órák, helyi idő szerint; a kezdő óra benne van, a záró nincs (01:00–05:00 = 01:00:00-tól 04:59:59-ig).
-  Átnyúlhat éjfélen (22:00–06:00).
+  Átnyúlhat éjfélen (22:00–06:00): az ilyen időszak ahhoz a naphoz tartozik, amelyen kezdődik, tehát a hétfői 22:00–06:00 keddig 06:00-ig tart.
+  A vége lehet 24:00 is, így a 00:00–24:00 az egész napot tiltja.
+- **Minden napnak saját órái vannak,** keretenként külön. A napok naptári napok, napi nullázásnál is.
 - **Folyamatban lévő meccs:** a tiltás kezdetekor futó meccs befejezhető, és az újracsatlakozás is működik.
 - TFT, botmeccs, gyakorlás, egyéni játék és néző mód tiltott időben is elérhető.
-- **Hétvége:** ha hétvégén nincs korlát, tiltás sincs. Napi nullázásnál a hétvége a nullázás órájától számít
-  (03:00-s nullázásnál szombat 02:00 még a pénteki naphoz tartozik, így akkor még tilt).
+- **Hétvége:** a szombatra és vasárnapra megadott órák akkor is érvényesek, ha hétvégén nincs korlát. Szabad hétvégén ezeken kívül minden használható, és semmi sem számít bele.
 
 ## 7. Mit jelent a tálcaikon színe?
 
@@ -280,7 +292,7 @@ A számlálók megmaradnak (újratelepítés után folytatódnak). Teljes törl�
   a LoL-klienshez csak keresés és meccselfogadás közben küld parancsot (a keresés megszakítása, az elfogadás elutasítása), és
   azt is csak akkor, ha közvetlenül előtte a kliens még ugyanabban a fázisban van. Játék közben legfeljebb 15 másodpercenként kérdezi le a klienst.
   Ha mégis akadást tapasztalsz, különítsd el az okot:
-  1. Rendszergazdai PowerShellben: `Stop-Service LolScrollLimiter`, majd játssz egy meccset. Ha így is akad, nem a program okozza (videokártya-illesztőprogram, túlmelegedés, Vanguard stb.).
+  1. Admin beállítások → Védelem → **Védelem leállítása**, majd játssz egy meccset. Ha így is akad, nem a program okozza (videokártya-illesztőprogram, túlmelegedés, Vanguard stb.).
   2. Ha csak a szolgáltatással akad: Feladatkezelő → Részletek → `Limiter.Service.exe` és `WmiPrvSE.exe` CPU-használata játék közben; küldd el a naplót (Eseménynapló → Alkalmazás, forrás: `LolScrollLimiter`) a játék időpontjával.
 - **A bővítmény nem jelentkezik:** `chrome://extensions` → a bővítmény részletei → „Service worker” → konzol. Ellenőrizd a `HKLM\SOFTWARE\Google\Chrome\NativeMessagingHosts\hu.kmsoft.lolscrolllimiter` kulcsot és a hivatkozott JSON-fájlban az `allowed_origins` azonosítót.
 

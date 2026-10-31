@@ -6,6 +6,16 @@ namespace Limiter.Protocol;
 
 public static class IpcConstants
 {
+    /// <summary>The Windows service's permissions (SDDL). The same values are in install.ps1, uninstall.ps1 and the installer.</summary>
+    public static class ServiceSecurity
+    {
+        /// <summary>Administrators can start it and change these permissions, but cannot stop, change or delete it.</summary>
+        public const string Locked = "D:(A;;CCLCSWRPWPDTLOCRRCWD;;;SY)(A;;CCLCSWRPLOCRRCWD;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)(A;;CCLCSWLOCRRC;;;AU)";
+
+        /// <summary>Administrators have full rights: for stopping it from the admin panel, updating and uninstalling.</summary>
+        public const string Open = "D:(A;;CCLCSWRPWPDTLOCRRCWD;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)(A;;CCLCSWLOCRRC;;;AU)";
+    }
+
     /// <summary>The name of the service's named pipe. The version number grows when the protocol changes.</summary>
     public const string PipeName = "LolScrollLimiter.v1";
 
@@ -127,7 +137,7 @@ public sealed class ScheduleDto
     public int LolRestDayBonusMatches { get; set; }
     public int ShortVideoRestDayBonusMinutes { get; set; }
     public int FacebookFeedRestDayBonusMinutes { get; set; }
-    /// <summary>Banned hours per limit.</summary>
+    /// <summary>Banned hours per limit: the period in effect, otherwise today's.</summary>
     public BannedHoursDto? LolBannedHours { get; set; }
     public BannedHoursDto? ShortVideoBannedHours { get; set; }
     public BannedHoursDto? FacebookFeedBannedHours { get; set; }

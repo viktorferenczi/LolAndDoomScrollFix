@@ -30,7 +30,7 @@ Chosen at install time:
 
 **Updates:** the "Check for updates" button (in the tray icon's menu and in the Details window) finds the latest release, downloads and verifies it (SHA-256), and starts the installer; the installation needs administrator approval, and the settings and counters are kept.
 
-**Banned hours:** at install time a daily banned period can be set per limit (LoL, short videos, Facebook feed), e.g. 01:00-05:00. During it that activity cannot be used at all, even if some of the limit is left; the limit and the reset are not affected.
+**Banned hours:** at install time, and later in the admin settings, each limit (LoL, short videos, Facebook feed) can have its own banned hours for each day of the week, e.g. Monday 01:00-05:00 or all of Saturday. During them that activity cannot be used at all, even if some of the limit is left, also on weekends without limits; the limit and the reset are not affected.
 
 TFT, bot games, practice, custom games and spectating do not use up the LoL limit; a confirmed remake gives the attempt back.
 On a detection or operation error the program **lets everything through and reports the error** (tray icon, the extension's red "!" badge).
@@ -77,6 +77,11 @@ For installation and verification see the guides linked below.
 ## Versions
 
 The published releases can be downloaded from the [releases page](https://github.com/viktorferenczi/LolAndDoomScrollFix/releases) (the installer, the extension packages and the checksums). The tray application's "Check for updates" button installs the latest one. The list starts with the newest.
+
+### Unreleased
+
+- **Banned hours per day:** every limit can have its own banned hours for each day of the week, in the installer and in the admin settings. A whole day can be banned (00:00-24:00). Hours given for a weekend day apply even if there is no limit on weekends. A single period from an earlier version becomes the Monday-to-Friday hours (and the weekend's, if the weekend limit was on).
+- **Harder to stop:** a killed service restarts after 1 second instead of 5-30 seconds, and administrators can no longer stop, disable or delete it with the usual Windows tools. The admin settings have a password-protected Stop button. On a normal account the service could not be stopped already; an administrator account can never be fully locked out.
 
 ### 1.7.0 - 2026-10-28
 
@@ -206,7 +211,7 @@ Telepítéskor választható:
 
 **Frissítés:** a tálcaikon menüjében és a Részletek ablakban a „Frissítések keresése” gomb megkeresi a legújabb kiadást, letölti és ellenőrzi (SHA-256), majd elindítja a telepítőt; a telepítéshez rendszergazdai jóváhagyás kell, a beállítások és a számlálók megmaradnak.
 
-**Tiltott órák:** telepítéskor keretenként (LoL, rövid videók, Facebook-hírfolyam) megadható egy napi tiltott időszak, pl. 01:00–05:00. Ilyenkor az adott dolog egyáltalán nem használható, akkor sem, ha a keretből maradt; a keretet és a nullázást nem érinti.
+**Tiltott órák:** telepítéskor és később az admin beállításokban keretenként (LoL, rövid videók, Facebook-hírfolyam) a hét minden napjára saját tiltott órák adhatók meg, pl. hétfő 01:00–05:00 vagy az egész szombat. Ilyenkor az adott dolog egyáltalán nem használható, akkor sem, ha a keretből még maradt, és korlát nélküli hétvégén is érvényes; a keretet és a nullázást nem érinti.
 
 TFT, botmeccs, gyakorlás, egyéni játék és néző mód nem fogyasztja a LoL-keretet; az igazolt remake visszaadja az alkalmat.
 Felismerési vagy működési hibánál a program **enged tovább, és hibát jelez** (tálcaikon, a bővítmény piros „!” jelvénye).
@@ -252,6 +257,11 @@ A telepítésről és az ellenőrzésről lásd lent a hivatkozott útmutatókat
 
 ## Verziók
 
+### Még ki nem adott
+
+- **Tiltott órák naponként:** minden keretnek a hét minden napjára saját tiltott órái lehetnek, a telepítőben és az admin beállításokban is. Az egész nap is tiltható (00:00–24:00). A hétvégi napra megadott órák akkor is érvényesek, ha hétvégén nincs korlát. A korábbi verzió egyetlen időszakából a hétfőtől péntekig tartó órák lesznek (és a hétvégéi, ha a hétvégi korlát be volt kapcsolva).
+- **Nehezebb leállítani:** a kilőtt szolgáltatás 5–30 másodperc helyett 1 másodperc múlva újraindul, a rendszergazdák pedig a szokásos Windows-eszközökkel már nem tudják leállítani, letiltani vagy törölni. Az admin beállításokban jelszóval védett Leállítás gomb van. Normál fiókon a szolgáltatás eddig sem volt leállítható; a rendszergazdai fiókot sosem lehet teljesen kizárni.
+
 ### 1.7.0 — 2026-10-28
 
 - **Kétnyelvű felület (angol és magyar):** telepítő, tálcaalkalmazás, admin felület, szolgáltatásüzenetek és Chrome-bővítmény. A nyelv a Windows megjelenítési nyelvét követi.
@@ -291,7 +301,7 @@ A program a következőket tudja ebben a kiadásban:
 - **Korlátok:** LoL PvP-meccsek száma, rövid videók (Instagram Reels, TikTok, YouTube Shorts, Facebook Reels) közös időkerete és a Facebook-hírfolyam külön időkerete. Közös számláló minden Chrome-profilra és LoL-fiókra.
 - **Telepítéskor választható:** gördülő 24 óra vagy napi nullázás egy megadott órában; a keretek percei; hétvégi korlát (alapból nincs).
 - **Pihenőnap-jutalom:** üres nap után másnap több keret jár (nem halmozódik); a mértéke a telepítőben állítható.
-- **Tiltott órák:** keretenként megadható napi időszak, amikor semmi sem használható; a keretet nem érinti.
+- **Tiltott órák:** keretenként a hét minden napjára megadható időszak, amikor semmi sem használható; a keretet nem érinti.
 - **Inkognitó:** az „Engedélyezés inkognitó módban” kapcsoló dönt róla.
 - **Játékbiztonság:** a program csak a LoL-klienst figyeli, játék közben nem nyúl semmihez, és a terhelése alacsony.
 - **Frissítések keresése gomb:** ellenőrzőösszeggel és a GitHub-kiadások szigorú ellenőrzésével tölt le és telepít.

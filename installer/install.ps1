@@ -58,6 +58,16 @@
 .PARAMETER FacebookFeedBanFrom
   Banned hours for the Facebook feed, see LolBanFrom. (FacebookFeedBanTo is the end.)
 
+.PARAMETER LolBanDays
+  Banned hours per weekday, Monday to Sunday, separated by commas: 'from-to' or empty, e.g. '1-5,1-5,,,22-6,0-24,'.
+  The end may be 24. A day's ban also applies on a weekend without limits. It replaces LolBanFrom/LolBanTo.
+
+.PARAMETER ShortVideoBanDays
+  See LolBanDays.
+
+.PARAMETER FacebookFeedBanDays
+  See LolBanDays.
+
 .PARAMETER AdminPasswordFile
   Temporary file written by the installer with the admin password (UTF-16 codes in hex). Limiter.Tray.exe reads it, builds
   a verifier (PBKDF2) in the data folder (admin.json) and deletes the file. The password is never kept in readable form.
@@ -90,6 +100,9 @@ param(
     [ValidateRange(-1, 23)][int]$ShortVideoBanTo = -1,
     [ValidateRange(-1, 23)][int]$FacebookFeedBanFrom = -1,
     [ValidateRange(-1, 23)][int]$FacebookFeedBanTo = -1,
+    [ValidatePattern('^(\d{1,2}-\d{1,2})?(,(\d{1,2}-\d{1,2})?){6}$')][string]$LolBanDays,
+    [ValidatePattern('^(\d{1,2}-\d{1,2})?(,(\d{1,2}-\d{1,2})?){6}$')][string]$ShortVideoBanDays,
+    [ValidatePattern('^(\d{1,2}-\d{1,2})?(,(\d{1,2}-\d{1,2})?){6}$')][string]$FacebookFeedBanDays,
     [switch]$EnforceOnWeekends,
     [string]$AdminPasswordFile,
     [switch]$KeepSettings,
@@ -137,6 +150,9 @@ if ($Language -eq 'hu') {
     $ServiceDescription = 'Rolling 24-hour LoL match and scrolling limit. Stopping it requires administrator rights.'
     $HostDescription = 'LoL & Doomscroll Limiter - connection to the local service'
 }
+
+$ServiceLocked = 'D:(A;;CCLCSWRPWPDTLOCRRCWD;;;SY)(A;;CCLCSWRPLOCRRCWD;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)(A;;CCLCSWLOCRRC;;;AU)'
+$ServiceOpen = 'D:(A;;CCLCSWRPWPDTLOCRRCWD;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)(A;;CCLCSWLOCRRC;;;AU)'
 
 $SidSystem = 'S-1-5-18'
 $SidAdmins = 'S-1-5-32-544'
@@ -210,6 +226,22 @@ function BanSetting([int]$From, [int]$To) {
     return [ordered]@{ enabled = $enabled; from = $From; to = $To }
 }
 
+# Banned hours per weekday from 'from-to' values (Monday first).
+function BanDays([string]$Spec) {
+    $names = 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
+    $parts = $Spec.Split(',')
+    $days = [ordered]@{}
+    for ($i = 0; $i -lt 7; $i++) {
+        if ($parts[$i]) {
+            $range = $parts[$i].Split('-')
+            $days[$names[$i]] = [ordered]@{ enabled = $true; from = [int]$range[0]; to = [int]$range[1] }
+        } else {
+            $days[$names[$i]] = [ordered]@{ enabled = $false; from = 1; to = 5 }
+        }
+    }
+    return $days
+}
+
 # The values chosen in the installer always override the earlier ones (the service picks them up within 30 s).
 $limits = [ordered]@{
     resetMode           = $ResetMode
@@ -225,6 +257,9 @@ $limits = [ordered]@{
     shortVideoBannedHours           = (BanSetting $ShortVideoBanFrom $ShortVideoBanTo)
     facebookFeedBannedHours         = (BanSetting $FacebookFeedBanFrom $FacebookFeedBanTo)
 }
+if ($LolBanDays) { $limits['lolBannedDays'] = BanDays $LolBanDays }
+if ($ShortVideoBanDays) { $limits['shortVideoBannedDays'] = BanDays $ShortVideoBanDays }
+if ($FacebookFeedBanDays) { $limits['facebookFeedBannedDays'] = BanDays $FacebookFeedBanDays }
 $limitsPath = Join-Path $DataDir 'limits.json'
 if ($KeepSettings -and (Test-Path -LiteralPath $limitsPath)) {
     Step 'Update: the existing limits are kept'
@@ -237,18 +272,21 @@ Assert-Acl $limitsPath -Required $SidSystem, $SidAdmins -Forbidden $SidUsers
 Step 'Installing the Windows service'
 $existing = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
 if ($existing) {
+    # The running service keeps its permissions closed; they have to be opened to update it.
+    & sc.exe sdset $ServiceName $ServiceOpen | Out-Null
     if ($existing.Status -ne 'Stopped') { Stop-Service -Name $ServiceName -Force; (Get-Service $ServiceName).WaitForStatus('Stopped', '00:00:30') }
     & sc.exe config $ServiceName binPath= "`"$ServiceExe`"" start= auto | Out-Null
 } else {
     New-Service -Name $ServiceName -BinaryPathName "`"$ServiceExe`"" -DisplayName $ServiceDisplayName -StartupType Automatic | Out-Null
 }
 & sc.exe description $ServiceName $ServiceDescription | Out-Null
-# After a crash: restart after 5 s, 5 s, 30 s; the failure counter resets daily.
-& sc.exe failure $ServiceName reset= 86400 actions= restart/5000/restart/5000/restart/30000 | Out-Null
+# After a crash or a kill from Task Manager: restart after 1 s, every time.
+& sc.exe failure $ServiceName reset= 86400 actions= restart/1000/restart/1000/restart/1000 | Out-Null
 & sc.exe failureflag $ServiceName 1 | Out-Null
-# Service permissions: Users (IU, SU, AU) can only query it, not stop it.
-& sc.exe sdset $ServiceName 'D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)(A;;CCLCSWLOCRRC;;;AU)' | Out-Null
 Start-Service -Name $ServiceName
+# Service permissions: Users (IU, SU, AU) can only query it; Administrators (BA) can start it but not stop, change or delete it.
+# They keep the right to change the permissions: the installer, the uninstaller and the admin panel open them that way.
+& sc.exe sdset $ServiceName $ServiceLocked | Out-Null
 
 # --- 3. Native Messaging host -------------------------------------------------------
 Step 'Registering the Chrome Native Messaging host'
