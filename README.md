@@ -78,7 +78,7 @@ For installation and verification see the guides linked below.
 
 The published releases can be downloaded from the [releases page](https://github.com/viktorferenczi/LolAndDoomScrollFix/releases) (the installer, the extension packages and the checksums). The tray application's "Check for updates" button installs the latest one. The list starts with the newest.
 
-### Unreleased
+### 1.8.0 - 2026-10-31
 
 - **Banned hours per day:** every limit can have its own banned hours for each day of the week, in the installer and in the admin settings. A whole day can be banned (00:00-24:00). Hours given for a weekend day apply even if there is no limit on weekends. A single period from an earlier version becomes the Monday-to-Friday hours (and the weekend's, if the weekend limit was on).
 - **Harder to stop:** a killed service restarts after 1 second instead of 5-30 seconds, and administrators can no longer stop, disable or delete it with the usual Windows tools. The admin settings have a password-protected Stop button. On a normal account the service could not be stopped already; an administrator account can never be fully locked out.
@@ -257,7 +257,7 @@ A telepítésről és az ellenőrzésről lásd lent a hivatkozott útmutatókat
 
 ## Verziók
 
-### Még ki nem adott
+### 1.8.0 — 2026-10-31
 
 - **Tiltott órák naponként:** minden keretnek a hét minden napjára saját tiltott órái lehetnek, a telepítőben és az admin beállításokban is. Az egész nap is tiltható (00:00–24:00). A hétvégi napra megadott órák akkor is érvényesek, ha hétvégén nincs korlát. A korábbi verzió egyetlen időszakából a hétfőtől péntekig tartó órák lesznek (és a hétvégéi, ha a hétvégi korlát be volt kapcsolva).
 - **Nehezebb leállítani:** a kilőtt szolgáltatás 5–30 másodperc helyett 1 másodperc múlva újraindul, a rendszergazdák pedig a szokásos Windows-eszközökkel már nem tudják leállítani, letiltani vagy törölni. Az admin beállításokban jelszóval védett Leállítás gomb van. Normál fiókon a szolgáltatás eddig sem volt leállítható; a rendszergazdai fiókot sosem lehet teljesen kizárni.
