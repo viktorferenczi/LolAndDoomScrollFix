@@ -345,6 +345,8 @@ $chrome = @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:Pro
 Check ($null -ne $chrome) 'Chrome is installed on the test machine'
 if ($chrome) {
     Get-Process chrome -ErrorAction SilentlyContinue | Stop-Process -Force
+    # Chrome refuses developer tools on the pages of force-installed extensions; only for this test they are allowed (1).
+    New-ItemProperty 'HKLM:\SOFTWARE\Policies\Google\Chrome' -Name DeveloperToolsAvailability -PropertyType DWord -Value 1 -Force | Out-Null
     $profileDir = Join-Path $env:TEMP 'e2e-chrome'
     Remove-Item $profileDir -Recurse -Force -ErrorAction SilentlyContinue
     $port = 9333
@@ -400,6 +402,7 @@ if ($chrome) {
         $ws.Dispose()
     } catch { Check $false "Talking to Chrome over the debugging port: $($_.Exception.Message)" } }
     Get-Process chrome -ErrorAction SilentlyContinue | Stop-Process -Force
+    Remove-ItemProperty 'HKLM:\SOFTWARE\Policies\Google\Chrome' -Name DeveloperToolsAvailability -ErrorAction SilentlyContinue
 }
 
 # ---------------------------------------------------------------- 5. uninstall
