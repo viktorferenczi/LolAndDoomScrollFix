@@ -78,6 +78,12 @@ For installation and verification see the guides linked below.
 
 The published releases can be downloaded from the [releases page](https://github.com/viktorferenczi/LolAndDoomScrollFix/releases) (the installer, the extension packages and the checksums). The tray application's "Check for updates" button installs the latest one. The list starts with the newest.
 
+### 1.8.1 - 2026-11-02
+
+- **Fix: the extension could not reach the program** ("Access to the specified native messaging host is forbidden"), and Chrome did not install the extension. Installations first made with 1.5.1 or earlier kept the development extension ID through every update. Production mode now always uses the Chrome Web Store extension, and the update repairs the Chrome settings.
+- The installer no longer asks for the extension ID in production mode. The finish page explains that Chrome installs the extension by itself, and can open the extension's store page in Chrome.
+- Documented: the "not trusted by Enhanced Safe Browsing" notice on the store page, and Windows Smart App Control blocking the unsigned installer and uninstaller (not fixed: it needs code signing).
+
 ### 1.8.0 - 2026-10-31
 
 - **Banned hours per day:** every limit can have its own banned hours for each day of the week, in the installer and in the admin settings. A whole day can be banned (00:00-24:00). Hours given for a weekend day apply even if there is no limit on weekends. A single period from an earlier version becomes the Monday-to-Friday hours (and the weekend's, if the weekend limit was on).
@@ -101,7 +107,7 @@ The published releases can be downloaded from the [releases page](https://github
 
 ### 1.5.2 - 2026-10-28
 
-- The installer's default extension ID is the extension published in the Chrome Web Store (the development ID in development mode).
+- In production mode the installer always uses the extension published in the Chrome Web Store and does not ask for its ID; development mode asks for the unpacked extension's ID.
 
 ### 1.5.1 - 2026-10-27
 
@@ -257,6 +263,12 @@ A telepítésről és az ellenőrzésről lásd lent a hivatkozott útmutatókat
 
 ## Verziók
 
+### 1.8.1 — 2026-11-02
+
+- **Javítás: a bővítmény nem érte el a programot** („Access to the specified native messaging host is forbidden”), és a Chrome nem telepítette a bővítményt. Az 1.5.1-es vagy régebbi verzióval kezdett telepítések minden frissítésen át megtartották a fejlesztői bővítményazonosítót. Éles módban a program most mindig a Chrome Web Store-ban lévő bővítményt használja, és a frissítés megjavítja a Chrome-beállításokat.
+- A telepítő éles módban már nem kérdezi a bővítményazonosítót. A befejező oldal elmondja, hogy a Chrome magától telepíti a bővítményt, és megnyithatja a bővítmény áruházi oldalát a Chrome-ban.
+- Dokumentálva: az áruházi oldal „nem megbízható a fokozott védelemmel ellátott Biztonságos Böngészés szerint” figyelmeztetése, és hogy a Windows Intelligens alkalmazáskezelése letiltja az aláírás nélküli telepítőt és eltávolítót (nincs javítva: kódaláírás kell hozzá).
+
 ### 1.8.0 — 2026-10-31
 
 - **Tiltott órák naponként:** minden keretnek a hét minden napjára saját tiltott órái lehetnek, a telepítőben és az admin beállításokban is. Az egész nap is tiltható (00:00–24:00). A hétvégi napra megadott órák akkor is érvényesek, ha hétvégén nincs korlát. A korábbi verzió egyetlen időszakából a hétfőtől péntekig tartó órák lesznek (és a hétvégéi, ha a hétvégi korlát be volt kapcsolva).
@@ -282,7 +294,7 @@ A közzétett kiadások a [kiadások oldalán](https://github.com/viktorferenczi
 
 ### 1.5.2 — 2026-10-28
 
-- A telepítő alapértelmezett bővítményazonosítója a Chrome Web Store-ban közzétett bővítmény (fejlesztői módban a fejlesztői azonosító).
+- Éles módban a telepítő mindig a Chrome Web Store-ban közzétett bővítményt használja, és nem kérdezi az azonosítóját; fejlesztői módban a kicsomagolt bővítmény azonosítóját kéri.
 
 ### 1.5.1 — 2026-10-27
 

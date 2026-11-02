@@ -307,6 +307,101 @@ $denied = $false
 try { Stop-Service LolScrollLimiter -Force -ErrorAction Stop } catch { $denied = $true }
 Check $denied 'The permissions are closed again after the setup'
 
+# ---------------------------------------------------------------- 4c. extension ID repair on update, Chrome and native messaging
+$StoreId = 'mkoeoadekdfnbjpmhiabpjlmhdoimcml'
+$DevId = 'iidlgdeiobckahalgoabbobfdlefkagi'
+$HostJson = Join-Path $AppDir 'hu.kmsoft.lolscrolllimiter.json'
+$ForceKey = 'HKLM:\SOFTWARE\Policies\Google\Chrome\ExtensionInstallForcelist'
+function ForceEntries { if (Test-Path $ForceKey) { $k = Get-Item $ForceKey; @($k.Property | ForEach-Object { [string]$k.GetValue($_) }) } else { @() } }
+
+Check ((Get-Content $HostJson -Raw | ConvertFrom-Json).allowed_origins -contains "chrome-extension://$StoreId/") 'Production install: the native host allows the store extension'
+Check (@(ForceEntries | Where-Object { $_ -like "$StoreId;*" }).Count -eq 1) 'Production install: Chrome force-installs the store extension'
+
+# The state an installation first made by 1.5.0/1.5.1 had: production mode with the development ID.
+Write-Host '== Update from a production installation that stored the development ID'
+Set-ItemProperty 'HKLM:\SOFTWARE\LolScrollLimiter' -Name ExtensionId -Value $DevId
+foreach ($name in (Get-Item $ForceKey).Property) { Remove-ItemProperty $ForceKey -Name $name }
+New-ItemProperty $ForceKey -Name '1' -PropertyType String -Value "$DevId;https://clients2.google.com/service/update2/crx" -Force | Out-Null
+$old = Get-Content $HostJson -Raw | ConvertFrom-Json
+$old.allowed_origins = @("chrome-extension://$DevId/")
+[System.IO.File]::WriteAllText($HostJson, ($old | ConvertTo-Json), (New-Object System.Text.UTF8Encoding($false)))
+
+$log = Join-Path $Evidence 'setup-update.log'
+$p = Start-Process -FilePath $Installer -ArgumentList @('/UPDATE', '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$log") -PassThru
+[void](Wait-Process-Bounded $p 240 'silent update')
+Check ($p.HasExited -and $p.ExitCode -eq 0) "The update over the locked service succeeds (exit code: $($p.ExitCode))"
+$origins = @((Get-Content $HostJson -Raw | ConvertFrom-Json).allowed_origins)
+Check ($origins -contains "chrome-extension://$StoreId/" -and $origins -notcontains "chrome-extension://$DevId/") "After the update the native host allows the store extension only ($($origins -join ', '))"
+$entries = ForceEntries
+Check (@($entries | Where-Object { $_ -like "$StoreId;*" }).Count -eq 1 -and @($entries | Where-Object { $_ -like "$DevId;*" }).Count -eq 0) "After the update Chrome force-installs the store extension, not the development one ($($entries -join ', '))"
+Check ((Get-ItemProperty 'HKLM:\SOFTWARE\LolScrollLimiter').ExtensionId -eq $StoreId) 'The stored extension ID is the store ID again'
+Check ((Get-Service LolScrollLimiter).Status -eq 'Running') 'The service runs after the update'
+$limits = Get-Content $limitsPath -Raw | ConvertFrom-Json
+Check ($limits.lolBannedDays.saturday.to -eq 24) 'The update kept the limits'
+
+# Real Chrome: the policy installs the extension from the Chrome Web Store, and the extension reaches the service.
+Write-Host '== Chrome: forced installation and native messaging'
+$chrome = @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+Check ($null -ne $chrome) 'Chrome is installed on the test machine'
+if ($chrome) {
+    Get-Process chrome -ErrorAction SilentlyContinue | Stop-Process -Force
+    $profileDir = Join-Path $env:TEMP 'e2e-chrome'
+    Remove-Item $profileDir -Recurse -Force -ErrorAction SilentlyContinue
+    $port = 9333
+    $chromeProc = Start-Process -FilePath $chrome -PassThru -ArgumentList @("--user-data-dir=$profileDir", "--remote-debugging-port=$port",
+        '--no-first-run', '--no-default-browser-check', '--disable-search-engine-choice-screen', 'about:blank')
+    $installedAt = $null
+    $started = Get-Date
+    while (-not $installedAt -and ((Get-Date) - $started).TotalSeconds -lt 240) {
+        Start-Sleep -Seconds 2
+        if (Test-Path (Join-Path $profileDir "Default\Extensions\$StoreId")) { $installedAt = Get-Date }
+    }
+    $took = if ($installedAt) { [math]::Round(($installedAt - $started).TotalSeconds) } else { -1 }
+    Write-Host "   extension folder after $took s"
+    Check ($null -ne $installedAt) "Chrome installed the store extension by itself ($took s)"
+    Start-Sleep -Seconds 5
+    Shot 'chrome-after-install'
+
+    if ($installedAt) {
+        # The extension's own page has the same rights as its service worker; the request goes through the native host.
+        $tab = Invoke-RestMethod -Method Put -Uri "http://127.0.0.1:$port/json/new?chrome-extension://$StoreId/popup.html"
+        Start-Sleep -Seconds 4
+        $ws = New-Object System.Net.WebSockets.ClientWebSocket
+        $ws.ConnectAsync([Uri]$tab.webSocketDebuggerUrl, [Threading.CancellationToken]::None).Wait()
+        function Cdp([int]$id, [string]$expression) {
+            $msg = @{ id = $id; method = 'Runtime.evaluate'; params = @{ expression = $expression; awaitPromise = $true; returnByValue = $true } } | ConvertTo-Json -Depth 5 -Compress
+            $bytes = [Text.Encoding]::UTF8.GetBytes($msg)
+            $ws.SendAsync([ArraySegment[byte]]$bytes, 'Text', $true, [Threading.CancellationToken]::None).Wait()
+            $buffer = New-Object byte[] 262144
+            $deadline = (Get-Date).AddSeconds(30)
+            while ((Get-Date) -lt $deadline) {
+                $sb = New-Object Text.StringBuilder
+                do {
+                    $r = $ws.ReceiveAsync([ArraySegment[byte]]$buffer, [Threading.CancellationToken]::None)
+                    if (-not $r.Wait(30000)) { return $null }
+                    [void]$sb.Append([Text.Encoding]::UTF8.GetString($buffer, 0, $r.Result.Count))
+                } until ($r.Result.EndOfMessage)
+                $reply = $sb.ToString() | ConvertFrom-Json
+                if ($reply.id -eq $id) { return $reply.result.result.value }
+            }
+            return $null
+        }
+        $answer = Cdp 1 "new Promise(r => chrome.runtime.sendNativeMessage('hu.kmsoft.lolscrolllimiter', { type: 'status', id: 'e2e' }, resp => r(JSON.stringify({ resp, err: chrome.runtime.lastError ? chrome.runtime.lastError.message : null }))))"
+        Write-Host "   native messaging: $answer"
+        Set-Content -Path (Join-Path $Evidence 'native-messaging.json') -Value $answer -Encoding utf8
+        $result = if ($answer) { $answer | ConvertFrom-Json } else { $null }
+        Check ($null -ne $result -and $null -eq $result.err) "The store extension may use the native host (error: $(if ($result) { $result.err } else { 'no answer' }))"
+        Check ($null -ne $result -and $result.resp.ok -and $null -ne $result.resp.lol) 'The service answers the extension through the native host'
+        Start-Sleep -Seconds 3
+        $popupText = Cdp 2 'document.body.innerText'
+        Write-Host "   popup: $($popupText -replace '\s+', ' ')"
+        Check ($popupText -and $popupText -notmatch 'nem érhető el|not reachable|forbidden|Hiba|Error') 'The extension''s popup shows no connection error'
+        Shot 'chrome-popup'
+        $ws.Dispose()
+    }
+    Get-Process chrome -ErrorAction SilentlyContinue | Stop-Process -Force
+}
+
 # ---------------------------------------------------------------- 5. uninstall
 Write-Host '== Uninstall'
 $unins = Get-ChildItem (Join-Path $AppDir 'unins*.exe') | Select-Object -First 1

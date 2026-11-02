@@ -29,7 +29,7 @@ Output in the `out\` folder:
 
 | File | Purpose |
 |---|---|
-| `LolScrollLimiter-Setup-1.8.0.exe` | Windows installer |
+| `LolScrollLimiter-Setup-1.8.1.exe` | Windows installer |
 | `extension-store.zip` | Upload to the Chrome Web Store |
 | `extension-dev.zip` | Development test version (loaded unpacked, fixed ID: `iidlgdeiobckahalgoabbobfdlefkagi`) |
 | `app\` | The program files to install |
@@ -52,9 +52,9 @@ Until the approval arrives, the development test version can be used (section 6)
 
 ## 5. Installation (production)
 
-1. Run `LolScrollLimiter-Setup-1.8.0.exe` from your own account; the trusted person types the administrator password into the UAC prompt.
+1. Run `LolScrollLimiter-Setup-1.8.1.exe` from your own account; the trusted person types the administrator password into the UAC prompt.
 2. Installation mode: **Production**.
-3. Extension ID: the default is the published store ID (`mkoeoadekdfnbjpmhiabpjlmhdoimcml`); leave it. In development mode the development ID is put into the field.
+3. The extension ID is not asked: production mode always uses the extension published in the Chrome Web Store (`mkoeoadekdfnbjpmhiabpjlmhdoimcml`). Chrome installs it by itself within a minute or two (restart Chrome if it was open); it shows "Installed by your administrator". The finish page can open the extension's store page in Chrome.
 4. **Limits** page:
 
    | Setting | Options | Default |
@@ -257,10 +257,10 @@ Checking for updates does not affect how the limits work; if the check fails (no
 **Making a release (developer):** raise the version in `Directory.Build.props`, `extension/manifest.json` and `installer/LolScrollLimiter.iss`, commit and push, then:
 
 ```bash
-git tag v1.8.0 && git push origin v1.8.0
+git tag v1.8.1 && git push origin v1.8.1
 ```
 
-`.github/workflows/release.yml` builds the installer on Windows, creates `SHA256SUMS.txt`, and publishes the release (`LolScrollLimiter-Setup-1.8.0.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
+`.github/workflows/release.yml` builds the installer on Windows, creates `SHA256SUMS.txt`, and publishes the release (`LolScrollLimiter-Setup-1.8.1.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
 The file name and the tag format are fixed (`LolScrollLimiter-Setup-X.Y.Z.exe` / `vX.Y.Z`), otherwise the button does not find the installer.
 
 In production mode the Chrome extension updates itself from the Chrome Web Store; with the development test version, the unpacked extension has to be reloaded on the `chrome://extensions` page after an update.
@@ -281,6 +281,14 @@ The counters are kept (they continue after a reinstall). Full deletion from an a
 
 ## 10. Troubleshooting
 
+- **The extension says "Access to the specified native messaging host is forbidden"**, or Chrome does not install the extension:
+  an installation first made with version 1.5.1 or earlier may still use the development extension ID. Updating to 1.8.1 or later fixes it.
+- **"This extension is not trusted by Enhanced Safe Browsing"** on the store page: Chrome shows this for extensions of new publishers
+  to users with Enhanced protection, until the publisher has followed the store's policies for a few months. It is not about the package,
+  and it does not stop the forced installation.
+- **Smart App Control blocks the installer, the uninstaller or the program:** the program is not code-signed, and Smart App Control
+  only runs signed or well-known programs; it cannot be allowed for one program. Turn Smart App Control off
+  (Windows Security → App & browser control → Smart App Control), uninstall, and turn it back on if your Windows version allows it.
 - **Logs:** Event Viewer → Windows Logs → Application, source: `LolScrollLimiter`.
 - **Installer log:** a silent install can write a log with `/LOG=setup.log`; the system-setup script also keeps its output in `%TEMP%\LolScrollLimiter-install.log` of the administrator who ran it.
 - **Checking the LoL connection by hand** (can be run as a normal user too, with the LoL client running):

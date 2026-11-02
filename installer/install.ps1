@@ -12,9 +12,9 @@
   - Starts the tray application automatically for every user.
 
 .PARAMETER ExtensionId
-  The extension's ID. Default: the ID of the extension published in the Chrome Web Store
-  (mkoeoadekdfnbjpmhiabpjlmhdoimcml); with -DevMode the ID of the development (unpacked) version
-  (derived from the manifest "key" field).
+  Only with -DevMode: the ID of the unpacked development extension. Default: the ID derived from the manifest "key" field
+  (iidlgdeiobckahalgoabbobfdlefkagi). In production mode it is ignored: the extension published in the Chrome Web Store
+  (mkoeoadekdfnbjpmhiabpjlmhdoimcml) is always used, also when an earlier installation stored another ID.
 
 .PARAMETER Language
   Language of the program's texts: 'en' or 'hu'. Stored in HKLM\SOFTWARE\LolScrollLimiter\Language. Without it,
@@ -123,8 +123,15 @@ $ChromePolicy = 'HKLM:\SOFTWARE\Policies\Google\Chrome'
 $ForceList = Join-Path $ChromePolicy 'ExtensionInstallForcelist'
 $Marker = 'HKLM:\SOFTWARE\LolScrollLimiter'
 
-if (-not $ExtensionId) {
-    $ExtensionId = if ($DevMode) { 'iidlgdeiobckahalgoabbobfdlefkagi' } else { 'mkoeoadekdfnbjpmhiabpjlmhdoimcml' }
+$StoreExtensionId = 'mkoeoadekdfnbjpmhiabpjlmhdoimcml'
+$DevExtensionId = 'iidlgdeiobckahalgoabbobfdlefkagi'
+# Versions up to 1.5.1 offered the development ID by default, and updates kept the stored ID. In production mode
+# Chrome then force-installed an extension that does not exist in the store, and refused the store extension's connection.
+if (-not $DevMode) {
+    if ($ExtensionId -and $ExtensionId -ne $StoreExtensionId) { Write-Warning "Production mode: the extension ID '$ExtensionId' is replaced by the store ID." }
+    $ExtensionId = $StoreExtensionId
+} elseif (-not $ExtensionId) {
+    $ExtensionId = $DevExtensionId
 }
 if ($ExtensionId -notmatch '^[a-p]{32}$') { throw "Invalid extension ID: '$ExtensionId'" }
 # Language of the program's texts: given by the installer; on update the stored one is kept; otherwise the display language.
@@ -296,7 +303,8 @@ $manifest = [ordered]@{
     description     = $HostDescription
     path            = $HostExe
     type            = 'stdio'
-    allowed_origins = @("chrome-extension://$ExtensionId/")
+    # Production: only the store extension. Development: the given ID, and the store extension too.
+    allowed_origins = @(@($ExtensionId, $StoreExtensionId) | Select-Object -Unique | ForEach-Object { "chrome-extension://$_/" })
 }
 [System.IO.File]::WriteAllText($hostManifest, ($manifest | ConvertTo-Json), (New-Object System.Text.UTF8Encoding($false)))
 $nmKey = "HKLM:\SOFTWARE\Google\Chrome\NativeMessagingHosts\$HostName"
@@ -307,6 +315,7 @@ Set-ItemProperty -Path $nmKey -Name '(default)' -Value $hostManifest
 Step 'Setting the Chrome policies'
 New-Item -Path $ChromePolicy -Force | Out-Null
 New-Item -Path $Marker -Force | Out-Null
+$PreviousExtensionId = (Get-ItemProperty -Path $Marker -Name 'ExtensionId' -ErrorAction SilentlyContinue).ExtensionId
 Set-ItemProperty -Path $Marker -Name 'ExtensionId' -Value $ExtensionId
 Set-ItemProperty -Path $Marker -Name 'InstallDir' -Value $InstallDir
 Set-ItemProperty -Path $Marker -Name 'Language' -Value $Language
@@ -318,6 +327,16 @@ Remove-ItemProperty -Path $ChromePolicy -Name 'IncognitoModeAvailability' -Error
 # Guest mode disabled (0): no extension runs there.
 New-ItemProperty -Path $ChromePolicy -Name 'BrowserGuestModeEnabled' -PropertyType DWord -Value 0 -Force | Out-Null
 
+# Our earlier force-install entries are removed (also one for the development ID or an earlier stored ID);
+# in production mode the store extension's entry is added again below.
+if (Test-Path $ForceList) {
+    $ours = @($StoreExtensionId, $DevExtensionId, $ExtensionId, $PreviousExtensionId) | Where-Object { $_ }
+    foreach ($name in (Get-Item $ForceList).Property) {
+        $value = [string](Get-ItemPropertyValue -Path $ForceList -Name $name)
+        if ($ours | Where-Object { $value -like "$_;*" -or $value -eq $_ }) { Remove-ItemProperty -Path $ForceList -Name $name }
+    }
+}
+
 if ($DevMode) {
     Write-Warning 'DEVELOPMENT MODE: the extension is not force-installed and the developer mode is not disabled. Load it unpacked on the chrome://extensions page.'
     Remove-ItemProperty -Path $ChromePolicy -Name 'ExtensionDeveloperModeSettings' -ErrorAction SilentlyContinue
@@ -328,9 +347,6 @@ if ($DevMode) {
     # Forced installation: the user cannot turn it off or remove it.
     New-Item -Path $ForceList -Force | Out-Null
     $entry = "$ExtensionId;$UpdateUrl"
-    $props = (Get-Item $ForceList).Property
-    $already = $props | Where-Object { (Get-ItemPropertyValue -Path $ForceList -Name $_) -like "$ExtensionId;*" }
-    foreach ($name in $already) { Remove-ItemProperty -Path $ForceList -Name $name }
     $index = 1
     while ((Get-Item $ForceList).Property -contains "$index") { $index++ }
     New-ItemProperty -Path $ForceList -Name "$index" -PropertyType String -Value $entry -Force | Out-Null

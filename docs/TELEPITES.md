@@ -29,7 +29,7 @@ Kimenet az `out\` mappában:
 
 | Fájl | Mire való |
 |---|---|
-| `LolScrollLimiter-Setup-1.8.0.exe` | Windows-telepítő |
+| `LolScrollLimiter-Setup-1.8.1.exe` | Windows-telepítő |
 | `extension-store.zip` | Feltöltés a Chrome Web Store-ba |
 | `extension-dev.zip` | Fejlesztői tesztverzió (kicsomagolt betöltés, fix azonosító: `iidlgdeiobckahalgoabbobfdlefkagi`) |
 | `app\` | A telepítendő programfájlok |
@@ -52,9 +52,9 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
 
 ## 4. Telepítés (éles)
 
-1. Futtasd a `LolScrollLimiter-Setup-1.8.0.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
+1. Futtasd a `LolScrollLimiter-Setup-1.8.1.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
 2. Telepítési mód: **Éles**.
-3. Bővítményazonosító: az alapértelmezett érték a közzétett áruházi azonosító (`mkoeoadekdfnbjpmhiabpjlmhdoimcml`); hagyd így. Fejlesztői módban a fejlesztői azonosító kerül a mezőbe.
+3. A bővítményazonosítót a telepítő nem kérdezi: éles módban mindig a Chrome Web Store-ban közzétett bővítményt használja (`mkoeoadekdfnbjpmhiabpjlmhdoimcml`). A Chrome egy-két percen belül magától telepíti (ha nyitva volt, indítsd újra); „A rendszergazda telepítette” felirattal jelenik meg. A befejező oldalról megnyitható a bővítmény áruházi oldala a Chrome-ban.
 4. **Korlátok** oldal:
 
    | Beállítás | Lehetőségek | Alapértelmezés |
@@ -254,10 +254,10 @@ A frissítés keresése nem érinti a korlátozások működését; ha a keresé
 **Kiadás készítése (fejlesztő):** emeld a verziót a `Directory.Build.props`, az `extension/manifest.json` és az `installer/LolScrollLimiter.iss` fájlban, commit és push, majd:
 
 ```bash
-git tag v1.8.0 && git push origin v1.8.0
+git tag v1.8.1 && git push origin v1.8.1
 ```
 
-A `.github/workflows/release.yml` Windows alatt lefordítja a telepítőt, elkészíti a `SHA256SUMS.txt`-t, és közzéteszi a kiadást (`LolScrollLimiter-Setup-1.8.0.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
+A `.github/workflows/release.yml` Windows alatt lefordítja a telepítőt, elkészíti a `SHA256SUMS.txt`-t, és közzéteszi a kiadást (`LolScrollLimiter-Setup-1.8.1.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
 A fájlnév és a címke formátuma kötött (`LolScrollLimiter-Setup-X.Y.Z.exe` / `vX.Y.Z`), különben a gomb nem találja a telepítőt.
 
 A Chrome-bővítmény éles módban a Chrome Web Store-ból magától frissül; a fejlesztői tesztverziónál a frissítés után a `chrome://extensions` oldalon újra be kell tölteni a kicsomagolt bővítményt.
@@ -278,6 +278,14 @@ A számlálók megmaradnak (újratelepítés után folytatódnak). Teljes törl�
 
 ## 9. Hibaelhárítás
 
+- **A bővítmény azt írja: „Access to the specified native messaging host is forbidden”**, vagy a Chrome nem telepíti a bővítményt:
+  az 1.5.1-es vagy régebbi verzióval kezdett telepítés még a fejlesztői bővítményazonosítót használhatja. Az 1.8.1-es vagy újabb verzióra frissítés megjavítja.
+- **„Ez a bővítmény nem megbízható a fokozott védelemmel ellátott Biztonságos Böngészés szerint”** az áruházi oldalon: a Chrome az új közzétevők bővítményeinél
+  mutatja a fokozott védelmet használóknak, amíg a közzétevő néhány hónapig be nem tartja az áruház szabályait. Nem a csomagról szól,
+  és a kötelező telepítést nem akadályozza.
+- **Az Intelligens alkalmazáskezelés letiltja a telepítőt, az eltávolítót vagy a programot:** a program nincs kódaláírással ellátva, az Intelligens alkalmazáskezelés pedig
+  csak aláírt vagy ismert programokat futtat; egyetlen programra nem engedélyezhető. Kapcsold ki
+  (Windows biztonság → Alkalmazás- és böngészővezérlés → Intelligens alkalmazáskezelés), távolítsd el a programot, majd kapcsold vissza, ha a Windows-verziód engedi.
 - **Naplók:** Eseménynapló → Windows-naplók → Alkalmazás, forrás: `LolScrollLimiter`.
 - **Telepítési napló:** csendes telepítésnél `/LOG=setup.log` naplót ír; a rendszerbeállító szkript kimenete a futtató rendszergazda `%TEMP%\LolScrollLimiter-install.log` fájljában is megvan.
 - **LoL-kapcsolat kézi ellenőrzése** (normál felhasználóként is futtatható, a LoL-kliens fusson):

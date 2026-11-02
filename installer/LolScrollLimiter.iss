@@ -2,7 +2,7 @@
 ; Build: installer\build.ps1 (the program files must be in out\app first).
 
 #define AppName "LoL & Doomscroll Limiter"
-#define AppVersion "1.8.0"
+#define AppVersion "1.8.1"
 #define DevExtensionId "iidlgdeiobckahalgoabbobfdlefkagi"
 #define StoreExtensionId "mkoeoadekdfnbjpmhiabpjlmhdoimcml"
 
@@ -37,6 +37,7 @@ Name: "hu"; MessagesFile: "compiler:Languages\Hungarian.isl"
 Source: "..\out\app\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 
 [Run]
+Filename: "{code:ChromePath}"; Parameters: "https://chromewebstore.google.com/detail/{#StoreExtensionId}"; Description: "{cm:OpenStore}"; Flags: nowait postinstall runasoriginaluser skipifsilent; Check: ShowStoreLink
 Filename: "{app}\Limiter.Tray.exe"; Description: "{cm:LaunchTray}"; Flags: nowait postinstall runasoriginaluser skipifsilent
 ; On update (silent install) the installer stopped the tray application, so it is started again.
 Filename: "{app}\Limiter.Tray.exe"; Flags: nowait runasoriginaluser; Check: IsUpdate
@@ -119,8 +120,8 @@ en.ExtTitle=Chrome extension
 hu.ExtTitle=Chrome-bővítmény
 en.ExtSubtitle=The extension's ID
 hu.ExtSubtitle=A bővítmény azonosítója
-en.ExtDesc=Default: the ID of the extension published in the Chrome Web Store (production mode) or the development ID (development mode). Change it only if you know what you are doing.
-hu.ExtDesc=Alapértelmezés: a Chrome Web Store-ban közzétett bővítmény azonosítója (éles mód) vagy a fejlesztői azonosító (fejlesztői mód). Csak akkor módosítsd, ha tudod, mit csinálsz.
+en.ExtDesc=Development mode only: the ID of the unpacked extension you load yourself. Default: the ID that the repository's manifest key gives. The extension from the Chrome Web Store can always connect too. Change it only if you know what you are doing.
+hu.ExtDesc=Csak fejlesztői módban: a kézzel betöltött, kicsomagolt bővítmény azonosítója. Alapértelmezés: a tároló manifest-kulcsából adódó azonosító. A Chrome Web Store-ból telepített bővítmény mindig csatlakozhat. Csak akkor módosítsd, ha tudod, mit csinálsz.
 en.ExtLabel=Extension ID:
 hu.ExtLabel=Bővítményazonosító:
 en.PwTitle=Admin password
@@ -155,8 +156,10 @@ en.ErrBonusMinutes=A bonus given in minutes must be a whole number between 0 and
 hu.ErrBonusMinutes=A percben megadott jutalom 0 és 1440 közötti egész szám lehet.
 en.ErrExtId=The extension ID is 32 characters long and can only contain the letters a–p.
 hu.ErrExtId=A bővítményazonosító 32 karakter hosszú, és csak a–p betűket tartalmazhat.
-en.ErrExtIdProd=Production mode needs the store ID; the given value is the development ID. Continue anyway?
-hu.ErrExtIdProd=Éles módban az áruházi azonosítóra van szükség; a megadott érték a fejlesztői azonosító. Folytatod így?
+en.OpenStore=Open the extension's page in Chrome
+hu.OpenStore=A bővítmény oldalának megnyitása a Chrome-ban
+en.FinishedChrome=Chrome installs the extension by itself within a minute or two; it shows "Installed by your administrator". If Chrome is open, restart it. The page that opens shows the extension in the Chrome Web Store.
+hu.FinishedChrome=A Chrome egy-két percen belül magától telepíti a bővítményt; „A rendszergazda telepítette” felirattal jelenik meg. Ha a Chrome nyitva van, indítsd újra. A megnyíló oldal a bővítményt mutatja a Chrome Web Store-ban.
 en.StatusConfiguring=Configuring the service, permissions and Chrome policies…
 hu.StatusConfiguring=Szolgáltatás, jogosultságok és Chrome-szabályok beállítása…
 en.ErrSetupFailed=The system setup failed (code: %1). Run it manually as administrator: %2
@@ -348,6 +351,29 @@ begin
   if IsUpdate then
     Result := (PageID = ModePage.ID) or (PageID = ExtensionPage.ID) or (PageID = LimitsPage.ID) or
               (PageID = BonusPage.ID) or (PageID = BanPages[0].ID) or (PageID = BanPages[1].ID) or (PageID = BanPages[2].ID) or (PageID = PasswordPage.ID);
+  // Production mode always uses the store extension: its ID is not asked.
+  if (PageID = ExtensionPage.ID) and ModePage.Values[0] then
+    Result := True;
+end;
+
+// Chrome's path (machine-wide or per-user installation), or '' if it is not found.
+function ChromePath(Param: String): String;
+begin
+  if not RegQueryStringValue(HKLM, 'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe', '', Result) and
+     not RegQueryStringValue(HKCU, 'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe', '', Result) then
+    Result := ExpandConstant('{commonpf64}\Google\Chrome\Application\chrome.exe');
+  if not FileExists(Result) then
+    Result := '';
+end;
+
+function IsProductionInstall: Boolean;
+begin
+  Result := not IsUpdate and ModePage.Values[0];
+end;
+
+function ShowStoreLink: Boolean;
+begin
+  Result := IsProductionInstall and (ChromePath('') <> '');
 end;
 
 procedure BanCheckChanged(Sender: TObject);
@@ -518,6 +544,8 @@ procedure CurPageChanged(CurPageID: Integer);
 var
   Current: String;
 begin
+  if (CurPageID = wpFinished) and IsProductionInstall then
+    WizardForm.FinishedLabel.Caption := WizardForm.FinishedLabel.Caption + #13#10#13#10 + CustomMessage('FinishedChrome');
   // The default ID follows the chosen mode; a value typed by hand is left alone.
   if CurPageID = ExtensionPage.ID then
   begin
@@ -634,10 +662,7 @@ begin
     begin
       MsgBox(CustomMessage('ErrExtId'), mbError, MB_OK);
       Result := False;
-    end
-    else if ModePage.Values[0] and (ExtensionPage.Values[0] = '{#DevExtensionId}') then
-      Result := MsgBox(CustomMessage('ErrExtIdProd'),
-        mbConfirmation, MB_YESNO) = IDYES;
+    end;
   end;
 end;
 
@@ -665,11 +690,14 @@ begin
       ' -InstallDir "' + ExpandConstant('{app}') + '"';
     if IsUpdate then
     begin
-      // Update: the extension ID and the mode come from the previous installation, the limits are kept.
-      if RegQueryStringValue(HKLM, MarkerKey, 'ExtensionId', ExtId) then
-        Params := Params + ' -ExtensionId ' + ExtId;
+      // Update: the mode comes from the previous installation, the limits are kept. Production mode always uses
+      // the store extension (install.ps1 decides), so only a development installation passes its stored ID.
       if RegQueryDWordValue(HKLM, MarkerKey, 'DevMode', DevModeValue) and (DevModeValue = 1) then
+      begin
         Params := Params + ' -DevMode';
+        if RegQueryStringValue(HKLM, MarkerKey, 'ExtensionId', ExtId) then
+          Params := Params + ' -ExtensionId ' + ExtId;
+      end;
       // An installation from before the language support has no stored language: take the installer's.
       if not RegValueExists(HKLM, MarkerKey, 'Language') then
         Params := Params + ' -Language ' + ActiveLanguage;
@@ -677,7 +705,6 @@ begin
     end
     else
     begin
-      Params := Params + ' -ExtensionId ' + ExtensionPage.Values[0];
       Params := Params + ' -Language ' + ActiveLanguage;
       // A silent install has no password page: the password is then set the first time the admin panel is opened.
       if PasswordPage.Values[0] <> '' then
@@ -687,7 +714,7 @@ begin
         Params := Params + ' -AdminPasswordFile "' + PwFile + '"';
       end;
       if ModePage.Values[1] then
-        Params := Params + ' -DevMode';
+        Params := Params + ' -DevMode -ExtensionId ' + ExtensionPage.Values[0];
       if DailyRadio.Checked then
         Params := Params + ' -ResetMode daily -DailyResetHour ' + IntToStr(ResetHourCombo.ItemIndex)
       else
