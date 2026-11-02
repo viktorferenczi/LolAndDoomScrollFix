@@ -348,7 +348,7 @@ if ($chrome) {
     $profileDir = Join-Path $env:TEMP 'e2e-chrome'
     Remove-Item $profileDir -Recurse -Force -ErrorAction SilentlyContinue
     $port = 9333
-    $chromeProc = Start-Process -FilePath $chrome -PassThru -ArgumentList @("--user-data-dir=$profileDir", "--remote-debugging-port=$port",
+    $chromeProc = Start-Process -FilePath $chrome -PassThru -ArgumentList @("--user-data-dir=$profileDir", "--remote-debugging-port=$port", '--remote-allow-origins=*',
         '--no-first-run', '--no-default-browser-check', '--disable-search-engine-choice-screen', 'about:blank')
     $installedAt = $null
     $started = Get-Date
@@ -362,7 +362,7 @@ if ($chrome) {
     Start-Sleep -Seconds 5
     Shot 'chrome-after-install'
 
-    if ($installedAt) {
+    if ($installedAt) { try {
         # The extension's own page has the same rights as its service worker; the request goes through the native host.
         $tab = Invoke-RestMethod -Method Put -Uri "http://127.0.0.1:$port/json/new?chrome-extension://$StoreId/popup.html"
         Start-Sleep -Seconds 4
@@ -398,7 +398,7 @@ if ($chrome) {
         Check ($popupText -and $popupText -notmatch 'nem érhető el|not reachable|forbidden|Hiba|Error') 'The extension''s popup shows no connection error'
         Shot 'chrome-popup'
         $ws.Dispose()
-    }
+    } catch { Check $false "Talking to Chrome over the debugging port: $($_.Exception.Message)" } }
     Get-Process chrome -ErrorAction SilentlyContinue | Stop-Process -Force
 }
 
