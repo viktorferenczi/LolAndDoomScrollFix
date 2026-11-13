@@ -2,7 +2,7 @@
 ; Build: installer\build.ps1 (the program files must be in out\app first).
 
 #define AppName "LoL & Doomscroll Limiter"
-#define AppVersion "1.8.1"
+#define AppVersion "1.8.2"
 #define DevExtensionId "iidlgdeiobckahalgoabbobfdlefkagi"
 #define StoreExtensionId "mkoeoadekdfnbjpmhiabpjlmhdoimcml"
 
@@ -86,8 +86,8 @@ en.BanSubtitleShort=Short videos: on which days and hours should watching be imp
 hu.BanSubtitleShort=Rövid videók: mely napokon és órákban ne lehessen nézni?
 en.BanSubtitleFeed=Facebook feed: on which days and hours should scrolling be impossible?
 hu.BanSubtitleFeed=Facebook-hírfolyam: mely napokon és órákban ne lehessen görgetni?
-en.BanNote=On a ticked day this cannot be used at all between the given hours, even if some of the limit is left. A period may run past midnight (22:00–06:00), and 00:00–24:00 is the whole day. It also applies on weekends without limits.
-hu.BanNote=A bejelölt napon ez a megadott órák között egyáltalán nem használható, akkor sem, ha a keretből még maradt. Az időszak átnyúlhat éjfélen (22:00–06:00), a 00:00–24:00 az egész nap. Korlát nélküli hétvégén is érvényes.
+en.BanNote=On a ticked day this cannot be used at all between the given hours, even if some of the limit is left. A period may run past midnight (22:00–06:00), and 00:00–24:00 is the whole day. If the limits do not apply on weekends, Saturday and Sunday are free and cannot be ticked.
+hu.BanNote=A bejelölt napon ez a megadott órák között egyáltalán nem használható, akkor sem, ha a keretből még maradt. Az időszak átnyúlhat éjfélen (22:00–06:00), a 00:00–24:00 az egész nap. Ha a korlátok hétvégén nem érvényesek, a szombat és a vasárnap szabad, és nem jelölhető be.
 en.Day0=Monday
 hu.Day0=Hétfő
 en.Day1=Tuesday
@@ -376,14 +376,21 @@ begin
   Result := IsProductionInstall and (ChromePath('') <> '');
 end;
 
+// Saturday and Sunday (days 5 and 6) can only be banned if the limits also apply on weekends: a free weekend is entirely free.
+function BanDayAvailable(I: Integer): Boolean;
+begin
+  Result := ((I mod 7) < 5) or WeekendCheck.Checked;
+end;
+
 procedure BanCheckChanged(Sender: TObject);
 var
   I: Integer;
 begin
   for I := 0 to 20 do
   begin
-    BanFroms[I].Enabled := BanChecks[I].Checked;
-    BanTos[I].Enabled := BanChecks[I].Checked;
+    BanChecks[I].Enabled := BanDayAvailable(I);
+    BanFroms[I].Enabled := BanDayAvailable(I) and BanChecks[I].Checked;
+    BanTos[I].Enabled := BanDayAvailable(I) and BanChecks[I].Checked;
   end;
 end;
 
@@ -467,7 +474,7 @@ begin
   for Day := 0 to 6 do
   begin
     I := Index * 7 + Day;
-    if BanChecks[I].Checked and (BanFroms[I].ItemIndex = BanTos[I].ItemIndex) then
+    if BanDayAvailable(I) and BanChecks[I].Checked and (BanFroms[I].ItemIndex = BanTos[I].ItemIndex) then
       Result := False;
   end;
 end;
@@ -486,7 +493,7 @@ begin
     I := Index * 7 + Day;
     if Day > 0 then
       Value := Value + ',';
-    if BanChecks[I].Checked then
+    if BanDayAvailable(I) and BanChecks[I].Checked then
     begin
       Value := Value + IntToStr(BanFroms[I].ItemIndex) + '-' + IntToStr(BanTos[I].ItemIndex);
       Any := True;
@@ -544,6 +551,8 @@ procedure CurPageChanged(CurPageID: Integer);
 var
   Current: String;
 begin
+  if (CurPageID = BanPages[0].ID) or (CurPageID = BanPages[1].ID) or (CurPageID = BanPages[2].ID) then
+    BanCheckChanged(nil);
   if (CurPageID = wpFinished) and IsProductionInstall then
     WizardForm.FinishedLabel.Caption := WizardForm.FinishedLabel.Caption + #13#10#13#10 + CustomMessage('FinishedChrome');
   // The default ID follows the chosen mode; a value typed by hand is left alone.

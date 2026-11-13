@@ -29,7 +29,7 @@ Kimenet az `out\` mappában:
 
 | Fájl | Mire való |
 |---|---|
-| `LolScrollLimiter-Setup-1.8.1.exe` | Windows-telepítő |
+| `LolScrollLimiter-Setup-1.8.2.exe` | Windows-telepítő |
 | `extension-store.zip` | Feltöltés a Chrome Web Store-ba |
 | `extension-dev.zip` | Fejlesztői tesztverzió (kicsomagolt betöltés, fix azonosító: `iidlgdeiobckahalgoabbobfdlefkagi`) |
 | `app\` | A telepítendő programfájlok |
@@ -52,7 +52,7 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
 
 ## 4. Telepítés (éles)
 
-1. Futtasd a `LolScrollLimiter-Setup-1.8.1.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
+1. Futtasd a `LolScrollLimiter-Setup-1.8.2.exe` fájlt a saját fiókodból; az UAC-ablakba a megbízható személy írja be a rendszergazdai jelszót.
 2. Telepítési mód: **Éles**.
 3. A bővítményazonosítót a telepítő nem kérdezi: éles módban mindig a Chrome Web Store-ban közzétett bővítményt használja (`mkoeoadekdfnbjpmhiabpjlmhdoimcml`). A Chrome egy-két percen belül magától telepíti (ha nyitva volt, indítsd újra); „A rendszergazda telepítette” felirattal jelenik meg. A befejező oldalról megnyitható a bővítmény áruházi oldala a Chrome-ban.
 4. **Korlátok** oldal:
@@ -88,8 +88,8 @@ Amíg a jóváhagyás nincs meg, a fejlesztői tesztverzió használható (5. po
    **Admin jelszó** oldal (az utolsó): add meg kétszer az admin jelszót (6–128 karakter). Ez kell az admin beállítások megnyitásához és a program eltávolításához, a Windows rendszergazdai jóváhagyása mellett. A jelszót ne a felhasználó ismerje. Ha már van telepített változat jelszóval, az újratelepítéshez előbb annak jelszavát kell megadni (a frissítés gombos frissítéshez nem).
    A jelszó nem tárolódik: csak egy ellenőrző (PBKDF2-SHA256, véletlen sóval) kerül a `C:\ProgramData\LolScrollLimiter\admin.json` fájlba, amelyhez csak a rendszergazdák és a SYSTEM férnek hozzá. Csendes telepítésnél (`/SILENT`) nincs jelszó-oldal; ilyenkor az Admin beállítások első megnyitásakor kell jelszót megadni.
 
-   Napi nullázásnál a „hétvége” a választott órától számít: 03:00-s nullázásnál szombat 03:00-tól hétfő 03:00-ig tart.
-   Gördülő módban szombat 00:00-tól hétfő 00:00-ig. Ha pénteken elfogy egy keret, a hétvége kezdetén feloldódik.
+   A hétvége a naptári hétvége, szombat 00:00-tól hétfő 00:00-ig, napi nullázásnál is. Ilyenkor semmi sincs korlátozva,
+   semmi sem számít bele, és tiltott órák sincsenek. Ha pénteken elfogy egy keret, a hétvége kezdetén feloldódik.
 
 5. A telepítő:
    - a programot a `C:\Program Files\LolScrollLimiter` mappába teszi (normál felhasználónak csak olvasható),
@@ -224,7 +224,8 @@ Módváltáskor a már rögzített használat az új szabály szerint számít (
 - **Minden napnak saját órái vannak,** keretenként külön. A napok naptári napok, napi nullázásnál is.
 - **Folyamatban lévő meccs:** a tiltás kezdetekor futó meccs befejezhető, és az újracsatlakozás is működik.
 - TFT, botmeccs, gyakorlás, egyéni játék és néző mód tiltott időben is elérhető.
-- **Hétvége:** a szombatra és vasárnapra megadott órák akkor is érvényesek, ha hétvégén nincs korlát. Szabad hétvégén ezeken kívül minden használható, és semmi sem számít bele.
+- **Hétvége:** ha hétvégén nincs korlát, tiltás sincs, szombat 00:00-tól hétfő 00:00-ig: a péntek esti időszak szombat 00:00-kor véget ér,
+  a szombat és a vasárnap órái pedig nem szerkeszthetők (szürkék). Bekapcsolt hétvégi korlátnál a szombatra és vasárnapra megadott órák érvényesek.
 
 ## 7. Mit jelent a tálcaikon színe?
 
@@ -254,10 +255,10 @@ A frissítés keresése nem érinti a korlátozások működését; ha a keresé
 **Kiadás készítése (fejlesztő):** emeld a verziót a `Directory.Build.props`, az `extension/manifest.json` és az `installer/LolScrollLimiter.iss` fájlban, commit és push, majd:
 
 ```bash
-git tag v1.8.1 && git push origin v1.8.1
+git tag v1.8.2 && git push origin v1.8.2
 ```
 
-A `.github/workflows/release.yml` Windows alatt lefordítja a telepítőt, elkészíti a `SHA256SUMS.txt`-t, és közzéteszi a kiadást (`LolScrollLimiter-Setup-1.8.1.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
+A `.github/workflows/release.yml` Windows alatt lefordítja a telepítőt, elkészíti a `SHA256SUMS.txt`-t, és közzéteszi a kiadást (`LolScrollLimiter-Setup-1.8.2.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
 A fájlnév és a címke formátuma kötött (`LolScrollLimiter-Setup-X.Y.Z.exe` / `vX.Y.Z`), különben a gomb nem találja a telepítőt.
 
 A Chrome-bővítmény éles módban a Chrome Web Store-ból magától frissül; a fejlesztői tesztverziónál a frissítés után a `chrome://extensions` oldalon újra be kell tölteni a kicsomagolt bővítményt.

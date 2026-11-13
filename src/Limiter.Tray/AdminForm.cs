@@ -84,7 +84,13 @@ public sealed class AdminForm : Form
             (Loc.T("Short videos:", "Rövid videók:"), _shortBonus, Loc.T("min", "perc")),
             (Loc.T("Facebook home feed:", "Facebook kezdőlapi hírfolyam:"), _feedBonus, Loc.T("min", "perc")))));
         root.Controls.Add(Group(Loc.T("Banned hours per day (cannot be used between the given hours; the limit is not affected)", "Tiltott órák naponként (a megadott órák között nem használható; a keretet nem érinti)"),
-            BanTabs(_lolBan, Loc.T("LoL PvP matches", "LoL PvP-meccsek"), _shortBan, Loc.T("Short videos", "Rövid videók"), _feedBan, Loc.T("Facebook feed", "Facebook-hírfolyam"))));
+            BanTabs(_lolBan, Loc.T("LoL PvP matches", "LoL PvP-meccsek"), _shortBan, Loc.T("Short videos", "Rövid videók"), _feedBan, Loc.T("Facebook feed", "Facebook-hírfolyam")),
+            new Label
+            {
+                AutoSize = true, MaximumSize = new Size(540, 0), ForeColor = SystemColors.GrayText, Margin = new Padding(0, 4, 0, 0),
+                Text = Loc.T("Saturday and Sunday are grey while the limits do not apply on weekends: the weekend is free then, without banned hours too.",
+                             "A szombat és a vasárnap szürke, amíg a korlátok hétvégén nem érvényesek: ilyenkor a hétvége szabad, tiltott órák nélkül is."),
+            }));
         root.Controls.Add(Group(Loc.T("Extra allowance for a chosen day", "Extra keret egy kiválasztott napra"), GrantPanel()));
         root.Controls.Add(Group(Loc.T("Protection", "Védelem"), ProtectionPanel()));
 
@@ -111,7 +117,7 @@ public sealed class AdminForm : Form
         _rolling.CheckedChanged += (_, _) => { _resetHour.Enabled = _daily.Checked; RefreshGrantDays(); };
         _daily.CheckedChanged += (_, _) => { _resetHour.Enabled = _daily.Checked; RefreshGrantDays(); };
         _resetHour.SelectedIndexChanged += (_, _) => RefreshGrantDays();
-        _weekends.CheckedChanged += (_, _) => RefreshGrantDays();
+        _weekends.CheckedChanged += (_, _) => { RefreshGrantDays(); SyncWeekendBans(); };
         // Accessible names (screen readers and the automated Windows test look for these).
         _grantDay.AccessibleName = Loc.T("Extra day", "Extra napja");
         _grantLol.AccessibleName = Loc.T("Extra LoL matches", "Extra LoL-meccsek");
@@ -148,6 +154,7 @@ public sealed class AdminForm : Form
         _lolBan.Set(s.LolBan());
         _shortBan.Set(s.WebBan(WebCategory.ShortVideo));
         _feedBan.Set(s.WebBan(WebCategory.FacebookFeed));
+        SyncWeekendBans();
 
         // Expired (past) extras have no effect, so they are not shown; they disappear from the file when saving.
         _grants = [.. GrantDays.Pruned(s, DateTimeOffset.UtcNow, TimeZoneInfo.Local).ExtraGrants];
@@ -202,6 +209,12 @@ public sealed class AdminForm : Form
     {
         if (AdminGate.SetNew(this))
             MessageBox.Show(this, Loc.T("The admin password was changed.", "Az admin jelszó megváltozott."), Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    /// <summary>On a free weekend the Saturday and Sunday banned hours have no effect, so they cannot be edited then.</summary>
+    private void SyncWeekendBans()
+    {
+        foreach (var editor in new[] { _lolBan, _shortBan, _feedBan }) editor.SetWeekendAvailable(_weekends.Checked);
     }
 
     // ---------- stopping the protection ----------
@@ -529,6 +542,12 @@ public sealed class AdminForm : Form
             foreach (var day in WeeklyBan.Days) _rows[day].Set(ban.For(day));
         }
 
+        public void SetWeekendAvailable(bool available)
+        {
+            _rows[DayOfWeek.Saturday].SetAvailable(available);
+            _rows[DayOfWeek.Sunday].SetAvailable(available);
+        }
+
         public WeeklyBan Get() => WeeklyBan.Days.Aggregate(WeeklyBan.Disabled, (ban, day) => ban.With(day, _rows[day].Get()));
     }
 
@@ -552,7 +571,19 @@ public sealed class AdminForm : Form
             Sync();
         }
 
-        private void Sync() => _from.Enabled = _to.Enabled = _enabled.Checked;
+        private bool _available = true;
+
+        private void Sync()
+        {
+            _enabled.Enabled = _available;
+            _from.Enabled = _to.Enabled = _available && _enabled.Checked;
+        }
+
+        public void SetAvailable(bool available)
+        {
+            _available = available;
+            Sync();
+        }
 
         public void AddTo(TableLayoutPanel table)
         {

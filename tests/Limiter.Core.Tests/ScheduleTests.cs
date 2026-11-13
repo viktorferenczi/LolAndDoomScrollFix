@@ -117,16 +117,35 @@ public class ScheduleTests
     }
 
     [Fact]
-    public void Weekend_follows_the_daily_reset_hour()
+    public void Weekend_is_the_calendar_weekend_also_with_a_daily_reset()
     {
-        using var env = new TestEnv(Daily(3), start: Utc(3, 2)); // Saturday 02:00 = still the day that started on Friday at 03:00
+        // With a 03:00 reset, Saturday 00:00-03:00 belongs to Friday's limit, but it is already the free weekend.
+        using var env = new TestEnv(Daily(3), start: Utc(2, 23, 59)); // Friday
         Assert.False(env.Engine.IsExemptNow);
-        env.Clock.UtcNow = Utc(3, 3);
+        Assert.Equal(Utc(3, 0), env.Engine.Schedule.NextExemptStart(env.Clock.UtcNow));
+        env.Clock.UtcNow = Utc(3, 0);
         Assert.True(env.Engine.IsExemptNow);
-        env.Clock.UtcNow = Utc(5, 2, 59); // early Monday = still the Sunday day
+        env.Clock.UtcNow = Utc(3, 0, 1);
         Assert.True(env.Engine.IsExemptNow);
-        env.Clock.UtcNow = Utc(5, 3);
+        Assert.Equal(MatchRecordOutcome.Exempt, env.Tracker.OnGameflow(TestEnv.UserA, TestEnv.Running(7)));
+        env.Clock.UtcNow = Utc(4, 23, 59); // Sunday 23:59
+        Assert.True(env.Engine.IsExemptNow);
+        env.Clock.UtcNow = Utc(5, 0); // Monday 00:00, although Sunday's "day" lasts until 03:00
         Assert.False(env.Engine.IsExemptNow);
+        Assert.Equal(0, env.Engine.GetLolStatus(TestEnv.UserA).Used);
+    }
+
+    [Fact]
+    public void A_limit_used_up_on_friday_with_a_daily_reset_is_released_at_saturday_midnight()
+    {
+        var settings = Daily(3) with { LolPvpMatches = 1, LolRestDayBonusMatches = 0 };
+        using var env = new TestEnv(settings, start: Utc(2, 20));
+        env.Store.TryRecordMatch(TestEnv.UserA, 1, Utc(2, 10), 420);
+        var status = env.Engine.GetLolStatus(TestEnv.UserA);
+        Assert.True(status.Blocked);
+        Assert.Equal(Utc(3, 0), status.AvailableAgainAt);
+        env.Clock.UtcNow = Utc(3, 1);
+        Assert.False(env.Engine.GetLolStatus(TestEnv.UserA).Blocked);
     }
 
     [Fact]

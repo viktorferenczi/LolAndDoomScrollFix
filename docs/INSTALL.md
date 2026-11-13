@@ -29,7 +29,7 @@ Output in the `out\` folder:
 
 | File | Purpose |
 |---|---|
-| `LolScrollLimiter-Setup-1.8.1.exe` | Windows installer |
+| `LolScrollLimiter-Setup-1.8.2.exe` | Windows installer |
 | `extension-store.zip` | Upload to the Chrome Web Store |
 | `extension-dev.zip` | Development test version (loaded unpacked, fixed ID: `iidlgdeiobckahalgoabbobfdlefkagi`) |
 | `app\` | The program files to install |
@@ -52,7 +52,7 @@ Until the approval arrives, the development test version can be used (section 6)
 
 ## 5. Installation (production)
 
-1. Run `LolScrollLimiter-Setup-1.8.1.exe` from your own account; the trusted person types the administrator password into the UAC prompt.
+1. Run `LolScrollLimiter-Setup-1.8.2.exe` from your own account; the trusted person types the administrator password into the UAC prompt.
 2. Installation mode: **Production**.
 3. The extension ID is not asked: production mode always uses the extension published in the Chrome Web Store (`mkoeoadekdfnbjpmhiabpjlmhdoimcml`). Chrome installs it by itself within a minute or two (restart Chrome if it was open); it shows "Installed by your administrator". The finish page can open the extension's store page in Chrome.
 4. **Limits** page:
@@ -87,8 +87,8 @@ Until the approval arrives, the development test version can be used (section 6)
    **Admin password** page (the last one): enter the admin password twice (6-128 characters). It is needed to open the admin settings and to uninstall the program, in addition to the Windows administrator approval. The user should not know it. If an installation with a password already exists, reinstalling first needs its password (updating with the update button does not).
    The password is not stored: only a verifier (PBKDF2-SHA256 with a random salt) is written to `C:\ProgramData\LolScrollLimiter\admin.json`, which only administrators and SYSTEM can access. A silent install (`/SILENT`) has no password page; the password is then asked the first time the Admin settings are opened.
 
-   With a daily reset, the "weekend" counts from the chosen hour: with a 03:00 reset it lasts from Saturday 03:00 to Monday 03:00.
-   In rolling mode, from Saturday 00:00 to Monday 00:00. If a limit is used up on Friday, it is released when the weekend begins.
+   The weekend is the calendar weekend, from Saturday 00:00 to Monday 00:00, also with a daily reset. During it nothing is limited
+   and nothing is counted, and banned hours do not apply either. If a limit is used up on Friday, it is released when the weekend begins.
 
 5. The installer:
    - puts the program into `C:\Program Files\LolScrollLimiter` (read-only for normal users),
@@ -227,7 +227,8 @@ When switching modes, usage that is already recorded counts under the new rule (
 - **Every day has its own hours,** separately for each limit. The days are calendar days, also with a daily reset.
 - **A match in progress:** a match that is running when the ban starts may finish, and reconnecting works too.
 - TFT, bot games, practice, custom games and spectating are available during a ban as well.
-- **Weekends:** the hours given for Saturday and Sunday apply even if there is no limit on weekends. With free weekends, outside those hours everything can be used and nothing is counted.
+- **Weekends:** if there is no limit on weekends, there is no ban either, from Saturday 00:00 to Monday 00:00: a Friday-night period ends at Saturday 00:00,
+  and Saturday's and Sunday's hours cannot be edited (they are grey). With the weekend limit on, the hours given for Saturday and Sunday apply.
 
 ## 8. What does the tray icon's colour mean?
 
@@ -257,10 +258,10 @@ Checking for updates does not affect how the limits work; if the check fails (no
 **Making a release (developer):** raise the version in `Directory.Build.props`, `extension/manifest.json` and `installer/LolScrollLimiter.iss`, commit and push, then:
 
 ```bash
-git tag v1.8.1 && git push origin v1.8.1
+git tag v1.8.2 && git push origin v1.8.2
 ```
 
-`.github/workflows/release.yml` builds the installer on Windows, creates `SHA256SUMS.txt`, and publishes the release (`LolScrollLimiter-Setup-1.8.1.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
+`.github/workflows/release.yml` builds the installer on Windows, creates `SHA256SUMS.txt`, and publishes the release (`LolScrollLimiter-Setup-1.8.2.exe`, `extension-store.zip`, `extension-dev.zip`, `SHA256SUMS.txt`).
 The file name and the tag format are fixed (`LolScrollLimiter-Setup-X.Y.Z.exe` / `vX.Y.Z`), otherwise the button does not find the installer.
 
 In production mode the Chrome extension updates itself from the Chrome Web Store; with the development test version, the unpacked extension has to be reloaded on the `chrome://extensions` page after an update.

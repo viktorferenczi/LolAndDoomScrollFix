@@ -28,10 +28,10 @@ public sealed record LolLimitStatus(
 /// <summary>
 /// Calculation of the limits. In rolling mode there is no midnight reset: every use is released exactly
 /// 24 hours later (web time minute by minute, gradually). In daily mode, at the given hour
-/// every limit resets at once. In an exempt period (weekend) nothing is used up, and only banned hours block.
+/// every limit resets at once. In an exempt period (calendar weekend without the weekend limit) nothing blocks and nothing is used up.
 /// Rest-day bonus: if nothing was used from a limit on the previous limited day, it is larger by this much today
 /// (does not stack; not given for a base limit of 0). The extra allowance the admin gave for a day (<see cref="DayGrant"/>) is added to it, by the day's
-/// start date; it has no effect on an exempt day. In banned hours the limit is not used up and not reset, it only blocks; this holds on an exempt day too.
+/// start date; it has no effect on an exempt day. In banned hours the limit is not used up and not reset, it only blocks.
 /// </summary>
 public sealed class LimitEngine
 {
@@ -111,12 +111,7 @@ public sealed class LimitEngine
         var used = TimeSpan.FromMilliseconds(buckets.Sum(b => b.Milliseconds));
 
         if (schedule.IsExempt(now))
-        {
-            var exemptBan = schedule.Ban(settings.WebBan(category), now);
-            return exemptBan.Active
-                ? new WebLimitStatus(category, limit, used, limit, true, null, exemptBan.Until, Bonus: bonus, Banned: true, Extra: extra)
-                : new WebLimitStatus(category, limit, used, limit, false, null, null, Exempt: true, Bonus: bonus, Extra: extra);
-        }
+            return new WebLimitStatus(category, limit, used, limit, false, null, null, Exempt: true, Bonus: bonus, Extra: extra);
 
         var remaining = used >= limit ? TimeSpan.Zero : limit - used;
         var blocked = used >= limit;
@@ -165,12 +160,7 @@ public sealed class LimitEngine
         var used = counted.Count;
 
         if (schedule.IsExempt(now))
-        {
-            var exemptBan = schedule.Ban(settings.LolBan(), now);
-            return exemptBan.Active
-                ? new LolLimitStatus(limit, used, limit, true, null, exemptBan.Until, Bonus: bonus, Banned: true, Extra: extra)
-                : new LolLimitStatus(limit, used, limit, false, null, null, Exempt: true, Bonus: bonus, Extra: extra);
-        }
+            return new LolLimitStatus(limit, used, limit, false, null, null, Exempt: true, Bonus: bonus, Extra: extra);
 
         var blocked = used >= limit;
         DateTimeOffset? next, availableAgain = null;

@@ -163,13 +163,15 @@ public class ExtraGrantTests
     }
 
     [Fact]
-    public void Daily_weekend_exemption_follows_the_day_start_date()
+    public void Daily_reset_friday_extra_applies_until_the_calendar_weekend()
     {
-        // On Saturday at 02:00 the day that started on Friday (a weekday) is still running; the extra applies to it.
+        // Friday's extra applies on Friday evening; from Saturday 00:00 the weekend is free, although Friday's "day" lasts until 03:00.
         var s = With(Grant(2, lol: 1)) with { ResetMode = ResetMode.Daily, DailyResetHour = 3 };
-        using var env = new TestEnv(s, start: At(3, 2));
+        using var env = new TestEnv(s, start: At(2, 23));
         Assert.False(env.Engine.GetLolStatus(A).Exempt);
         Assert.Equal(4, env.Engine.GetLolStatus(A).Limit);
+        env.Clock.UtcNow = At(3, 2);
+        Assert.True(env.Engine.GetLolStatus(A).Exempt);
     }
 
     // ---------- day chooser ----------

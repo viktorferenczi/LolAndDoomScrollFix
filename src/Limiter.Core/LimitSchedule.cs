@@ -3,7 +3,8 @@ namespace Limiter.Core;
 /// <summary>
 /// Schedule: from when the limit counts (rolling 24 hours or since the daily reset), and when the weekend is exempt.
 /// In daily mode a "day" lasts from the reset hour to the next daily reset (e.g. 03:00–03:00),
-/// in rolling mode from midnight to midnight. Weekend: a day that starts on Saturday or Sunday.
+/// in rolling mode from midnight to midnight. Weekend: calendar Saturday and Sunday (00:00 Saturday to 00:00 Monday),
+/// also with a daily reset; without the weekend limit nothing is restricted then, not even by banned hours.
 /// </summary>
 public sealed class LimitSchedule
 {
@@ -44,17 +45,19 @@ public sealed class LimitSchedule
         _settings.ResetMode == ResetMode.Daily ? DayStart(now) : now - LimitEngine.Window;
 
     /// <summary>Whether we are exempt from the restriction now (weekend, if the weekend limit is not on).</summary>
-    public bool IsExempt(DateTimeOffset now) =>
-        !_settings.EnforceOnWeekends && IsWeekend(LogicalDate(now));
+    public bool IsExempt(DateTimeOffset now) => IsFreeDay(TimeZoneInfo.ConvertTime(now, _zone).DateTime);
+
+    /// <summary>A calendar day of a weekend without limits.</summary>
+    private bool IsFreeDay(DateTime local) => !_settings.EnforceOnWeekends && IsWeekend(local.Date);
 
     /// <summary>The start of the next exempt (weekend) period, or null if there is a limit on weekends too.</summary>
     public DateTimeOffset? NextExemptStart(DateTimeOffset now)
     {
         if (_settings.EnforceOnWeekends) return null;
         if (IsExempt(now)) return now;
-        var date = LogicalDate(now);
+        var date = TimeZoneInfo.ConvertTime(now, _zone).Date;
         do date = date.AddDays(1); while (!IsWeekend(date));
-        return ToUtc(date.AddHours(DayStartHour));
+        return ToUtc(date);
     }
 
     /// <summary>The bounds of today (in daily mode: between two resets, in rolling mode: from midnight to midnight).</summary>
@@ -78,7 +81,8 @@ public sealed class LimitSchedule
 
     /// <summary>
     /// Whether a banned period is active now, and if so, until when (adjoining periods of the next days count as one;
-    /// null if it does not end within a week). The days are calendar days, also with a daily reset, and an exempt weekend has its own ban too.
+    /// null if it does not end within a week). The days are calendar days, also with a daily reset. A free weekend has no ban,
+    /// not even the end of a Friday-night period.
     /// </summary>
     public (bool Active, DateTimeOffset? Until) Ban(WeeklyBan ban, DateTimeOffset now)
     {
@@ -97,15 +101,19 @@ public sealed class LimitSchedule
     public BannedHours CurrentOrToday(WeeklyBan ban, DateTimeOffset now)
     {
         var local = TimeZoneInfo.ConvertTime(now, _zone).DateTime;
+        if (IsFreeDay(local)) return BannedHours.Disabled;
         return Covering(ban, local) ?? ban.For(local.DayOfWeek);
     }
 
     /// <summary>The period covering the given local time: today's, or yesterday's if that spans midnight.</summary>
-    private static BannedHours? Covering(WeeklyBan ban, DateTime local)
+    private BannedHours? Covering(WeeklyBan ban, DateTime local)
     {
+        if (IsFreeDay(local)) return null;
         var today = ban.For(local.DayOfWeek);
         if (today.Enabled && today.From != today.To && local.Hour >= today.From && (today.From > today.To || local.Hour < today.To))
             return today;
+        // A period that started on a free weekend day does not reach into Monday either.
+        if (IsFreeDay(local.AddDays(-1))) return null;
         var yesterday = ban.For(local.AddDays(-1).DayOfWeek);
         return yesterday.Enabled && yesterday.From > yesterday.To && local.Hour < yesterday.To ? yesterday : null;
     }

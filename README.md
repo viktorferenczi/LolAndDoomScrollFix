@@ -30,7 +30,7 @@ Chosen at install time:
 
 **Updates:** the "Check for updates" button (in the tray icon's menu and in the Details window) finds the latest release, downloads and verifies it (SHA-256), and starts the installer; the installation needs administrator approval, and the settings and counters are kept.
 
-**Banned hours:** at install time, and later in the admin settings, each limit (LoL, short videos, Facebook feed) can have its own banned hours for each day of the week, e.g. Monday 01:00-05:00 or all of Saturday. During them that activity cannot be used at all, even if some of the limit is left, also on weekends without limits; the limit and the reset are not affected.
+**Banned hours:** at install time, and later in the admin settings, each limit (LoL, short videos, Facebook feed) can have its own banned hours for each day of the week, e.g. Monday 01:00-05:00 or all of Saturday. During them that activity cannot be used at all, even if some of the limit is left; the limit and the reset are not affected. A weekend without limits is entirely free, from Saturday 00:00 to Monday 00:00.
 
 TFT, bot games, practice, custom games and spectating do not use up the LoL limit; a confirmed remake gives the attempt back.
 On a detection or operation error the program **lets everything through and reports the error** (tray icon, the extension's red "!" badge).
@@ -77,6 +77,10 @@ For installation and verification see the guides linked below.
 ## Versions
 
 The published releases can be downloaded from the [releases page](https://github.com/viktorferenczi/LolAndDoomScrollFix/releases) (the installer, the extension packages and the checksums). The tray application's "Check for updates" button installs the latest one. The list starts with the newest.
+
+### 1.8.2 - 2026-11-13
+
+- **Fix: a free weekend is entirely free, from Saturday 00:00 to Sunday 23:59.** With a daily reset the weekend used to start and end at the reset hour (e.g. Saturday 03:00 to Monday 03:00), and since 1.8.0 banned hours also applied on a free weekend, including a Friday-night period running into Saturday. Now, when the limits do not apply on weekends, nothing is limited or banned on calendar Saturday and Sunday. In the installer and the admin settings, Saturday's and Sunday's banned hours are grey then.
 
 ### 1.8.1 - 2026-11-02
 
@@ -217,7 +221,7 @@ Telepítéskor választható:
 
 **Frissítés:** a tálcaikon menüjében és a Részletek ablakban a „Frissítések keresése” gomb megkeresi a legújabb kiadást, letölti és ellenőrzi (SHA-256), majd elindítja a telepítőt; a telepítéshez rendszergazdai jóváhagyás kell, a beállítások és a számlálók megmaradnak.
 
-**Tiltott órák:** telepítéskor és később az admin beállításokban keretenként (LoL, rövid videók, Facebook-hírfolyam) a hét minden napjára saját tiltott órák adhatók meg, pl. hétfő 01:00–05:00 vagy az egész szombat. Ilyenkor az adott dolog egyáltalán nem használható, akkor sem, ha a keretből még maradt, és korlát nélküli hétvégén is érvényes; a keretet és a nullázást nem érinti.
+**Tiltott órák:** telepítéskor és később az admin beállításokban keretenként (LoL, rövid videók, Facebook-hírfolyam) a hét minden napjára saját tiltott órák adhatók meg, pl. hétfő 01:00–05:00 vagy az egész szombat. Ilyenkor az adott dolog egyáltalán nem használható, akkor sem, ha a keretből még maradt; a keretet és a nullázást nem érinti. A korlát nélküli hétvége szombat 00:00-tól hétfő 00:00-ig teljesen szabad.
 
 TFT, botmeccs, gyakorlás, egyéni játék és néző mód nem fogyasztja a LoL-keretet; az igazolt remake visszaadja az alkalmat.
 Felismerési vagy működési hibánál a program **enged tovább, és hibát jelez** (tálcaikon, a bővítmény piros „!” jelvénye).
@@ -262,6 +266,10 @@ A cél az, hogy megfékezze a végtelen görgetést és a túlzott League of Leg
 A telepítésről és az ellenőrzésről lásd lent a hivatkozott útmutatókat.
 
 ## Verziók
+
+### 1.8.2 — 2026-11-13
+
+- **Javítás: a szabad hétvége teljesen szabad, szombat 00:00-tól vasárnap 23:59-ig.** Napi nullázásnál a hétvége eddig a nullázás órájában kezdődött és ért véget (pl. szombat 03:00-tól hétfő 03:00-ig), és az 1.8.0 óta a tiltott órák a szabad hétvégén is érvényesek voltak, a szombatba átnyúló péntek esti időszakkal együtt. Most, ha a korlátok hétvégén nem érvényesek, a naptári szombaton és vasárnapon semmi sincs korlátozva vagy tiltva. A telepítőben és az admin beállításokban ilyenkor a szombat és a vasárnap tiltott órái szürkék.
 
 ### 1.8.1 — 2026-11-02
 
